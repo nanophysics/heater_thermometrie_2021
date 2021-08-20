@@ -1,0 +1,6 @@
+__pycache__
+.vscode/.ropeproject
+calib_*_out.txt
+Values-*.txt
+calibration_correction/**/calib_raw_*
+calibration_raw/
