@@ -30,15 +30,25 @@
       "console": "integratedTerminal"
     },
     {
-      "name": "Python: run_1_condense.py",
+      "name": "Python: heater_thermometrie_2021_driver_test.py",
       "type": "python",
       "request": "launch",
       "justMyCode": false,
-      "program": "${workspaceFolder}/compact_measurements/20000101_01-20210322a/HV_OUT_FIL_0V/run_1_condense.py",
-      "cwd": "${workspaceFolder}/compact_measurements/20000101_01-20210322a/HV_OUT_FIL_0V",
-      "args": ["raw-red-CH11"],
+      "program": "${workspaceFolder}/heater_thermometrie_2021_driver_test.py",
+      "cwd": "${workspaceFolder}",
+      "args": [],
       "console": "integratedTerminal"
   },
+  {
+    "name": "Python: run_1_condense.py",
+    "type": "python",
+    "request": "launch",
+    "justMyCode": false,
+    "program": "${workspaceFolder}/compact_measurements/20000101_01-20210322a/HV_OUT_FIL_0V/run_1_condense.py",
+    "cwd": "${workspaceFolder}/compact_measurements/20000101_01-20210322a/HV_OUT_FIL_0V",
+    "args": ["raw-red-CH11"],
+    "console": "integratedTerminal"
+},
 {
       "name": "Python: set_output.py DA2=1.0 DA3=0.1",
       "type": "python",

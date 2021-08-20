@@ -10,22 +10,6 @@ import logging
 from mp.micropythonshell import FILENAME_IDENTIFICATION
 
 '''
-    Naming conventions
-        PEP8
-        https://realpython.com/python-pep8/
-        Start of variable: datatype
-            b_xx      Boolean
-            str_xx    String
-            f_xx      Float
-            i_xx      Integer
-            dict_xx   Dictionary
-            list_xx   List or Tuple
-        End of variable: unit
-            xx_V
-            xx_m2
-            xx_1
-            xx_percent100
-
     Separation of logic
         pyboard
             every x ms: polls for the geophone
@@ -66,12 +50,11 @@ REQUIRED_MPFSHELL_VERSION='100.9.13'
 if mp.version.FULL < REQUIRED_MPFSHELL_VERSION:
     raise Exception(f'Your "mpfshell" has version "{mp.version.FULL}" but should be higher than "{REQUIRED_MPFSHELL_VERSION}". Call "pip install --upgrade mpfshell2"!')
 
-import compact_2012_dac
 import calib_prepare_lib
 import config_all
 from src_micropython.micropython_portable import *
 
-HWTYPE_COMPACT_2012 = 'compact_2012'
+HWTYPE_HEATER_THERMOMETRIE_2021 = 'heater_thermometrie_2021'
 
 # ranges and scaling
 DICT_GAIN_2_VALUE = {
@@ -97,41 +80,6 @@ SAVE_VALUES_TO_DISK_TIME_S=5.0
 F_SWEEPINTERVAL_S = 0.03
 
 
-class TimeSpan:
-    '''
-      A helper to measure the time required to communicate with the pyboard.
-    '''
-    def __init__(self, i_measurements, s_name):
-        self._i_measurements = i_measurements
-        self._s_name = s_name
-        self._reset()
-    
-    def _reset(self):
-        self._f_time_start_s = None
-        self._i_count = 0
-        self._f_sum_ms = 0.0
-        self._f_min_ms = 10000000.0
-        self._f_max_ms = 0.0
-    
-    def start(self):
-        self._f_time_start_s = time.perf_counter()
-    
-    def end(self):
-        if self._i_count >= self._i_measurements:
-            logger.debug('{}: min={:4.1f}ms avg={:4.1f}ms max={:4.1f}ms'.format(
-                self._s_name,
-                self._f_min_ms,
-                self._f_sum_ms/self._i_count,
-                self._f_max_ms
-            ))
-            self._reset()
-            return
-        assert self._f_time_start_s is not None
-        f_time_elapsed_ms = 1000.0*(time.perf_counter() - self._f_time_start_s)
-        self._i_count += 1
-        self._f_sum_ms += f_time_elapsed_ms
-        self._f_min_ms = min(self._f_min_ms, f_time_elapsed_ms)
-        self._f_max_ms = max(self._f_max_ms, f_time_elapsed_ms)
 
 class Dac:
     def __init__(self, index):
@@ -145,7 +93,7 @@ class Dac:
                 return str_gain.replace(CHANGE_BY_HAND, '')
         return '??? {:5.1f}'.format(self.f_gain)
 
-class Compact2012:
+class HeaderThermometrie2021:
     def __init__(self, board=None, hwserial=''):
         if board is not None:
             assert hwserial == ''
@@ -155,9 +103,9 @@ class Compact2012:
             hwserial = hwserial.strip()
             if hwserial == '':
                 hwserial = None
-            self.board = mp.pyboard_query.ConnectHwtypeSerial(product=mp.pyboard_query.Product.Pyboard, hwtype=HWTYPE_COMPACT_2012, hwserial=hwserial)
+            self.board = mp.pyboard_query.ConnectHwtypeSerial(product=mp.pyboard_query.Product.Pyboard, hwtype=HWTYPE_HEATER_THERMOMETRIE_2021, hwserial=hwserial)
         assert isinstance(self.board, mp.pyboard_query.Board)
-        self.board.systemexit_hwtype_required(hwtype=HWTYPE_COMPACT_2012)
+        self.board.systemexit_hwtype_required(hwtype=HWTYPE_HEATER_THERMOMETRIE_2021)
         self.board.systemexit_firmware_required(min='1.14.0', max='1.14.0')
         self.compact_2012_serial = self.board.identification.HWSERIAL
         try:
@@ -170,16 +118,13 @@ class Compact2012:
             serials_defined.remove(config_all.SERIAL_UNDEFINED)
             print(f'INFO: "config_all.py" lists these serials: {",".join(serials_defined)}')
 
-        print(f'INFO: {HWTYPE_COMPACT_2012} connected: {self.compact_2012_config}')
+        print(f'INFO: {HWTYPE_HEATER_THERMOMETRIE_2021} connected: {self.compact_2012_config}')
 
         self.__calibrationLookup = None
         self.ignore_str_dac12 = False
         self.f_write_file_time_s = 0.0
         self.filename_values = DIRECTORY_OF_THIS_FILE / f'Values-{self.compact_2012_serial}.txt'
         self.list_dacs = list(map(lambda i: Dac(i), range(DACS_COUNT)))
-
-        self.obj_time_span_set_dac = TimeSpan(100, 'set_dac()')
-        self.obj_time_span_get_status = TimeSpan(100, 'get_status()')
 
         # The time when the dac was set last.
         self.f_last_dac_set_s = 0.0
@@ -195,6 +140,7 @@ class Compact2012:
         self.shell.sync_folder(DIRECTORY_OF_THIS_FILE / 'src_micropython', FILES_TO_SKIP=['config_identification.py'])
         # Start the program
         self.fe.exec_('import micropython_logic')
+        self.get_defrost()
         self.sync_status_get()
         self.load_calibration_lookup()
 
@@ -359,6 +305,12 @@ Voltages: physical values in volt; the voltage at the OUT output.\n\n'''.format(
         self.b_pyboard_error = list_pyboard_status[0]
         self.i_pyboard_geophone_dac = list_pyboard_status[1]
         self.f_pyboard_geophone_read_s = time.perf_counter()
+
+    def get_defrost(self):
+        str_status = self.fe.eval('micropython_logic.get_defrost()')
+        defrost = eval(str_status)
+        assert isinstance(defrost, bool)
+        return defrost
 
     def sync_status_get(self):
         '''

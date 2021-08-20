@@ -1,8 +1,8 @@
 import time
-import compact_2012_driver
+import heater_thermometrie_2021_driver
 
 if __name__ == '__main__':
-    driver = compact_2012_driver.Compact2012()
+    driver = heater_thermometrie_2021_driver.HeaderThermometrie2021()
     driver.sync_set_geophone_led_threshold_percent_FS(10.0)
 
     if False:

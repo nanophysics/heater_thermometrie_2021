@@ -3,7 +3,7 @@
 #
 
 # The type of hardware connected to this pyboard
-HWTYPE = 'compact_2012' # or 'scanner_pyb_2020', ...
+HWTYPE = 'heater_thermometrie_2021' # or 'scanner_pyb_2020', ...
 
 # The hardware version as printed on the schematics
 HWVERSION = '2000-01-01'
