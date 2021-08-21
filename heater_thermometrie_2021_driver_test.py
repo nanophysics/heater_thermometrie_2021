@@ -2,7 +2,7 @@ import time
 import heater_thermometrie_2021_driver
 
 if __name__ == '__main__':
-    driver = heater_thermometrie_2021_driver.HeaderThermometrie2021()
+    driver = heater_thermometrie_2021_driver.HeaterThermometrie2021()
     driver.sync_set_geophone_led_threshold_percent_FS(10.0)
 
     if False:

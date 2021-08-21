@@ -11,7 +11,7 @@ class Driver(InstrumentDriver.InstrumentWorker):
         """Perform the operation of opening the instrument connection"""
 
         # open connection
-        self.compact2012 = compact_2012_driver.HeaderThermometrie2021(hwserial=self.comCfg.address) 
+        self.compact2012 = compact_2012_driver.HeaterThermometrie2021(hwserial=self.comCfg.address) 
     
         # Reset the usb connection (it must not change the applied voltages)
         self.log('ETH Compact Driver: Connection resetted at startup')

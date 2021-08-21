@@ -29,19 +29,19 @@ class heater_hsm(hsm.Statemachine):
     super().__init__()
 
   def state_disconnected(self, objSignal):
-    'The tail is not connected by the cable'
+    'The insert is not connected by the cable'
     pass
   
   def state_connected(self, objSignal):
-    'This tail is connected by the cable and the id was read successfully'
+    'This insert is connected by the cable and the id was read successfully'
     pass
 
   def state_connected_termoff(self, objSignal):
-    'Thermometrie is off'
+    'Thermometrie switch is off'
     pass
 
   def state_connected_termon(self, objSignal):
-    'Thermometrie is on'
+    'Thermometrie switch is on'
     pass
 
   def state_connected_termon_heatingoff(self, objSignal):

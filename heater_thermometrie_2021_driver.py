@@ -93,7 +93,7 @@ class Dac:
                 return str_gain.replace(CHANGE_BY_HAND, '')
         return '??? {:5.1f}'.format(self.f_gain)
 
-class HeaderThermometrie2021:
+class HeaterThermometrie2021:
     def __init__(self, board=None, hwserial=''):
         if board is not None:
             assert hwserial == ''
@@ -107,13 +107,13 @@ class HeaderThermometrie2021:
         assert isinstance(self.board, mp.pyboard_query.Board)
         self.board.systemexit_hwtype_required(hwtype=HWTYPE_HEATER_THERMOMETRIE_2021)
         self.board.systemexit_firmware_required(min='1.14.0', max='1.14.0')
-        self.compact_2012_serial = self.board.identification.HWSERIAL
+        self.heater_thermometrie_2021_serial = self.board.identification.HWSERIAL
         try:
-            self.compact_2012_config = config_all.dict_compact2012[self.compact_2012_serial]
+            self.compact_2012_config = config_all.dict_compact2012[self.heater_thermometrie_2021_serial]
         except KeyError:
             self.compact_2012_config = config_all.dict_compact2012[config_all.SERIAL_UNDEFINED]
             print()
-            print(f'WARNING: The connected "compact_2012" has serial "{self.compact_2012_serial}". However, this serial in unknown!')
+            print(f'WARNING: The connected "compact_2012" has serial "{self.heater_thermometrie_2021_serial}". However, this serial in unknown!')
             serials_defined = sorted(config_all.dict_compact2012.keys())
             serials_defined.remove(config_all.SERIAL_UNDEFINED)
             print(f'INFO: "config_all.py" lists these serials: {",".join(serials_defined)}')
@@ -123,7 +123,7 @@ class HeaderThermometrie2021:
         self.__calibrationLookup = None
         self.ignore_str_dac12 = False
         self.f_write_file_time_s = 0.0
-        self.filename_values = DIRECTORY_OF_THIS_FILE / f'Values-{self.compact_2012_serial}.txt'
+        self.filename_values = DIRECTORY_OF_THIS_FILE / f'Values-{self.heater_thermometrie_2021_serial}.txt'
         self.list_dacs = list(map(lambda i: Dac(i), range(DACS_COUNT)))
 
         # The time when the dac was set last.
@@ -139,19 +139,43 @@ class HeaderThermometrie2021:
         # Download the source code
         self.shell.sync_folder(DIRECTORY_OF_THIS_FILE / 'src_micropython', FILES_TO_SKIP=['config_identification.py'])
         # Start the program
-        self.fe.exec_('import micropython_logic')
+        self.fe.exec('import scanner_pyb_2020')
+        self.fe.exec('scanner = scanner_pyb_2020.ScannerPyb2020()')
+
+        # self.fe.exec_('import micropython_logic')
         self.get_defrost()
+
+        self.display_clear()
+        self.display_zeile(2, "Zeile2")
+        self.display_show()
+
         self.sync_status_get()
+
         self.load_calibration_lookup()
+
+    def display_clear(self):
+        cmd = f'scanner.display.clear()'
+        self.fe.eval(cmd)
+
+    def display_show(self):
+        cmd = f'scanner.display.show()'
+        self.fe.eval(cmd)
+
+    def display_zeile(self, line:int, text:str):
+        assert isinstance(line, int)
+        assert 1 <= line <= 4
+        assert isinstance(text, str)
+        cmd = f'scanner.display.zeile({line}, "{text}")'
+        self.fe.eval(cmd)
 
     def close(self):
         self.save_values_to_file()
         self.fe.close()
 
     def load_calibration_lookup(self):
-        if self.compact_2012_serial is None:
+        if self.heater_thermometrie_2021_serial is None:
             return
-        calib_correction_data = calib_prepare_lib.CalibCorrectionData(self.compact_2012_serial)
+        calib_correction_data = calib_prepare_lib.CalibCorrectionData(self.heater_thermometrie_2021_serial)
         self.__calibrationLookup = calib_correction_data.load()
 
     def reset_calibration_lookup(self):
@@ -307,7 +331,7 @@ Voltages: physical values in volt; the voltage at the OUT output.\n\n'''.format(
         self.f_pyboard_geophone_read_s = time.perf_counter()
 
     def get_defrost(self):
-        str_status = self.fe.eval('micropython_logic.get_defrost()')
+        str_status = self.fe.eval('scanner.get_defrost()')
         defrost = eval(str_status)
         assert isinstance(defrost, bool)
         return defrost

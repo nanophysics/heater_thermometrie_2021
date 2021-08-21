@@ -219,9 +219,6 @@ def __spi_read_geophone():
 def get_status():
     return b_error, i_geophone_dac
 
-def get_defrost():
-    return True
-
 def set_geophone_threshold_dac(i_threshold_dac):
     global i_geophone_threshold_dac
     i_geophone_threshold_dac = i_threshold_dac
