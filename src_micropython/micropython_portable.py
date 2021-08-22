@@ -3,6 +3,19 @@
 """
 import binascii
 
+
+class Thermometrie:
+    CURRENT_A_CARBON = 10E-6
+    CURRENT_A_PT1000 = 10E-6
+    U3V = 3.33333333
+    R31_OHM = 100.0
+    R44_OHM = 200.0
+    IA_GAIN_CARBON = 1.0 + 50000.0/R31_OHM
+    IA_GAIN_PT1000 = 1.0 + 50000.0/R44_OHM
+    ADC24_FACTOR_CARBON = U3V/(2.0**23)/IA_GAIN_CARBON
+    ADC24_FACTOR_PT1000 = U3V/(2.0**23)/IA_GAIN_PT1000
+
+
 # Analog limit of differential amplifier
 fADC24_LIMIT_V = 0.7e-3  # corresponds to +- 1.4V at the ADC24 input
 
@@ -80,7 +93,8 @@ def set_dac20_nibbles(str_dac20):
 
         dac20_nibbles[i_offset_out] = ord("1")
         for i in range(DAC20_NIBBLES):
-            dac20_nibbles[i_offset_out + i + 1] = ord(str_dac20[i_offset_in + i])
+            dac20_nibbles[i_offset_out + i +
+                          1] = ord(str_dac20[i_offset_in + i])
 
 
 def set_dac12_nibbles(str_dac12):
@@ -102,7 +116,8 @@ def set_dac12_nibbles(str_dac12):
         # D7, D6, D5, D4, D3, D2, D1=0, D0=0
         dac12_nibbles[i_offset_out + 0] = ord("0")
         for i in range(DAC12_NIBBLES):
-            dac12_nibbles[i_offset_out + i + 1] = ord(str_dac12[i_offset_in + i])
+            dac12_nibbles[i_offset_out + i +
+                          1] = ord(str_dac12[i_offset_in + i])
 
 
 def splice_dac12(dac12_nibbles):
@@ -110,7 +125,8 @@ def splice_dac12(dac12_nibbles):
     bytes_count = (DACS_COUNT - 1) * DAC20_REGISTER_BYTES
     dac12_bytes_value1to9 = dac12_bytes[:bytes_count]
     dac12_bytes_value10 = dac12_bytes[bytes_count:]
-    assert len(dac12_bytes_value1to9) == (DACS_COUNT - 1) * DAC20_REGISTER_BYTES
+    assert len(dac12_bytes_value1to9) == (
+        DACS_COUNT - 1) * DAC20_REGISTER_BYTES
     assert len(dac12_bytes_value10) == DAC20_REGISTER_BYTES
     return dac12_bytes_value1to9, dac12_bytes_value10
 
@@ -140,7 +156,8 @@ def convert_ADC24_signed_to_V(iADC24_signed):
     fADC24 = iADC24_signed * factor
 
     if not (-fADC24_LIMIT_V < fADC24 < fADC24_LIMIT_V):
-        raise Exception("fADC24={:12.9f} but should be between {:12.9f} and {:12.9f}.".format(fADC24, -fADC24_LIMIT_V, fADC24_LIMIT_V))
+        raise Exception("fADC24={:12.9f} but should be between {:12.9f} and {:12.9f}.".format(
+            fADC24, -fADC24_LIMIT_V, fADC24_LIMIT_V))
 
     return fADC24
 
