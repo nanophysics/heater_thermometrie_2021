@@ -8,7 +8,7 @@ from onewire import OneWire
 from ds18x20 import DS18X20
 from ads1219 import ADS1219
 from sh1106 import SH1106_I2C
-from max30205 import MAX30205
+from dac8571 import DAC8571
 
 from micropython_portable import Thermometrie
 
@@ -74,17 +74,21 @@ class OnewireTail(OnewireID):
 
 
 class TemperatureTail:
-    def __init__(self):
+    def __init__(self, i2c):
         self.short_carb = Pin(PIN_SHORT_CARB, Pin.OUT_PP)
         self.short_pt1000 = Pin(PIN_SHORT_PT1000, Pin.OUT_PP)
 
+        # https://www.ti.com/lit/ds/symlink/ads1219.pdf?ts=1629640067880&ref_url=https%253A%252F%252Fwww.ti.com%252Fproduct%252FADS1219
+        #  ADS1219 4-Channel, 1-kSPS, 24-Bit, Delta-Sigma ADC With I2C Interface
+
+        #   MCP4725 12-Bit Digital-to-Analog Converter with EEPROM Memory in SOT-23-6
+
         # ADC24
         # I2C(scl=Pin('X9'), sda=Pin('X10'), freq=400000)
-        self.i2c_AD24 = I2C(1)
         self.reset = Pin(PIN_RESET, Pin.OUT_PP)
         # active low, deshalb auf 1
         self.reset.value(1)
-        self.adc = ADS1219(self.i2c_AD24)
+        self.adc = ADS1219(i2c)
         # self.adc.set_channel(ADS1219.CHANNEL_AIN0_AIN1)
         self.adc.set_conversion_mode(ADS1219.CM_SINGLE)
         self.adc.set_vref(ADS1219.VREF_EXTERNAL)
@@ -117,11 +121,57 @@ class TemperatureTail:
     # print("resistance_carbon: %f Ohm, resistance_pt1000: %f Ohm" % (voltage_carbon/electronics.CURRENT_A_CARBON, voltage_pt1000/electronics.CURRENT_A_PT1000))
 
 
+class Heater:
+    def __init__(self, i2c):
+        # DAC8571 16-BIT, LOW POWER, VOLTAGE OUTPUT, I2C INTERFACE DIGITAL-TO-ANALOG CONVERTER
+        #
+        # https://youtu.be/BvIQ0b2gUFs
+        #
+        # https://www.kernelconfig.io/config_ti_dac5571
+        #  Driver for the Texas Instruments
+        #    DAC5571, DAC6571, DAC7571, DAC5574, DAC6574, DAC7574, DAC5573,
+        #    DAC6573, DAC7573, DAC8571, DAC8574
+        # https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/iio/dac/ti-dac5571.c?h=v5.11.20
+        #  Linux kernel driver in C
+        self._dac = DAC8571(i2c)
+
+    def set_power(self, power):
+        assert isinstance(power, int)
+        assert 0 <= power < 2 ** 16
+        self._dac.write_dac(dac=power)
+
+        # dac = adafruit_mcp4725.MCP4725(i2c)
+        # # Optionally you can specify a different addres if you override the A0 pin.
+        # # amp = adafruit_max9744.MAX9744(i2c, address=0x63)
+
+        # # There are a three ways to set the DAC output, you can use any of these:
+        # dac.value = 65535  # Use the value property with a 16-bit number just like
+        # # the AnalogOut class.  Note the MCP4725 is only a 12-bit
+        # # DAC so quantization errors will occur.  The range of
+        # # values is 0 (minimum/ground) to 65535 (maximum/Vout).
+
+        # dac.raw_value = 4095  # Use the raw_value property to directly read and write
+        # # the 12-bit DAC value.  The range of values is
+        # # 0 (minimum/ground) to 4095 (maximum/Vout).
+
+        # dac.normalized_value = 1.0  # Use the normalized_value property to set the
+        # # output with a floating point value in the range
+        # # 0 to 1.0 where 0 is minimum/ground and 1.0 is
+        # # maximum/Vout.
+
+        # # Main loop will go up and down through the range of DAC values forever.
+        # while True:
+        #     # Go up the 12-bit raw range.
+        #     print("Going up 0-3.3V...")
+        #     for i in range(4095):
+        #         dac.raw_value = i
+
+
 class Display:
     ZEILENHOEHE = 8 + 4
 
     def __init__(self, i2c):
-        self._sh1106 = SH1106_I2C(128, 64, i2c, None, 0x3C)
+        self._sh1106 = SH1106_I2C(width=128, height=64, i2c=i2c, res=None, addr=0x3C)
         self._sh1106.sleep(False)
         self._sh1106.rotate(True, update=False)
         # 0..255  brigtness
@@ -141,13 +191,22 @@ class Display:
 class Proxy:
     def __init__(self):
         self.defrost = Pin(PIN_DEFROST, Pin.IN)
-        i2c_OLED = I2C(scl=PIN_SCL_OLED, sda=PIN_SDA_OLED, freq=40000)
-        self.max30205 = MAX30205(i2c_OLED)
-        self.display = Display(i2c_OLED)
+        # >>> i2c.scan()
+        # [60]
+        # 60=0x3C: OLED
+        i2c_AD_DA = I2C(1, freq=40000)
+        # >>> i2c.scan()
+        # [72, 76, 98]
+        # 72=0x48: ADS1291  TODO(hans) Why 48, should be 40!
+        # 76=0x4C: DAC8571, DAC16
+        # 98=0x62: MCP4725, DAC12
+        i2c_OLED = I2C(2, freq=40000)
+        self.display = Display(i2c=i2c_OLED)
         self.display_clear()
         self.onewire_id = OnewireID()
         self.onewire_tail = OnewireTail()
-        self.temperature_tail = TemperatureTail()
+        self.temperature_tail = TemperatureTail(i2c=i2c_AD_DA)
+        self.heater = Heater(i2c=i2c_AD_DA)
 
     def display_clear(self):
         self.display.clear()

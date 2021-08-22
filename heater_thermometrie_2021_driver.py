@@ -160,6 +160,16 @@ class TemperatureTail:
     #     SHORT_PT1000.value(1)
 
 
+class Heater:
+    def __init__(self, proxy):
+        self.proxy = proxy
+
+    def set_power(self, power: int) -> None:
+        assert isinstance(power, int)
+        assert 0 <= power < 2 ** 16
+        return self.proxy.eval_as(str, f"proxy.heater.set_power(power={power})")
+
+
 class MicropythonProxy:
     def __init__(self, fe):
         self.fe = fe
@@ -245,6 +255,7 @@ class HeaterThermometrie2021:
         self.onewire_id = OnewireID(self.proxy)
         self.onewire_tail = OnewireTail(self.proxy)
         self.temperature_tail = TemperatureTail(self.proxy)
+        self.heater = Heater(self.proxy)
 
         self.display.clear()
         self.display.zeile(0, "heater")
@@ -280,6 +291,12 @@ class HeaterThermometrie2021:
             print("%s: %f V, %f Ohm" % (label, temperature_V, temperature_V / current_factor))
 
         self.temperature_tail.set_thermometrie(on=False)
+
+        self.heater.set_power(power=2 ** 15 - 1)
+        time.sleep(1.5)
+        self.heater.set_power(power=2 ** 16 - 1)
+        time.sleep(0.5)
+        self.heater.set_power(power=0)
 
         # temperature_V = self.temperature_tail.get_voltage(carbon=True)
         # print("voltage_carbon: %f V," % temperature_V)
