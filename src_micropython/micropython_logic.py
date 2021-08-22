@@ -1,5 +1,4 @@
 import ubinascii
-import ustruct
 import time
 from machine import Pin, I2C
 from onewire import OneWire
