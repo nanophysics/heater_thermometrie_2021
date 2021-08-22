@@ -4,6 +4,7 @@
 
 # MicroPython driver for the Texas Instruments ADS1219 ADC
 
+# pylint: disable=import-error
 from micropython import const
 import ustruct
 import utime
@@ -90,7 +91,7 @@ class ADS1219:
         self._read_modify_write_config(_VREF_MASK, vref)
 
     def read_data(self):
-        if (self.read_config() & _CM_MASK) == CM_SINGLE:
+        if (self.read_config() & _CM_MASK) == ADS1219.CM_SINGLE:
             self.start_sync()
         while (self.read_status() & _DRDY_MASK) == _DRDY_NO_NEW_RESULT:
             utime.sleep_ms(1)

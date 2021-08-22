@@ -1,3 +1,5 @@
+# pylint: disable=import-error
+
 # DS18x20 temperature sensor driver for MicroPython.
 # MIT license; Copyright (c) 2016 Damien P. George
 
@@ -33,7 +35,7 @@ class DS18X20:
         self.ow.writebyte(CMD_RDPOWER)
         self.power = self.ow.readbit()
         if powerpin is not None:
-            assert type(powerpin) is Pin, "Parameter must be a Pin object"
+            assert isinstance(powerpin, Pin)
             self.powerpin = powerpin
             self.powerpin.init(mode=Pin.OUT, value=0)
         return self.power
@@ -81,13 +83,12 @@ class DS18X20:
                 else:
                     t = buf[0] >> 1
                 return t - 0.25 + (buf[7] - buf[6]) / buf[7]
-            elif rom[0] in (0x22, 0x28):
+            if rom[0] in (0x22, 0x28):
                 t = buf[1] << 8 | buf[0]
                 if t & 0x8000:  # sign bit set
                     t = -((t ^ 0xFFFF) + 1)
                 return t / 16
-            else:
-                return None
+            return None
         except AssertionError:
             return None
 
@@ -96,9 +97,8 @@ class DS18X20:
             self.config[2] = ((bits - 9) << 5) | 0x1F
             self.write_scratch(rom, self.config)
             return bits
-        else:
-            data = self.read_scratch(rom)
-            return ((data[4] >> 5) & 0x03) + 9
+        data = self.read_scratch(rom)
+        return ((data[4] >> 5) & 0x03) + 9
 
     def fahrenheit(self, celsius):
         return celsius * 1.8 + 32 if celsius is not None else None

@@ -1,13 +1,14 @@
-import ubinascii
+# pylint: disable=import-error
+
 import time
+import ubinascii
 from machine import Pin, I2C
+
 from onewire import OneWire
 from ds18x20 import DS18X20
-from micropython_ads1219 import ADS1219
-
-import max7312
-import sh1106
-import max30205
+from ads1219 import ADS1219
+from sh1106 import SH1106_I2C
+from max30205 import MAX30205
 
 from micropython_portable import Thermometrie
 
@@ -120,7 +121,7 @@ class Display:
     ZEILENHOEHE = 8 + 4
 
     def __init__(self, i2c):
-        self._sh1106 = sh1106.SH1106_I2C(128, 64, i2c, None, 0x3C)
+        self._sh1106 = SH1106_I2C(128, 64, i2c, None, 0x3C)
         self._sh1106.sleep(False)
         self._sh1106.rotate(True, update=False)
         # 0..255  brigtness
@@ -141,7 +142,7 @@ class Proxy:
     def __init__(self):
         self.defrost = Pin(PIN_DEFROST, Pin.IN)
         i2c_OLED = I2C(scl=PIN_SCL_OLED, sda=PIN_SDA_OLED, freq=40000)
-        self.max30205 = max30205.MAX30205(i2c_OLED)
+        self.max30205 = MAX30205(i2c_OLED)
         self.display = Display(i2c_OLED)
         self.display_clear()
         self.onewire_id = OnewireID()

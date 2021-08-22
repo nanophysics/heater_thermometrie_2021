@@ -10,7 +10,7 @@
       "request": "launch",
       "module": "pylint",
       "cwd": "${workspaceFolder}",
-      "args": ["--rcfile=${workspaceFolder}/.pylintrc", "--verbose", "pymeas", "compact_measurement", "measurement-actual"],
+      "args": ["--rcfile=${workspaceFolder}/.pylintrc", "--verbose", ".", "src_micropython"],
       "console": "integratedTerminal"
   },
   {

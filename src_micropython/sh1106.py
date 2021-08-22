@@ -70,9 +70,9 @@
 # display.text('Testing 1', 0, 0, 1)
 # display.show()
 
-from micropython import const
-import utime as time
-import framebuf
+from micropython import const  # pylint: disable=import-error
+import utime as time  # pylint: disable=import-error
+import framebuf  # pylint: disable=import-error
 
 
 # a few register definitions
@@ -108,6 +108,15 @@ class SH1106:
         self.blit = fb.blit
 
         self.init_display()
+
+    def write_cmd(self, cmd):
+        raise Exception("Required to be overridden")
+
+    def write_data(self, buf):
+        raise Exception("Required to be overridden")
+
+    def reset(self):
+        raise Exception("Required to be overridden")
 
     def init_display(self):
         self.reset()
@@ -148,7 +157,7 @@ class SH1106:
             self.write_cmd(_HIGH_COLUMN_ADDRESS | 0)
             self.write_data(self.buffer[self.width * page : self.width * page + self.width])
 
-    def reset(self, res):
+    def _reset(self, res):
         if res is not None:
             res(1)
             time.sleep_ms(1)
@@ -159,7 +168,7 @@ class SH1106:
 
 
 class SH1106_I2C(SH1106):
-    def __init__(self, width, height, i2c, res=None, addr=0x3C, external_vcc=False):
+    def __init__(self, width, height, i2c, res=None, addr=0x3C, external_vcc=False):  # pylint: disable=too-many-arguments
         self.i2c = i2c
         self.addr = addr
         self.res = res
@@ -189,11 +198,11 @@ class SH1106_I2C(SH1106):
         self.i2c.stop()
 
     def reset(self):
-        super().reset(self.res)
+        super()._reset(self.res)
 
 
 class SH1106_SPI(SH1106):
-    def __init__(self, width, height, spi, dc, res=None, cs=None, external_vcc=False):
+    def __init__(self, width, height, spi, dc, res=None, cs=None, external_vcc=False):  # pylint: disable=too-many-arguments
         self.rate = 10 * 1000 * 1000
         dc.init(dc.OUT, value=0)
         if res is not None:
@@ -231,4 +240,4 @@ class SH1106_SPI(SH1106):
             self.spi.write(buf)
 
     def reset(self):
-        super().reset(self.res)
+        super()._reset(self.res)

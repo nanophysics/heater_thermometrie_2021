@@ -1,3 +1,5 @@
+# pylint: disable=all
+
 import pyb
 import machine
 import micropython

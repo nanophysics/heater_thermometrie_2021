@@ -1,3 +1,6 @@
+# pylint: disable=undefined-variable
+# pylint: disable=import-error
+
 import pyb
 
 REG_OUTPUT = const(0x02)

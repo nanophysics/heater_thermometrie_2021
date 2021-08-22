@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+# pylint: disable=undefined-variable
+# pylint: disable=import-error
 
 """
     I2C-Interface to the MAX30205 "Human Body Temperature Sensor"

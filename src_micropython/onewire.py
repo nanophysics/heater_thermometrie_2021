@@ -9,15 +9,15 @@ OneWire library for MicroPython
 """
 
 import time
-import machine
+import machine  # pylint: disable=import-error
 
 
 class OneWire:
-    CMD_SEARCHROM = const(0xF0)
-    CMD_READROM = const(0x33)
-    CMD_MATCHROM = const(0x55)
-    CMD_SKIPROM = const(0xCC)
-    PULLUP_ON = const(1)
+    CMD_SEARCHROM = const(0xF0)  # pylint: disable=undefined-variable
+    CMD_READROM = const(0x33)  # pylint: disable=undefined-variable
+    CMD_MATCHROM = const(0x55)  # pylint: disable=undefined-variable
+    CMD_SKIPROM = const(0xCC)  # pylint: disable=undefined-variable
+    PULLUP_ON = const(1)  # pylint: disable=undefined-variable
 
     def __init__(self, pin):
         self.pin = pin
@@ -32,7 +32,7 @@ class OneWire:
         Perform the onewire reset function.
         Returns True if a device asserted a presence pulse, False otherwise.
         """
-        sleep_us = time.sleep_us
+        sleep_us = time.sleep_us  # pylint: disable=no-member
         pin = self.pin
 
         pin(0)
@@ -47,7 +47,7 @@ class OneWire:
         return status
 
     def readbit(self):
-        sleep_us = time.sleep_us
+        sleep_us = time.sleep_us  # pylint: disable=no-member
         pin = self.pin
 
         pin(1)  # half of the devices don't match CRC without this line
@@ -74,11 +74,11 @@ class OneWire:
         return buf
 
     def readinto(self, buf):
-        for i in range(len(buf)):
+        for i, _val in enumerate(buf):
             buf[i] = self.readbyte()
 
     def writebit(self, value, powerpin=None):
-        sleep_us = time.sleep_us
+        sleep_us = time.sleep_us  # pylint: disable=no-member
         pin = self.pin
 
         i = self.disable_irq()
@@ -88,7 +88,7 @@ class OneWire:
         sleep_us(60)
         if powerpin:
             pin(1)
-            powerpin(PULLUP_ON)
+            powerpin(OneWire.PULLUP_ON)
         else:
             pin(1)
         self.enable_irq(i)
@@ -108,7 +108,7 @@ class OneWire:
         Select a specific device to talk to. Pass in rom as a bytearray (8 bytes).
         """
         self.reset()
-        self.writebyte(CMD_MATCHROM)
+        self.writebyte(OneWire.CMD_MATCHROM)
         self.write(rom)
 
     def crc8(self, data):
@@ -116,8 +116,8 @@ class OneWire:
         Compute CRC, based on tables
         """
         crc = 0
-        for i in range(len(data)):
-            crc ^= data[i]  ## just re-using crc as intermediate
+        for i, val in enumerate(data):
+            crc ^= val  # just re-using crc as intermediate
             crc = self.crctab1[crc & 0x0F] ^ self.crctab2[(crc >> 4) & 0x0F]
         return crc
 
@@ -140,7 +140,7 @@ class OneWire:
     def _search_rom(self, l_rom, diff):
         if not self.reset():
             return None, 0
-        self.writebyte(CMD_SEARCHROM)
+        self.writebyte(OneWire.CMD_SEARCHROM)
         if not l_rom:
             l_rom = bytearray(8)
         rom = bytearray(8)
