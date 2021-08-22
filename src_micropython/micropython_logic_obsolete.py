@@ -1,4 +1,3 @@
-
 import pyb
 import machine
 import micropython
@@ -8,7 +7,7 @@ import utime
 from micropython_portable import *
 from micropython_ads1219 import *
 
-'''
+"""
 compact_40_pin_flatcable	pyboard
 
 compact_40_pin_03	pyboard_gnd
@@ -30,7 +29,7 @@ compact_40_pin_35	pyboard_Y7	(DIO(7))
 
 compact_40_pin_16	pyboard_X11	(CS(0))
 compact_40_pin_22	pyboard_X12	(CS(1))
-'''
+"""
 
 # 600000: 300000
 # 1200000: 650000
@@ -89,7 +88,7 @@ def pyboard_init():
     p_LED_BLUE_out.value(0)
 
 
-'''
+"""
         pyboard_init output (using settings from VI)
         23: 0 0:write 1:read 
         22: 0 (Control Reg) 
@@ -115,8 +114,8 @@ def pyboard_init():
         2: 0 OPGND
         1: 1 RBUF
         0: 0 Reserved
-'''
-bytearray_initialization = bytearray([0b00100000, 0b00000000, 0b00010010]*10)
+"""
+bytearray_initialization = bytearray([0b00100000, 0b00000000, 0b00010010] * 10)
 assert len(bytearray_initialization) == 30
 
 
@@ -209,7 +208,7 @@ def __spi_read_geophone():
     spi.init(pyb.SPI.MASTER, baudrate=SPI_BAUDRATE, polarity=SPI_DAC20_DAC12_POLARITY, phase=SPI_DAC20_DAC12_PHASE, crc=None)
 
     global i_geophone_dac
-    i_geophone_dac = read_geophone[1] + 256*read_geophone[0]
+    i_geophone_dac = read_geophone[1] + 256 * read_geophone[0]
     # shift one bit and filter out 12 bits of data
     i_geophone_dac >>= 1
     # Filter 12 bits: the MCP3201 has 12 bit resolution
@@ -219,6 +218,7 @@ def __spi_read_geophone():
 def get_status():
     return b_error, i_geophone_dac
 
+
 def set_geophone_threshold_dac(i_threshold_dac):
     global i_geophone_threshold_dac
     i_geophone_threshold_dac = i_threshold_dac
@@ -227,6 +227,7 @@ def set_geophone_threshold_dac(i_threshold_dac):
 def set_user_led(on):
     assert isinstance(on, bool)
     p_LED_GREEN_out.value(on)
+
 
 #
 # Logic for 'calib_' only
@@ -248,11 +249,13 @@ def calib_raw_init():
     adc.set_gain(ADS1219.GAIN_1X)  # GAIN_1X, GAIN_4X
     adc.set_data_rate(ADS1219.DR_20_SPS)
 
+
 def calib_set_mux(iDac_index0):
-    i = iDac_index0//2
+    i = iDac_index0 // 2
     p_CALIB_MUX_A0.value(i & 0x01)
     p_CALIB_MUX_A1.value(i & 0x02)
     p_CALIB_MUX_A2.value(i & 0x04)
+
 
 def calib_read_ADC24(iDac_index):
     calib_set_mux(iDac_index)
@@ -260,41 +263,44 @@ def calib_read_ADC24(iDac_index):
     iADC24 = adc.read_data_signed()
     return str(iADC24)
 
+
 def calib_set_DAC12(iDAC12_index, iDAC12_value):
-    '''
+    """
     All DAC20 and DAC12 will be set to zero.
     But 'iDAC12_index' will be set to 'iDAC12_value'.
-    '''
+    """
     assert 0 <= iDAC12_index < DACS_COUNT
     assert 0 <= iDAC12_value < DAC12_MAX
 
-    list_i_dac12 = [0]*DACS_COUNT
+    list_i_dac12 = [0] * DACS_COUNT
     list_i_dac12[iDAC12_index] = iDAC12_value
     str_dac12 = getHexStringFromListInt12(list_i_dac12)
 
-    list_i_dac20 = [0]*DACS_COUNT
+    list_i_dac20 = [0] * DACS_COUNT
     str_dac20 = getHexStringFromListInt20(list_i_dac20)
 
     set_dac(str_dac20, str_dac12)
+
 
 def calib_raw_measure(filename, hwserial, iDac_index, iDacStart, iDacEnd, iSettleTime_s=0, f_status=None):
     calib_set_mux(iDac_index)
 
     class State:
         pass
+
     state = State()
     state.iSettleTime_s = iSettleTime_s
 
     gain_AD8428 = 2000.0
     i_mittelwert = 3
-    factor = 3.3/(2.0**23)/gain_AD8428/float(i_mittelwert)
+    factor = 3.3 / (2.0 ** 23) / gain_AD8428 / float(i_mittelwert)
     messbereich_V = 0.0007  # Referenzpin ca. 1.6V / 2000
-    list_i_dac12 = [0]*DACS_COUNT
+    list_i_dac12 = [0] * DACS_COUNT
     str_dac12 = getHexStringFromListInt12(list_i_dac12)
     MEASUREMENT_COUNT = 3
 
     # 'iDac_index' must even and in (0, 2, .. 8)
-    assert 0 <= iDac_index < DACS_COUNT-1
+    assert 0 <= iDac_index < DACS_COUNT - 1
     assert iDac_index % 2 == 0
 
     # We measure differences: We have to measure one step more (See: https://en.wikipedia.org/wiki/Off-by-one_error#Fencepost_error)
@@ -312,9 +318,9 @@ def calib_raw_measure(filename, hwserial, iDac_index, iDacStart, iDacEnd, iSettl
                     # For the very last measurment of a DAC, this will be one step out of the limit.
                     return
                 # Set output on DAC20 and DAC12
-                list_i_dac20 = [0]*DACS_COUNT
+                list_i_dac20 = [0] * DACS_COUNT
                 list_i_dac20[iDac_index] = iDAC20a
-                list_i_dac20[iDac_index+1] = iDAC20b
+                list_i_dac20[iDac_index + 1] = iDAC20b
                 str_dac20 = getHexStringFromListInt20(list_i_dac20)
                 set_dac(str_dac20, str_dac12)
 
@@ -327,12 +333,11 @@ def calib_raw_measure(filename, hwserial, iDac_index, iDacStart, iDacEnd, iSettl
                 utime.sleep_ms(30)
 
                 # Read from ADC24
-                list_iAD24 = [adc.read_data_signed()
-                              for i in range(MEASUREMENT_COUNT)]
+                list_iAD24 = [adc.read_data_signed() for i in range(MEASUREMENT_COUNT)]
                 w.write(list_iAD24)
 
             measure(iDac, iDac)
-            measure(iDac, iDac+1)
+            measure(iDac, iDac + 1)
         w.close()
     except KeyboardInterrupt:
         print('closed "{}"'.format(filename))
@@ -352,7 +357,7 @@ timer_blink = pyb.Timer(4, freq=BLINK_FREQUENCY_HZ)
 pyb_led_red = pyb.LED(1)
 pyb_led_red.on()
 
-i2c = machine.SoftI2C(scl=machine.Pin('Y9'), sda=machine.Pin('Y10'))
+i2c = machine.SoftI2C(scl=machine.Pin("Y9"), sda=machine.Pin("Y10"))
 
 spi = pyb.SPI(1)
 

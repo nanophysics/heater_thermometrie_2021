@@ -76,14 +76,14 @@ import framebuf
 
 
 # a few register definitions
-_SET_CONTRAST        = const(0x81)
-_SET_NORM_INV        = const(0xa6)
-_SET_DISP            = const(0xae)
-_SET_SCAN_DIR        = const(0xc0)
-_SET_SEG_REMAP       = const(0xa0)
-_LOW_COLUMN_ADDRESS  = const(0x00)
+_SET_CONTRAST = const(0x81)
+_SET_NORM_INV = const(0xA6)
+_SET_DISP = const(0xAE)
+_SET_SCAN_DIR = const(0xC0)
+_SET_SEG_REMAP = const(0xA0)
+_LOW_COLUMN_ADDRESS = const(0x00)
 _HIGH_COLUMN_ADDRESS = const(0x10)
-_SET_PAGE_ADDRESS    = const(0xB0)
+_SET_PAGE_ADDRESS = const(0xB0)
 
 
 class SH1106:
@@ -93,10 +93,9 @@ class SH1106:
         self.external_vcc = external_vcc
         self.pages = self.height // 8
         self.buffer = bytearray(self.pages * self.width)
-        fb = framebuf.FrameBuffer(self.buffer, self.width, self.height,
-                                  framebuf.MVLSB)
+        fb = framebuf.FrameBuffer(self.buffer, self.width, self.height, framebuf.MVLSB)
         self.framebuf = fb
-# set shortcuts for the methods of framebuf
+        # set shortcuts for the methods of framebuf
         self.fill = fb.fill
         self.fill_rect = fb.fill_rect
         self.hline = fb.hline
@@ -147,9 +146,7 @@ class SH1106:
             self.write_cmd(_SET_PAGE_ADDRESS | page)
             self.write_cmd(_LOW_COLUMN_ADDRESS | 2)
             self.write_cmd(_HIGH_COLUMN_ADDRESS | 0)
-            self.write_data(self.buffer[
-                self.width * page:self.width * page + self.width
-            ])
+            self.write_data(self.buffer[self.width * page : self.width * page + self.width])
 
     def reset(self, res):
         if res is not None:
@@ -162,8 +159,7 @@ class SH1106:
 
 
 class SH1106_I2C(SH1106):
-    def __init__(self, width, height, i2c, res=None, addr=0x3c,
-                 external_vcc=False):
+    def __init__(self, width, height, i2c, res=None, addr=0x3C, external_vcc=False):
         self.i2c = i2c
         self.addr = addr
         self.res = res
@@ -182,7 +178,7 @@ class SH1106_I2C(SH1106):
         self.i2c.writeto(self.addr, self.temp)
 
     def hw_write_data(self, buf):
-        self.i2c.writeto(self.addr, b'\x40'+buf)
+        self.i2c.writeto(self.addr, b"\x40" + buf)
 
     def sw_write_data(self, buf):
         self.temp[0] = self.addr << 1
@@ -197,8 +193,7 @@ class SH1106_I2C(SH1106):
 
 
 class SH1106_SPI(SH1106):
-    def __init__(self, width, height, spi, dc, res=None, cs=None,
-                 external_vcc=False):
+    def __init__(self, width, height, spi, dc, res=None, cs=None, external_vcc=False):
         self.rate = 10 * 1000 * 1000
         dc.init(dc.OUT, value=0)
         if res is not None:

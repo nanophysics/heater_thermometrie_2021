@@ -3,10 +3,10 @@
 #
 
 # The type of hardware connected to this pyboard
-HWTYPE = 'heater_thermometrie_2021' # or 'scanner_pyb_2020', ...
+HWTYPE = "heater_thermometrie_2021"  # or 'scanner_pyb_2020', ...
 
 # The hardware version as printed on the schematics
-HWVERSION = '2000-01-01'
+HWVERSION = "2000-01-01"
 
 # The serial number of this hardware
-HWSERIAL = '20000101_01'  # 20190606_01
+HWSERIAL = "20000101_01"  # 20190606_01

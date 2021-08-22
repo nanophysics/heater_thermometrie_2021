@@ -19,7 +19,7 @@
       "request": "launch",
       "module": "black",
       "cwd": "${workspaceFolder}",
-      "args": ["--config", "${workspaceFolder}/.blackconfig.yaml", "*.py", "pymeas/*.py", "compact_measurement/*.py", "measurement-actual/*.py"],
+      "args": ["--config", "${workspaceFolder}/.blackconfig.yaml", "*.py", "src_micropython/*.py"],
       "console": "integratedTerminal"
   },
   {

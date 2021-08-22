@@ -9,22 +9,23 @@ import max7312
 import sh1106
 import max30205
 
-VERSION = 'v0.91'
+VERSION = "v0.1"
 
 # Pins according to schematics
-PIN_SDA_OLED="Y10"
-PIN_SCL_OLED="Y9"
-PIN_SDA_AD_DA="X10"
-PIN_SCL_AD_DA="X9"
-PIN_DEFROST="X8"
-PIN_SHORT_PT1000="X2"
-PIN_SHORT_CARB="X1"
-PIN_DS18_SHORT="X6"
-PIN_DS18_PWD="X5"
-PIN_DS18_ID="X4"
-PIN_D18_TEMP="Y4"
-PIN_RESET="X11"
-PIN_DRDY="X12"
+PIN_SDA_OLED = "Y10"
+PIN_SCL_OLED = "Y9"
+PIN_SDA_AD_DA = "X10"
+PIN_SCL_AD_DA = "X9"
+PIN_DEFROST = "X8"
+PIN_SHORT_PT1000 = "X2"
+PIN_SHORT_CARB = "X1"
+PIN_DS18_SHORT = "X6"
+PIN_DS18_PWD = "X5"
+PIN_DS18_ID = "X4"
+PIN_D18_TEMP = "Y4"
+PIN_RESET = "X11"
+PIN_DRDY = "X12"
+
 
 class OnewireID:
     def __init__(self, pin=Pin(PIN_D18_TEMP)):
@@ -43,9 +44,9 @@ class OnewireID:
         rom = ubinascii.unhexlify(ident)
         self.temp.resolution(rom=rom, bits=12)
         self.temp.convert_temp()
-        time.sleep(0.8) #conversion takes up to 750ms
+        # conversion takes up to 750ms
+        time.sleep(0.8)
         return self.temp.read_temp(rom)
-
 
 
 class OnewireTail(OnewireID):
@@ -70,13 +71,14 @@ class OnewireTail(OnewireID):
 
 
 class Display:
-    ZEILENHOEHE = 8+4
+    ZEILENHOEHE = 8 + 4
 
     def __init__(self, i2c):
-        self._sh1106 = sh1106.SH1106_I2C(128, 64, i2c, None, 0x3c)
+        self._sh1106 = sh1106.SH1106_I2C(128, 64, i2c, None, 0x3C)
         self._sh1106.sleep(False)
         self._sh1106.rotate(True, update=False)
-        self._sh1106.contrast(255) # 0..255  brigtness
+        # 0..255  brigtness
+        self._sh1106.contrast(255)
         self._sh1106.fill(0)
 
     def zeile(self, i, text):
@@ -100,8 +102,8 @@ class Proxy:
 
     def display_clear(self):
         self.display.clear()
-        self.display.zeile(0, '2020 %s' % VERSION)
-        self.display.zeile(1, '%1.2fC' % 55.6)
+        self.display.zeile(0, "2020 %s" % VERSION)
+        self.display.zeile(1, "%1.2fC" % 55.6)
 
     def get_defrost(self):
         return True
