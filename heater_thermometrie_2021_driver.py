@@ -8,6 +8,7 @@ import pathlib
 import logging
 
 from mp.micropythonshell import FILENAME_IDENTIFICATION
+from numpy.lib.arraysetops import isin
 
 '''
     Separation of logic
@@ -80,18 +81,74 @@ SAVE_VALUES_TO_DISK_TIME_S=5.0
 F_SWEEPINTERVAL_S = 0.03
 
 
+class DisplayProxy:
+    def __init__(self, proxy):
+        self.proxy = proxy
 
-class Dac:
-    def __init__(self, index):
-        self.index = index
-        self.f_value_V = 0.0
-        self.f_gain = 1.0
+    def clear(self):
+        self.proxy.eval_as(None, "proxy.display.clear()")
 
-    def get_gain_string(self):
-        for str_gain, f_gain in DICT_GAIN_2_VALUE.items():
-            if math.isclose(f_gain, self.f_gain):
-                return str_gain.replace(CHANGE_BY_HAND, '')
-        return '??? {:5.1f}'.format(self.f_gain)
+    def show(self):
+        self.proxy.eval_as(None, "proxy.display.show()")
+
+    def zeile(self, line:int, text:str):
+        assert isinstance(line, int)
+        assert 0 <= line <= 4
+        assert isinstance(text, str)
+        cmd = f'proxy.display.zeile({line}, "{text}")'
+        self.proxy.eval_as(None, f"proxy.display.zeile({line}, '{text}')")
+
+class OneWireID:
+    def __init__(self, proxy):
+        self.proxy = proxy
+
+    # def set_power(self, on: bool):
+    #     assert isinstance(on, bool)
+    #     cmd = f'proxy.onewireID.set_power({on})'
+    #     self.fe.eval(cmd)
+
+    def scan_ID(self) -> str:
+        # '28E3212E0D00002E'
+        return self.proxy.eval_as(str, 'proxy.onewireID.scan_ID()')
+
+    def read_temp(self, id:str) -> float:
+        assert isinstance(id, str)
+        assert len(id) == 16
+        return self.proxy.eval_as(float, f"proxy.onewireID.read_temp('{id}')")
+
+class MicropythonProxy:
+    def __init__(self, fe):
+        self.fe = fe
+
+        # Start the program
+        self.fe.exec('import micropython_logic')
+        self.fe.exec('proxy = micropython_logic.Proxy()')
+
+        # hw.DS18_PWR
+        # One wire in heater
+
+        # One wire on insert
+        # ow = OneWire(Pin('X4'))
+        # temp_insert = DS18X20(ow)
+
+    def eval_as(self, type_expected, cmd):
+        isinstance(cmd, str)
+        result = self.fe.eval(cmd)
+        isinstance(result, bytes)
+        if type_expected == str:
+            return result.decode("ascii")
+        if type_expected == None:
+            assert result == b"None"
+            return
+        value = eval(result)
+        isinstance(value, type_expected)
+        return value
+
+    def get_defrost(self):
+        str_status = self.fe.eval('proxy.get_defrost()')
+        defrost = eval(str_status)
+        assert isinstance(defrost, bool)
+        return defrost
 
 class HeaterThermometrie2021:
     def __init__(self, board=None, hwserial=''):
@@ -124,7 +181,6 @@ class HeaterThermometrie2021:
         self.ignore_str_dac12 = False
         self.f_write_file_time_s = 0.0
         self.filename_values = DIRECTORY_OF_THIS_FILE / f'Values-{self.heater_thermometrie_2021_serial}.txt'
-        self.list_dacs = list(map(lambda i: Dac(i), range(DACS_COUNT)))
 
         # The time when the dac was set last.
         self.f_last_dac_set_s = 0.0
@@ -138,35 +194,36 @@ class HeaterThermometrie2021:
         self.fe = self.shell.MpFileExplorer
         # Download the source code
         self.shell.sync_folder(DIRECTORY_OF_THIS_FILE / 'src_micropython', FILES_TO_SKIP=['config_identification.py'])
-        # Start the program
-        self.fe.exec('import scanner_pyb_2020')
-        self.fe.exec('scanner = scanner_pyb_2020.ScannerPyb2020()')
+
+        self.proxy = MicropythonProxy(self.fe)
+        self.display = DisplayProxy(self.proxy)
+        self.onewireID = OneWireID(self.proxy)
+        # self.onewireID.set_power(on= True)
+        id = self.onewireID.scan_ID()
+        if id is not None:
+            temp = self.onewireID.read_temp(id=id)
+            print(f"ID vom heater_thermometrie_2021={id} temp={temp}")
 
         # self.fe.exec_('import micropython_logic')
-        self.get_defrost()
+        self.proxy.get_defrost()
 
-        self.display_clear()
-        self.display_zeile(2, "Zeile2")
-        self.display_show()
+        self.display.clear()
+        self.display.zeile(0, 'heater')
+        self.display.zeile(1, ' _thermometrie')
+        self.display.zeile(2, ' _2021')
+        self.display.zeile(3, 'ETH Zuerich')
+        self.display.zeile(4, 'Peter Maerki')
+
+        self.display.show()
+
+        self.onewire.set_power(on=True)
+        ids = self.onewire.scan()
+        print(f"onewire ids {ids}")
+
 
         self.sync_status_get()
 
         self.load_calibration_lookup()
-
-    def display_clear(self):
-        cmd = f'scanner.display.clear()'
-        self.fe.eval(cmd)
-
-    def display_show(self):
-        cmd = f'scanner.display.show()'
-        self.fe.eval(cmd)
-
-    def display_zeile(self, line:int, text:str):
-        assert isinstance(line, int)
-        assert 1 <= line <= 4
-        assert isinstance(text, str)
-        cmd = f'scanner.display.zeile({line}, "{text}")'
-        self.fe.eval(cmd)
 
     def close(self):
         self.save_values_to_file()
@@ -329,12 +386,6 @@ Voltages: physical values in volt; the voltage at the OUT output.\n\n'''.format(
         self.b_pyboard_error = list_pyboard_status[0]
         self.i_pyboard_geophone_dac = list_pyboard_status[1]
         self.f_pyboard_geophone_read_s = time.perf_counter()
-
-    def get_defrost(self):
-        str_status = self.fe.eval('scanner.get_defrost()')
-        defrost = eval(str_status)
-        assert isinstance(defrost, bool)
-        return defrost
 
     def sync_status_get(self):
         '''
