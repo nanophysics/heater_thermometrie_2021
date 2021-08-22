@@ -86,35 +86,47 @@ class DisplayProxy:
         self.proxy = proxy
 
     def clear(self):
-        self.proxy.eval_as(None, "proxy.display.clear()")
+        self.proxy.eval_as_none("proxy.display.clear()")
 
     def show(self):
-        self.proxy.eval_as(None, "proxy.display.show()")
+        self.proxy.eval_as_none("proxy.display.show()")
 
     def zeile(self, line:int, text:str):
         assert isinstance(line, int)
         assert 0 <= line <= 4
         assert isinstance(text, str)
         cmd = f'proxy.display.zeile({line}, "{text}")'
-        self.proxy.eval_as(None, f"proxy.display.zeile({line}, '{text}')")
+        self.proxy.eval_as_none(f"proxy.display.zeile({line}, '{text}')")
 
-class OneWireID:
+class OnewireID:
     def __init__(self, proxy):
         self.proxy = proxy
 
-    # def set_power(self, on: bool):
-    #     assert isinstance(on, bool)
-    #     cmd = f'proxy.onewireID.set_power({on})'
-    #     self.fe.eval(cmd)
-
-    def scan_ID(self) -> str:
+    def scan(self) -> str:
         # '28E3212E0D00002E'
-        return self.proxy.eval_as(str, 'proxy.onewireID.scan_ID()')
+        return self.proxy.eval_as(str, 'proxy.onewire_id.scan()')
 
-    def read_temp(self, id:str) -> float:
-        assert isinstance(id, str)
-        assert len(id) == 16
-        return self.proxy.eval_as(float, f"proxy.onewireID.read_temp('{id}')")
+    def read_temp(self, ident:str) -> float:
+        assert isinstance(ident, str)
+        assert len(ident) == 16
+        return self.proxy.eval_as(float, f"proxy.onewire_id.read_temp('{ident}')")
+
+class OnewireTail:
+    def __init__(self, proxy):
+        self.proxy = proxy
+
+    def set_power(self, on:bool) -> None:
+        isinstance(on, bool)
+        return self.proxy.eval_as_none(f"proxy.onewire_tail.set_power(on={on})")
+
+    def scan(self) -> str:
+        # '28E3212E0D00002E'
+        return self.proxy.eval_as(str, 'proxy.onewire_tail.scan()', accept_none=True)
+
+    def read_temp(self, ident:str) -> float:
+        assert isinstance(ident, str)
+        assert len(ident) == 16
+        return self.proxy.eval_as(float, f"proxy.onewire_tail.read_temp('{ident}')")
 
 class MicropythonProxy:
     def __init__(self, fe):
@@ -131,18 +143,21 @@ class MicropythonProxy:
         # ow = OneWire(Pin('X4'))
         # temp_insert = DS18X20(ow)
 
-    def eval_as(self, type_expected, cmd):
-        isinstance(cmd, str)
+    def eval_as(self, type_expected, cmd, accept_none=False):
+        assert isinstance(cmd, str)
         result = self.fe.eval(cmd)
-        isinstance(result, bytes)
+        assert isinstance(result, bytes)
+        if accept_none:
+            if result == b"None":
+                return None
         if type_expected == str:
             return result.decode("ascii")
-        if type_expected == None:
-            assert result == b"None"
-            return
         value = eval(result)
-        isinstance(value, type_expected)
+        assert isinstance(value, type_expected)
         return value
+
+    def eval_as_none(self, cmd):
+        self.eval_as(type_expected=type(None), cmd=cmd)
 
     def get_defrost(self):
         str_status = self.fe.eval('proxy.get_defrost()')
@@ -197,15 +212,8 @@ class HeaterThermometrie2021:
 
         self.proxy = MicropythonProxy(self.fe)
         self.display = DisplayProxy(self.proxy)
-        self.onewireID = OneWireID(self.proxy)
-        # self.onewireID.set_power(on= True)
-        id = self.onewireID.scan_ID()
-        if id is not None:
-            temp = self.onewireID.read_temp(id=id)
-            print(f"ID vom heater_thermometrie_2021={id} temp={temp}")
-
-        # self.fe.exec_('import micropython_logic')
-        self.proxy.get_defrost()
+        self.onewire_id = OnewireID(self.proxy)
+        self.onewire_tail = OnewireTail(self.proxy)
 
         self.display.clear()
         self.display.zeile(0, 'heater')
@@ -216,10 +224,22 @@ class HeaterThermometrie2021:
 
         self.display.show()
 
-        self.onewire.set_power(on=True)
-        ids = self.onewire.scan()
-        print(f"onewire ids {ids}")
+        ident = self.onewire_id.scan()
+        if ident is not None:
+            temp = self.onewire_id.read_temp(ident=ident)
+            print(f"ID vom heater_thermometrie_2021={ident} temp={temp}")
 
+        self.onewire_tail.set_power(on=True)
+        ident = self.onewire_tail.scan()
+        if ident is not None:
+            temp = self.onewire_tail.read_temp(ident=ident)
+            print(f"ID vom tail={ident} temp={temp}")
+        else:
+            print(f"Onewire of tail did not respond")
+        self.onewire_tail.set_power(on=False)
+
+        # self.fe.exec_('import micropython_logic')
+        self.proxy.get_defrost()
 
         self.sync_status_get()
 
