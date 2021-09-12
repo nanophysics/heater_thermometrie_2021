@@ -1,9 +1,22 @@
-#!/usr/bin/env python
+import sys
+import logging
 
+logger = logging.getLogger('LabberDriver')
+
+
+fh = logging.FileHandler(r'c:\tmp\labber.log')
+fh.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+# add the handlers to the logger
+logger.addHandler(fh)
+
+logger.error("Hello")
+
+# sys.path.append(r"C:\Program Files\Labber\python-labber\multiproc-include\py39")
 import InstrumentDriver
 
-import compact_2012_driver
-
+import heater_thermometrie_2021_driver
 
 class Driver(InstrumentDriver.InstrumentWorker):
     """ This class implements the Compact 2012 driver"""
@@ -12,14 +25,14 @@ class Driver(InstrumentDriver.InstrumentWorker):
         """Perform the operation of opening the instrument connection"""
 
         # open connection
-        self.compact2012 = compact_2012_driver.HeaterThermometrie2021(hwserial=self.comCfg.address)
+        self.ht2021 = heater_thermometrie_2021_driver.HeaterThermometrie2021(hwserial=self.comCfg.address)
 
         # Reset the usb connection (it must not change the applied voltages)
-        self.log("ETH Compact Driver: Connection resetted at startup")
+        self.log("ETH Heater Thermometrie 2021: Connection resetted at startup")
 
     def performClose(self, bError=False, options={}):
         """Perform the close instrument connection operation"""
-        self.compact2012.close()
+        self.ht2021.close()
 
     def performSetValue(self, quant, value, sweepRate=0.0, options={}):
         """Perform the Set Value instrument operation. This function should
@@ -34,7 +47,7 @@ class Driver(InstrumentDriver.InstrumentWorker):
             # },
         if quant.name == "Green LED":
             # set user LED
-            self.compact2012.sync_set_user_led(bool(value))
+            self.ht2021.sync_set_user_led(bool(value))
         elif quant.name.endswith("-voltage"):
             # get index of channel to set
             # Hack...
@@ -61,7 +74,7 @@ class Driver(InstrumentDriver.InstrumentWorker):
         # if final call and voltages have been changed, send them at once
         elif quant.name == "red LED threshold percent FS":
             value = max(0.0, min(100.0, value))
-            self.compact2012.sync_set_geophone_led_threshold_percent_FS(value)
+            self.ht2021.sync_set_geophone_led_threshold_percent_FS(value)
         if self.isFinalCall(options) and len(self.dict_requested_values) > 0:
             self.sync_DACs()
         return value
@@ -69,7 +82,7 @@ class Driver(InstrumentDriver.InstrumentWorker):
     def sync_DACs(self):
         """Set multiple values at once, with support for sweeping"""
         while True:
-            b_done, dict_changed_values = self.compact2012.sync_dac_set_all(self.dict_requested_values)
+            b_done, dict_changed_values = self.ht2021.sync_dac_set_all(self.dict_requested_values)
             # print('dict_changed_values: {}'.format(dict_changed_values))
             for indx0, value in dict_changed_values.items():
                 # update the quantity to keep driver up-to-date
@@ -90,9 +103,9 @@ class Driver(InstrumentDriver.InstrumentWorker):
         """Perform the Get Value instrument operation"""
         # only implmeneted for geophone voltage
         if quant.name == "percent FS":
-            value = self.compact2012.get_geophone_percent_FS()
+            value = self.ht2021.get_geophone_percent_FS()
         elif quant.name == "particle velocity":
-            value = self.compact2012.get_geophone_particle_velocity()
+            value = self.ht2021.get_geophone_particle_velocity()
         elif quant.name == "red LED threshold percent FS":
             value = quant.getValue()
         elif quant.name.endswith("-voltage"):
@@ -103,7 +116,7 @@ class Driver(InstrumentDriver.InstrumentWorker):
             # get value from driver, then return scaled value
             str_gain = self.getValue("DA%d-jumper setting" % (indx0 + 1))
             gain = compact_2012_driver.DICT_GAIN_2_VALUE[str_gain]
-            value = gain * self.compact2012.get_dac(indx0)
+            value = gain * self.ht2021.get_dac(indx0)
         else:
             # just return the quantity value
             value = quant.getValue()

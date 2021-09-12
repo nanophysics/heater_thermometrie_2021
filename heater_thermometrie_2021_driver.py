@@ -1,17 +1,21 @@
-import config_all
-import calib_prepare_lib
 import os
 import sys
 import re
+import enum
 import math
 import time
 import pathlib
 import logging
 
+import config_all
+import calib_prepare_lib
+
 from mp.micropythonshell import FILENAME_IDENTIFICATION
 
 from src_micropython import micropython_portable
 from src_micropython.micropython_portable import Thermometrie
+
+SIMULATE = True
 
 """
     Separation of logic
@@ -57,26 +61,13 @@ if mp.version.FULL < REQUIRED_MPFSHELL_VERSION:
 
 HWTYPE_HEATER_THERMOMETRIE_2021 = "heater_thermometrie_2021"
 
-# ranges and scaling
-DICT_GAIN_2_VALUE = {
-    "+/- 10 V, change by hand": 1.0,
-    "+/- 5 V, change by hand": 0.5,
-    "+/- 2 V, change by hand": 0.2,
-    "+/- 1 V, change by hand": 0.1,
-    "+/- 0.5 V, change by hand": 0.05,
-    "+/- 0.2 V, change by hand": 0.02,
-    "+/- 0.1 V, change by hand": 0.01,
+# class EnumHeating2Value(enum.Enum):
+
+DICT_HEATING_2_VALUE = {
+    "off": 1.0,
+    "manual": 0.02,
+    "controlled": 0.01,
 }
-CHANGE_BY_HAND = ", change by hand"
-
-# datasheet RTC-10hz, 395ohm, at 1000 Ohm RL 19.7 V/(m/s)
-GEOPHONE_VOLTAGE_TO_PARTICLEVELOCITY_FACTOR = 19.7
-# gainINA103 = 1000, dividerR49R51 = 0.33,  VrefMCP3201 = 3.3 therefore VrefMCP3201/gainINA103/dividerR49R51 = 0.01
-F_GEOPHONE_VOLTAGE_FACTOR = 0.01 / 4096.0
-GEOPHONE_MAX_AGE_S = 1.0
-
-# sweep set interval, in seconds
-F_SWEEPINTERVAL_S = 0.03
 
 
 class DisplayProxy:
@@ -284,9 +275,9 @@ class HeaterThermometrie2021:
 
         self.temperature_tail.set_thermometrie(on=True)
         for carbon, label, current_factor in (
-            (True, "carbon", Thermometrie.CURRENT_A_CARBON),
-            (False, "PT1000", Thermometrie.CURRENT_A_PT1000),
-        ):
+                (True, "carbon", Thermometrie.CURRENT_A_CARBON),
+                (False, "PT1000", Thermometrie.CURRENT_A_PT1000),
+            ):
             temperature_V = self.temperature_tail.get_voltage(carbon=carbon)
             print("%s: %f V, %f Ohm" % (label, temperature_V, temperature_V / current_factor))
 
