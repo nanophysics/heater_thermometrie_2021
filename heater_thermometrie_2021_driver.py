@@ -15,8 +15,6 @@ from mp.micropythonshell import FILENAME_IDENTIFICATION
 from src_micropython import micropython_portable
 from src_micropython.micropython_portable import Thermometrie
 
-SIMULATE = True
-
 """
     Separation of logic
         pyboard
@@ -52,22 +50,83 @@ try:
     import mp.micropythonshell
     import mp.pyboard_query
 except ModuleNotFoundError as ex:
-    raise Exception('The module "mpfshell2" is missing. Did you call "pip -r requirements.txt"?')
+    raise Exception(
+        'The module "mpfshell2" is missing. Did you call "pip -r requirements.txt"?'
+    )
 
 REQUIRED_MPFSHELL_VERSION = "100.9.13"
 if mp.version.FULL < REQUIRED_MPFSHELL_VERSION:
-    raise Exception(f'Your "mpfshell" has version "{mp.version.FULL}" but should be higher than "{REQUIRED_MPFSHELL_VERSION}". Call "pip install --upgrade mpfshell2"!')
+    raise Exception(
+        f'Your "mpfshell" has version "{mp.version.FULL}" but should be higher than "{REQUIRED_MPFSHELL_VERSION}". Call "pip install --upgrade mpfshell2"!'
+    )
 
 
 HWTYPE_HEATER_THERMOMETRIE_2021 = "heater_thermometrie_2021"
 
-# class EnumHeating2Value(enum.Enum):
 
-DICT_HEATING_2_VALUE = {
-    "off": 1.0,
-    "manual": 0.02,
-    "controlled": 0.01,
-}
+class EnumBase(enum.Enum):
+    @classmethod
+    def get_value(cls, text):
+        for v in cls:
+            if v.value == text:
+                return v
+        raise AttributeError()
+
+
+class EnumControlHeating(EnumBase):
+    OFF = "off"
+    MANUAL = "manual"
+    CONTROLLED = "controlled"
+
+
+class EnumControlExpert(EnumBase):
+    SIMPLE = "simple"
+    EXPERT = "expert"
+
+class EnumControlThermometrie(EnumBase):
+    ON = "on"
+    OFF = "off"
+
+
+# DICT_HEATING_2_VALUE = {
+#     "off": 1.0,
+#     "manual": 0.02,
+#     "controlled": 0.01,
+# }
+
+
+SIMULATE = True
+
+
+class FeSimulator:
+    def exec(self, cmd: str) -> None:
+        pass
+
+    def eval(self, cmd: str):
+        if cmd.startswith("proxy.display."):
+            return b"None"
+        if cmd == "proxy.onewire_id.scan()":
+            return b"28E3212E0D00002E"
+        if cmd == "proxy.onewire_id.read_temp('28E3212E0D00002E')":
+            return b"42.42"
+        if cmd.startswith("proxy.onewire_tail.set_power("):
+            return b"None"
+        if cmd == "proxy.onewire_tail.scan()":
+            return b"28E3212E0D00002F"
+        if cmd == "proxy.onewire_tail.read_temp('28E3212E0D00002F')":
+            return b"43.43"
+        if cmd == "proxy.get_defrost()":
+            return b"True"
+        if cmd.startswith("proxy.temperature_tail.set_thermometrie(on="):
+            return b"None"
+        if cmd.startswith("proxy.temperature_tail.get_voltage(carbon="):
+            return b"4.711"
+        if cmd.startswith("proxy.heater.set_power(power="):
+            return b"None"
+        assert NotImplementedError()
+
+    def close(self):
+        pass
 
 
 class DisplayProxy:
@@ -126,11 +185,15 @@ class TemperatureTail:
 
     def set_thermometrie(self, on: bool) -> None:
         assert isinstance(on, bool)
-        return self.proxy.eval_as_none(f"proxy.temperature_tail.set_thermometrie(on={on})")
+        return self.proxy.eval_as_none(
+            f"proxy.temperature_tail.set_thermometrie(on={on})"
+        )
 
     def get_voltage(self, carbon=True) -> float:
         assert isinstance(carbon, bool)
-        return self.proxy.eval_as(float, f"proxy.temperature_tail.get_voltage(carbon={carbon})")
+        return self.proxy.eval_as(
+            float, f"proxy.temperature_tail.get_voltage(carbon={carbon})"
+        )
 
     # hw.adc.set_channel(ADS1219.CHANNEL_AIN2_AIN3) # carbon
     # voltage_carbon = hw.adc.read_data_signed() * electronics.ADC24_FACTOR_CARBON
@@ -198,35 +261,19 @@ class MicropythonProxy:
 
 class HeaterThermometrie2021:
     def __init__(self, board=None, hwserial=""):
-        if board is not None:
-            assert hwserial == ""
-            self.board = board
+        if SIMULATE:
+            self.heater_thermometrie_2021_serial = "v42"
+            self.fe = FeSimulator()
         else:
-            assert board is None
-            hwserial = hwserial.strip()
-            if hwserial == "":
-                hwserial = None
-            self.board = mp.pyboard_query.ConnectHwtypeSerial(product=mp.pyboard_query.Product.Pyboard, hwtype=HWTYPE_HEATER_THERMOMETRIE_2021, hwserial=hwserial)
-        assert isinstance(self.board, mp.pyboard_query.Board)
-        self.board.systemexit_hwtype_required(hwtype=HWTYPE_HEATER_THERMOMETRIE_2021)
-        self.board.systemexit_firmware_required(min="1.14.0", max="1.14.0")
-        self.heater_thermometrie_2021_serial = self.board.identification.HWSERIAL
-        try:
-            self.compact_2012_config = config_all.dict_compact2012[self.heater_thermometrie_2021_serial]
-        except KeyError:
-            self.compact_2012_config = config_all.dict_compact2012[config_all.SERIAL_UNDEFINED]
-            print()
-            print(f'WARNING: The connected "compact_2012" has serial "{self.heater_thermometrie_2021_serial}". However, this serial in unknown!')
-            serials_defined = sorted(config_all.dict_compact2012.keys())
-            serials_defined.remove(config_all.SERIAL_UNDEFINED)
-            print(f'INFO: "config_all.py" lists these serials: {",".join(serials_defined)}')
-
-        print(f"INFO: {HWTYPE_HEATER_THERMOMETRIE_2021} connected: {self.compact_2012_config}")
+            self._init_pyboard(board=board, hwserial=hwserial)
 
         self.__calibrationLookup = None
         self.ignore_str_dac12 = False
         self.f_write_file_time_s = 0.0
-        self.filename_values = DIRECTORY_OF_THIS_FILE / f"Values-{self.heater_thermometrie_2021_serial}.txt"
+        self.filename_values = (
+            DIRECTORY_OF_THIS_FILE
+            / f"Values-{self.heater_thermometrie_2021_serial}.txt"
+        )
 
         # The time when the dac was set last.
         self.f_last_dac_set_s = 0.0
@@ -235,11 +282,6 @@ class HeaterThermometrie2021:
         self.b_pyboard_error = False
         self.i_pyboard_geophone_dac = 0
         self.f_pyboard_geophone_read_s = 0
-
-        self.shell = self.board.mpfshell
-        self.fe = self.shell.MpFileExplorer
-        # Download the source code
-        self.shell.sync_folder(DIRECTORY_OF_THIS_FILE / "src_micropython", FILES_TO_SKIP=["config_identification.py"])
 
         self.proxy = MicropythonProxy(self.fe)
         self.display = DisplayProxy(self.proxy)
@@ -275,11 +317,14 @@ class HeaterThermometrie2021:
 
         self.temperature_tail.set_thermometrie(on=True)
         for carbon, label, current_factor in (
-                (True, "carbon", Thermometrie.CURRENT_A_CARBON),
-                (False, "PT1000", Thermometrie.CURRENT_A_PT1000),
-            ):
+            (True, "carbon", Thermometrie.CURRENT_A_CARBON),
+            (False, "PT1000", Thermometrie.CURRENT_A_PT1000),
+        ):
             temperature_V = self.temperature_tail.get_voltage(carbon=carbon)
-            print("%s: %f V, %f Ohm" % (label, temperature_V, temperature_V / current_factor))
+            print(
+                "%s: %f V, %f Ohm"
+                % (label, temperature_V, temperature_V / current_factor)
+            )
 
         self.temperature_tail.set_thermometrie(on=False)
 
@@ -302,17 +347,79 @@ class HeaterThermometrie2021:
 
         self.load_calibration_lookup()
 
+    def _init_pyboard(self, board, hwserial):
+        if board is not None:
+            assert hwserial == ""
+            self.board = board
+        else:
+            assert board is None
+            hwserial = hwserial.strip()
+            if hwserial == "":
+                hwserial = None
+            self.board = mp.pyboard_query.ConnectHwtypeSerial(
+                product=mp.pyboard_query.Product.Pyboard,
+                hwtype=HWTYPE_HEATER_THERMOMETRIE_2021,
+                hwserial=hwserial,
+            )
+        assert isinstance(self.board, mp.pyboard_query.Board)
+        self.board.systemexit_hwtype_required(hwtype=HWTYPE_HEATER_THERMOMETRIE_2021)
+        self.board.systemexit_firmware_required(min="1.14.0", max="1.14.0")
+        self.heater_thermometrie_2021_serial = self.board.identification.HWSERIAL
+        try:
+            self.compact_2012_config = config_all.dict_compact2012[
+                self.heater_thermometrie_2021_serial
+            ]
+        except KeyError:
+            self.compact_2012_config = config_all.dict_compact2012[
+                config_all.SERIAL_UNDEFINED
+            ]
+            print()
+            print(
+                f'WARNING: The connected "compact_2012" has serial "{self.heater_thermometrie_2021_serial}". However, this serial in unknown!'
+            )
+            serials_defined = sorted(config_all.dict_compact2012.keys())
+            serials_defined.remove(config_all.SERIAL_UNDEFINED)
+            print(
+                f'INFO: "config_all.py" lists these serials: {",".join(serials_defined)}'
+            )
+
+        print(
+            f"INFO: {HWTYPE_HEATER_THERMOMETRIE_2021} connected: {self.compact_2012_config}"
+        )
+
+        self.shell = self.board.mpfshell
+        self.fe = self.shell.MpFileExplorer
+        # Download the source code
+        self.shell.sync_folder(
+            DIRECTORY_OF_THIS_FILE / "src_micropython",
+            FILES_TO_SKIP=["config_identification.py"],
+        )
+
     def close(self):
         self.fe.close()
 
     def load_calibration_lookup(self):
         if self.heater_thermometrie_2021_serial is None:
             return
-        calib_correction_data = calib_prepare_lib.CalibCorrectionData(self.heater_thermometrie_2021_serial)
+        calib_correction_data = calib_prepare_lib.CalibCorrectionData(
+            self.heater_thermometrie_2021_serial
+        )
         self.__calibrationLookup = calib_correction_data.load()
 
     def reset_calibration_lookup(self):
         self.__calibrationLookup = None
+
+    def set_control_heating(self, heating: EnumControlHeating):
+        assert isinstance(heating, EnumControlHeating)
+        print(f"set_control_heating({heating})")
+
+    def set_control_expert(self, expert: EnumControlExpert):
+        assert isinstance(expert, EnumControlExpert)
+        print(f"set_control_expert({expert})")
+
+    def set_control_thermometrie(self, thermometrie: EnumControlThermometrie):
+        assert isinstance(thermometrie, EnumControlThermometrie)
+        print(f"set_control_thermometrie({thermometrie})")
 
     def get_dac(self, index):
         """
@@ -400,13 +507,23 @@ class HeaterThermometrie2021:
         The effective set values will be returned. To be used for updateing the display and the log output.
         If b_done == False, the labber driver muss call this method again with the same parameters.
         """
-        b_done, b_need_wait_before_DAC_set, dict_changed_values = self.__calculate_and_set_new_dac(dict_requested_values)
+        (
+            b_done,
+            b_need_wait_before_DAC_set,
+            dict_changed_values,
+        ) = self.__calculate_and_set_new_dac(dict_requested_values)
 
         if b_need_wait_before_DAC_set:
             # We have to make sure, that the last call was not closer than F_SWEEPINTERVAL_S
             OVERHEAD_TIME_SLEEP_S = 0.001
-            time_to_sleep_s = F_SWEEPINTERVAL_S - (time.perf_counter() - self.f_last_dac_set_s) - OVERHEAD_TIME_SLEEP_S
-            if time_to_sleep_s > 0.001:  # It doesn't make sense for the operarting system to stop for less than 1ms
+            time_to_sleep_s = (
+                F_SWEEPINTERVAL_S
+                - (time.perf_counter() - self.f_last_dac_set_s)
+                - OVERHEAD_TIME_SLEEP_S
+            )
+            if (
+                time_to_sleep_s > 0.001
+            ):  # It doesn't make sense for the operarting system to stop for less than 1ms
                 assert time_to_sleep_s <= F_SWEEPINTERVAL_S
                 time.sleep(time_to_sleep_s)
 
@@ -421,11 +538,17 @@ class HeaterThermometrie2021:
         Send to new dac values to the pyboard.
         Return pyboard_status.
         """
-        f_values_plus_min_v = list(map(lambda obj_Dac: obj_Dac.f_value_V, self.list_dacs))
-        str_dac20, str_dac12 = compact_2012_dac.getDAC20DAC12HexStringFromValues(f_values_plus_min_v, calibrationLookup=self.__calibrationLookup)
+        f_values_plus_min_v = list(
+            map(lambda obj_Dac: obj_Dac.f_value_V, self.list_dacs)
+        )
+        str_dac20, str_dac12 = compact_2012_dac.getDAC20DAC12HexStringFromValues(
+            f_values_plus_min_v, calibrationLookup=self.__calibrationLookup
+        )
         if self.ignore_str_dac12:
             str_dac12 = "0" * DACS_COUNT * DAC12_NIBBLES
-        s_py_command = 'micropython_logic.set_dac("{}", "{}")'.format(str_dac20, str_dac12)
+        s_py_command = 'micropython_logic.set_dac("{}", "{}")'.format(
+            str_dac20, str_dac12
+        )
         self.obj_time_span_set_dac.start()
 
         str_status = self.fe.eval(s_py_command)
@@ -459,10 +582,19 @@ class HeaterThermometrie2021:
         assert 0.0 <= threshold_percent_FS <= 100.0
         threshold_dac = threshold_percent_FS * 4096.0 // 100.0
         assert 0.0 <= threshold_dac <= 4096
-        self.fe.eval("micropython_logic.set_geophone_threshold_dac({})".format(threshold_dac))
+        self.fe.eval(
+            "micropython_logic.set_geophone_threshold_dac({})".format(threshold_dac)
+        )
 
     def debug_geophone_print(self):
-        print("geophone:                      dac={:016b}={:04d} [0..4095], voltage={:06f}mV, percent={:04.01f}".format(self.i_pyboard_geophone_dac, self.i_pyboard_geophone_dac, self.__read_geophone_voltage(), self.get_geophone_percent_FS()))
+        print(
+            "geophone:                      dac={:016b}={:04d} [0..4095], voltage={:06f}mV, percent={:04.01f}".format(
+                self.i_pyboard_geophone_dac,
+                self.i_pyboard_geophone_dac,
+                self.__read_geophone_voltage(),
+                self.get_geophone_percent_FS(),
+            )
+        )
 
     def __sync_get_geophone(self):
         f_geophone_age_s = time.perf_counter() - self.f_pyboard_geophone_read_s
@@ -479,7 +611,9 @@ class HeaterThermometrie2021:
         return f_percent_FS
 
     def get_geophone_particle_velocity(self):
-        return self.__read_geophone_voltage() / GEOPHONE_VOLTAGE_TO_PARTICLEVELOCITY_FACTOR
+        return (
+            self.__read_geophone_voltage() / GEOPHONE_VOLTAGE_TO_PARTICLEVELOCITY_FACTOR
+        )
 
     #
     # Logic for 'calib_' only
@@ -491,7 +625,9 @@ class HeaterThermometrie2021:
         self.fe.eval("micropython_logic.calib_raw_init()")
 
     def sync_calib_read_ADC24(self, iDac_index):
-        strADC24 = self.fe.eval("micropython_logic.calib_read_ADC24({})".format(iDac_index))
+        strADC24 = self.fe.eval(
+            "micropython_logic.calib_read_ADC24({})".format(iDac_index)
+        )
         iADC24 = int(strADC24)
 
         fADC24 = convert_ADC24_signed_to_V(iADC24)
@@ -505,9 +641,15 @@ class HeaterThermometrie2021:
         assert iDacEnd < DAC20_MAX
         assert iDacStart < iDacEnd
         assert 0 <= iDac_index < DACS_COUNT
-        self.fe.eval('micropython_logic.calib_raw_measure("{}", {}, {}, {})'.format(filename, iDac_index, iDacStart, iDacEnd))
+        self.fe.eval(
+            'micropython_logic.calib_raw_measure("{}", {}, {}, {})'.format(
+                filename, iDac_index, iDacStart, iDacEnd
+            )
+        )
         pass
 
     def calib_raw_readfile(self, filename):
-        filenameFull = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+        filenameFull = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), filename
+        )
         self.fe.get(filename, filenameFull)

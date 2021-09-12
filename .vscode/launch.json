@@ -33,7 +33,7 @@
       "name": "Python: heater_thermometrie_2021_driver_test.py",
       "type": "python",
       "request": "launch",
-      "justMyCode": false,
+      "justMyCode": true,
       "program": "${workspaceFolder}/heater_thermometrie_2021_driver_test.py",
       "cwd": "${workspaceFolder}",
       "args": [],

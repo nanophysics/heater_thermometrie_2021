@@ -1,6 +1,7 @@
 import sys
 import logging
 
+from heater_thermometrie_2021_driver import EnumControlHeating,EnumControlExpert, EnumControlThermometrie
 logger = logging.getLogger('LabberDriver')
 
 
@@ -45,6 +46,21 @@ class Driver(InstrumentDriver.InstrumentWorker):
             #     'f_DA_OUT_sweep_VperSecond': 5.0,
             #     'f_gain': 0.1
             # },
+        if quant.name == "Heating":
+            # set user LED
+            # print(f"quant.name {quant.name}, value {value}")
+            # print(f"dir(quant) {dir(quant)}")
+            # print(f"quant.getValueString() {quant.getValueString()}")
+            # print(f"self.getValue('Heating') {self.getValue('Heating')}")
+            # print(f"options {options}")
+            self.ht2021.set_control_heating(EnumControlHeating.get_value(value))
+            return value
+        if quant.name == "Expert":
+            self.ht2021.set_control_expert(EnumControlExpert.get_value(value))
+            return value
+        if quant.name == "Thermometrie":
+            self.ht2021.set_control_thermometrie(EnumControlThermometrie.get_value(value))
+            return value
         if quant.name == "Green LED":
             # set user LED
             self.ht2021.sync_set_user_led(bool(value))
@@ -75,6 +91,14 @@ class Driver(InstrumentDriver.InstrumentWorker):
         elif quant.name == "red LED threshold percent FS":
             value = max(0.0, min(100.0, value))
             self.ht2021.sync_set_geophone_led_threshold_percent_FS(value)
+        # if self.isFinalCall(options):
+            # print(f"self.isFinalCall({options}): self.getValue('Heating') {self.getValue('Heating')}")
+            # if options.get('quant', None) == "Heating":
+                # set user LED
+                # print(f"self.getValue('Heating') {options['value']}")
+                # self.ht2021.set_control_heating(text=options['value'])
+            # print(f"self.getValue('Heating') {self.getValue('Heating')}")
+            # self.ht2021.set_control_heating(text=self.getValue('Heating'))
         if self.isFinalCall(options) and len(self.dict_requested_values) > 0:
             self.sync_DACs()
         return value
