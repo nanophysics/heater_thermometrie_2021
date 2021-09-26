@@ -1,6 +1,7 @@
 # pylint: disable=import-error
 
 import time
+# import errno
 import ubinascii
 from machine import Pin, I2C
 
@@ -26,8 +27,8 @@ PIN_DS18_SHORT = "X6"
 PIN_DS18_PWD = "X5"
 PIN_DS18_ID = "X4"
 PIN_D18_TEMP = "Y4"
-PIN_RESET = "X11"
-PIN_DRDY = "X12"
+PIN_ADS1219_RESET = "X11"
+PIN_ADS1219_DRDY = "X12"
 
 
 class OnewireID:
@@ -85,15 +86,23 @@ class TemperatureTail:
 
         # ADC24
         # I2C(scl=Pin('X9'), sda=Pin('X10'), freq=400000)
-        self.reset = Pin(PIN_RESET, Pin.OUT_PP)
+        self.dataready = Pin(PIN_ADS1219_DRDY, Pin.IN)
+        self.reset = Pin(PIN_ADS1219_RESET, Pin.OUT_PP)
         # active low, deshalb auf 1
         self.reset.value(1)
         self.adc = ADS1219(i2c)
-        # self.adc.set_channel(ADS1219.CHANNEL_AIN0_AIN1)
-        self.adc.set_conversion_mode(ADS1219.CM_SINGLE)
-        self.adc.set_vref(ADS1219.VREF_EXTERNAL)
-        self.adc.set_gain(ADS1219.GAIN_1X)  # GAIN_1X, GAIN_4X
-        self.adc.set_data_rate(ADS1219.DR_20_SPS)  # DR_20_SPS -> 50 ms
+        # try:
+        #     self.adc = ADS1219(i2c)
+        # except OSError as ex:
+        #     if ex.args[0] != errno.ETIMEDOUT:
+        #         raise
+        #     self.adc = None
+
+        if self.adc:
+            self.adc.set_conversion_mode(ADS1219.CM_SINGLE)
+            self.adc.set_vref(ADS1219.VREF_EXTERNAL)
+            self.adc.set_gain(ADS1219.GAIN_1X)  # GAIN_1X, GAIN_4X
+            self.adc.set_data_rate(ADS1219.DR_20_SPS)  # DR_20_SPS -> 50 ms
 
         self.set_thermometrie(on=False)
 
@@ -109,9 +118,11 @@ class TemperatureTail:
         if carbon:
             channel = ADS1219.CHANNEL_AIN2_AIN3
             factor = Thermometrie.ADC24_FACTOR_CARBON
-        self.adc.set_channel(channel=channel)
-        voltage = self.adc.read_data_signed() * Thermometrie.ADC24_FACTOR_PT1000
-        return voltage
+        if self.adc:
+            self.adc.set_channel(channel=channel)
+            voltage = self.adc.read_data_signed() * Thermometrie.ADC24_FACTOR_PT1000
+            return voltage
+        return 47.11
 
     # hw.adc.set_channel(ADS1219.CHANNEL_AIN2_AIN3) # carbon
     # voltage_carbon = hw.adc.read_data_signed() * electronics.ADC24_FACTOR_CARBON

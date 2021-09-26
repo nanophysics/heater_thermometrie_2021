@@ -54,6 +54,8 @@ except ModuleNotFoundError as ex:
         'The module "mpfshell2" is missing. Did you call "pip -r requirements.txt"?'
     )
 
+SIMULATE = False
+
 REQUIRED_MPFSHELL_VERSION = "100.9.13"
 if mp.version.FULL < REQUIRED_MPFSHELL_VERSION:
     raise Exception(
@@ -86,16 +88,6 @@ class EnumControlExpert(EnumBase):
 class EnumControlThermometrie(EnumBase):
     ON = "on"
     OFF = "off"
-
-
-# DICT_HEATING_2_VALUE = {
-#     "off": 1.0,
-#     "manual": 0.02,
-#     "controlled": 0.01,
-# }
-
-
-SIMULATE = True
 
 
 class FeSimulator:
@@ -255,7 +247,7 @@ class MicropythonProxy:
     def eval_as_none(self, cmd):
         self.eval_as(type_expected=type(None), cmd=cmd)
 
-    def get_defrost(self):
+    def get_defrost(self) -> bool:
         return self.eval_as(bool, "proxy.get_defrost()")
 
 
@@ -312,8 +304,6 @@ class HeaterThermometrie2021:
         else:
             print(f"Onewire of tail did not respond")
         self.onewire_tail.set_power(on=False)
-
-        defrost = self.proxy.get_defrost()
 
         self.temperature_tail.set_thermometrie(on=True)
         for carbon, label, current_factor in (
@@ -397,6 +387,9 @@ class HeaterThermometrie2021:
 
     def close(self):
         self.fe.close()
+
+    def get_defrost(self) -> bool:
+        return self.proxy.get_defrost()
 
     def load_calibration_lookup(self):
         if self.heater_thermometrie_2021_serial is None:

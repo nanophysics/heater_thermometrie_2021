@@ -11,8 +11,9 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 fh.setFormatter(formatter)
 # add the handlers to the logger
 logger.addHandler(fh)
+logger.setLevel(logging.DEBUG)
 
-logger.error("Hello")
+logger.debug("Hello")
 
 # sys.path.append(r"C:\Program Files\Labber\python-labber\multiproc-include\py39")
 import InstrumentDriver
@@ -39,6 +40,7 @@ class Driver(InstrumentDriver.InstrumentWorker):
         """Perform the Set Value instrument operation. This function should
         return the actual value set by the instrument"""
         # keep track of multiple calls, to set multiple voltages efficiently
+        logger.error(f"performSetValue({quant.name})")
         if self.isFirstCall(options):
             self.dict_requested_values = {}
             # 0: {
@@ -126,6 +128,11 @@ class Driver(InstrumentDriver.InstrumentWorker):
     def performGetValue(self, quant, options={}):
         """Perform the Get Value instrument operation"""
         # only implmeneted for geophone voltage
+        print(f"performGetValue({quant.name})")
+        logger.debug(f"performGetValue: {quant.name}")
+        if quant.name == "Defrost - Switch on box":
+            logger.info(f"performGetValue: {quant.name}")
+            return self.ht2021.get_defrost()
         if quant.name == "percent FS":
             value = self.ht2021.get_geophone_percent_FS()
         elif quant.name == "particle velocity":

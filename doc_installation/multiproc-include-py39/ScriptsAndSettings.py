@@ -152,7 +152,8 @@ def getPreferences():
         except Exception:
             pass
 
-        return prefs_object
+    # 2021-09-17, Hans Märki, Bugix: Dentent by four spaces
+    return prefs_object
 
 
 def reload_preferences():
@@ -317,7 +318,8 @@ def createLogPath(sLogName, dateObj=None, bCreatePath=True, logger_mode=False, b
                 exception = None
                 del exception
 
-        return os.path.join(sPath, sLogName + '.hdf5')
+    # 2021-09-17, Hans Märki, Bugix: Dentent by four spaces
+    return os.path.join(sPath, sLogName + '.hdf5')
 
 
 def get_command_line(**kwds):

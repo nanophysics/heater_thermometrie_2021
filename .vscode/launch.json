@@ -10,19 +10,29 @@
       "request": "launch",
       "module": "pylint",
       "cwd": "${workspaceFolder}",
-      "args": ["--rcfile=${workspaceFolder}/.pylintrc", "--verbose", ".", "src_micropython"],
+      "args": [
+        "--rcfile=${workspaceFolder}/.pylintrc",
+        "--verbose",
+        ".",
+        "src_micropython"
+      ],
       "console": "integratedTerminal"
-  },
-  {
+    },
+    {
       "name": "Black",
       "type": "python",
       "request": "launch",
       "module": "black",
       "cwd": "${workspaceFolder}",
-      "args": ["--config", "${workspaceFolder}/.blackconfig.yaml", "*.py", "src_micropython/*.py"],
+      "args": [
+        "--config",
+        "${workspaceFolder}/.blackconfig.yaml",
+        "*.py",
+        "src_micropython/*.py"
+      ],
       "console": "integratedTerminal"
-  },
-  {
+    },
+    {
       "name": "Python: Current File",
       "type": "python",
       "request": "launch",
@@ -37,24 +47,6 @@
       "program": "${workspaceFolder}/heater_thermometrie_2021_driver_test.py",
       "cwd": "${workspaceFolder}",
       "args": [],
-      "console": "integratedTerminal"
-  },
-  {
-    "name": "Python: run_1_condense.py",
-    "type": "python",
-    "request": "launch",
-    "justMyCode": false,
-    "program": "${workspaceFolder}/compact_measurements/20000101_01-20210322a/HV_OUT_FIL_0V/run_1_condense.py",
-    "cwd": "${workspaceFolder}/compact_measurements/20000101_01-20210322a/HV_OUT_FIL_0V",
-    "args": ["raw-red-CH11"],
-    "console": "integratedTerminal"
-},
-{
-      "name": "Python: set_output.py DA2=1.0 DA3=0.1",
-      "type": "python",
-      "request": "launch",
-      "program": "${workspaceFolder}/set_output.py",
-      "args": ["DA2=1.0", "DA3=0.1"],
       "console": "integratedTerminal"
     }
   ]
