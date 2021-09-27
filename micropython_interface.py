@@ -1,12 +1,6 @@
-import os
-import sys
-import re
-import enum
-import math
 import time
 import pathlib
 import logging
-import threading
 
 import config_all
 import calib_prepare_lib
@@ -55,7 +49,7 @@ except ModuleNotFoundError as ex:
         'The module "mpfshell2" is missing. Did you call "pip -r requirements.txt"?'
     )
 
-SIMULATE = False
+HWSERIAL_SIMULATE = "SIMULATE"
 
 REQUIRED_MPFSHELL_VERSION = "100.9.17"
 if mp.version.FULL < REQUIRED_MPFSHELL_VERSION:
@@ -226,31 +220,26 @@ class MicropythonProxy:
         return self.eval_as(bool, "proxy.get_defrost()")
 
 class MicropythonInterface:
-    def __init__(self, board, hwserial):
-        if SIMULATE:
+    def __init__(self, hwserial):
+        if hwserial == HWSERIAL_SIMULATE:
             self.heater_thermometrie_2021_serial = "v42"
             self.fe = FeSimulator()
         else:
-            self._init_pyboard(board=board, hwserial=hwserial)
+            logger.warn(f"******************* {hwserial}")
+            self._init_pyboard(hwserial=hwserial)
 
     def close(self):
         self.fe.close()
 
-
-    def _init_pyboard(self, board, hwserial):
-        if board is not None:
-            assert hwserial == ""
-            self.board = board
-        else:
-            assert board is None
-            hwserial = hwserial.strip()
-            if hwserial == "":
-                hwserial = None
-            self.board = mp.pyboard_query.ConnectHwtypeSerial(
-                product=mp.pyboard_query.Product.Pyboard,
-                hwtype=HWTYPE_HEATER_THERMOMETRIE_2021,
-                hwserial=hwserial,
-            )
+    def _init_pyboard(self, hwserial=""):
+        hwserial = hwserial.strip()
+        if hwserial == "":
+            hwserial = None
+        self.board = mp.pyboard_query.ConnectHwtypeSerial(
+            product=mp.pyboard_query.Product.Pyboard,
+            hwtype=HWTYPE_HEATER_THERMOMETRIE_2021,
+            hwserial=hwserial,
+        )
         assert isinstance(self.board, mp.pyboard_query.Board)
         self.board.systemexit_hwtype_required(hwtype=HWTYPE_HEATER_THERMOMETRIE_2021)
         self.board.systemexit_firmware_required(min="1.14.0", max="1.14.0")

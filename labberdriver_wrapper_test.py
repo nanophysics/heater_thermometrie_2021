@@ -1,9 +1,12 @@
 import time
-import heater_thermometrie_2021_driver
+import labberdriver_wrapper
+import micropython_interface
 
 
 def doit():
-    driver = heater_thermometrie_2021_driver.HeaterThermometrie2021()
+    hwserial = micropython_interface.HWSERIAL_SIMULATE
+    hwserial = ""
+    driver = labberdriver_wrapper.LabberDriverWrapper(hwserial=hwserial)
     if False:
         driver.sync_set_geophone_led_threshold_percent_FS(10.0)
 

@@ -11,3 +11,4 @@ h5py>=3.4.0
 # http://www.voidspace.org.uk/python/pycrypto-2.6.1/
 # pycrypto>=2.6.1
 pyvisa>=1.11.3
+wrapt>=1.12.1

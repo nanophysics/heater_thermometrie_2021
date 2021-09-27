@@ -40,11 +40,21 @@
       "console": "integratedTerminal"
     },
     {
-      "name": "Python: heater_thermometrie_2021_driver_test.py",
+      "name": "Python: labberdriver_wrapper_test.py",
       "type": "python",
       "request": "launch",
       "justMyCode": true,
-      "program": "${workspaceFolder}/heater_thermometrie_2021_driver_test.py",
+      "program": "${workspaceFolder}/labberdriver_wrapper_test.py",
+      "cwd": "${workspaceFolder}",
+      "args": [],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Python: labberdriver_thread_test.py",
+      "type": "python",
+      "request": "launch",
+      "justMyCode": true,
+      "program": "${workspaceFolder}/labberdriver_thread_test.py",
       "cwd": "${workspaceFolder}",
       "args": [],
       "console": "integratedTerminal"

@@ -10,13 +10,16 @@ import logging
 import config_all
 import calib_prepare_lib
 
-from micropython_interface import MicropythonProxy, SIMULATE, mp, MicropythonInterface
+from micropython_interface import mp, MicropythonInterface
 
 logger = logging.getLogger("heater_thermometrie_2012")
 
 logger.setLevel(logging.DEBUG)
 
 DIRECTORY_OF_THIS_FILE = pathlib.Path(__file__).absolute().parent
+
+class QuantityNotFoundException(Exception):
+    pass
 
 class EnumBase(enum.Enum):
     @classmethod
@@ -42,16 +45,16 @@ class EnumControlThermometrie(EnumBase):
     OFF = "off"
 
 
-class HeaterThermometrie2021:
-    def __init__(self, board=None, hwserial=""):
-        self.board = MicropythonInterface(board, hwserial)
+class LabberDriverWrapper:
+    def __init__(self, hwserial):
+        self.mpi = MicropythonInterface(hwserial)
 
         self.__calibrationLookup = None
         self.ignore_str_dac12 = False
         self.f_write_file_time_s = 0.0
         self.filename_values = (
             DIRECTORY_OF_THIS_FILE
-            / f"Values-{self.board.heater_thermometrie_2021_serial}.txt"
+            / f"Values-{self.mpi.heater_thermometrie_2021_serial}.txt"
         )
 
         # The time when the dac was set last.
@@ -62,7 +65,7 @@ class HeaterThermometrie2021:
         self.i_pyboard_geophone_dac = 0
         self.f_pyboard_geophone_read_s = 0
 
-        self.board.init()
+        self.mpi.init()
 
         return
         self.sync_status_get()
@@ -70,10 +73,7 @@ class HeaterThermometrie2021:
         self.load_calibration_lookup()
 
     def close(self):
-        self.board.close()
-
-    def get_defrost(self) -> bool:
-        return self.board.get_defrost()
+        self.mpi.close()
 
     def load_calibration_lookup(self):
         if self.heater_thermometrie_2021_serial is None:
@@ -86,17 +86,43 @@ class HeaterThermometrie2021:
     def reset_calibration_lookup(self):
         self.__calibrationLookup = None
 
-    def set_control_heating(self, heating: EnumControlHeating):
-        assert isinstance(heating, EnumControlHeating)
-        print(f"set_control_heating({heating})")
+    def set_value(self, name:str, value):
+        if name == "Heating":
+            # set user LED
+            # print(f"quant.name {quant.name}, value {value}")
+            # print(f"dir(quant) {dir(quant)}")
+            # print(f"quant.getValueString() {quant.getValueString()}")
+            # print(f"self.getValue('Heating') {self.getValue('Heating')}")
+            # print(f"options {options}")
+            value_new = EnumControlHeating.get_value(value)
+            print(f"set_control_heating({value_new})")
+            return value_new
+        if name == "Expert":
+            value_new = EnumControlExpert.get_value(value)
+            print(f"set_control_expert({value_new})")
+            return value_new
+        if name == "Thermometrie":
+            value_new = EnumControlThermometrie.get_value(value)
+            print(f"set_control_thermometrie({value_new})")
+            return value_new
+        if name == "Green LED":
+            value_new = bool(value)
+            print(f"set_user_led({value_new})")
+            return value_new
+        if name in ("power", "temperature", "Temperature Box", "temperature tolerance band", "settle time", "timeout time"):
+            return value
+        raise QuantityNotFoundException(name)
 
-    def set_control_expert(self, expert: EnumControlExpert):
-        assert isinstance(expert, EnumControlExpert)
-        print(f"set_control_expert({expert})")
-
-    def set_control_thermometrie(self, thermometrie: EnumControlThermometrie):
-        assert isinstance(thermometrie, EnumControlThermometrie)
-        print(f"set_control_thermometrie({thermometrie})")
+    def get_value(self, name:str):
+        if name == "Serial Number Heater":
+            return self.mpi.heater_thermometrie_2021_serial
+        if name == "Defrost - Switch on box":
+            return self.mpi.get_defrost()
+        if name == "power":
+            return 0.53
+        if name == "Thermometrie":
+            return True
+        raise QuantityNotFoundException(name)
 
     def get_dac(self, index):
         """
