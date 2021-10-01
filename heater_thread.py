@@ -2,7 +2,7 @@ import time
 import logging
 import threading
 
-import labberdriver_wrapper
+import heater_wrapper
 
 logger = logging.getLogger("heater_thermometrie_2012")
 
@@ -15,17 +15,17 @@ def synchronized(func):
             try:
                 return func(*args, **kwargs)
             except:  # pylint: disable=bare-except
-                logger.exception('Exception in method "LabberDriverThread.%s"', func.__name__)
+                logger.exception('Exception in method "HeaterThread.%s"', func.__name__)
                 raise
 
     return wrapper
 
 
-class LabberDriverThread(threading.Thread):
+class HeaterThread(threading.Thread):
     def __init__(self, hwserial: str):
-        logger.info(f"LabberDriverThread(hwserial='{hwserial}')")
+        logger.info(f"HeaterThread(hwserial='{hwserial}')")
         super().__init__(daemon=True)
-        self.ldw = labberdriver_wrapper.LabberDriverWrapper(hwserial=hwserial)
+        self.hw = heater_wrapper.HeaterWrapper(hwserial=hwserial)
         self._stopping = False
         self.start()
 
@@ -43,12 +43,12 @@ class LabberDriverThread(threading.Thread):
 
     @synchronized
     def _tick(self):
-        self.ldw.tick()
+        self.hw.tick()
 
     @synchronized
     def set_value(self, name: str, value):
-        self.ldw.set_value(name=name, value=value)
+        self.hw.set_value(name=name, value=value)
 
     @synchronized
     def get_value(self, name: str):
-        return self.ldw.get_value(name=name)
+        return self.hw.get_value(name=name)

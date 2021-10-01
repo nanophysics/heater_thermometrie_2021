@@ -1,14 +1,14 @@
 import time
 import micropython_proxy
-import labberdriver_thread
+import heater_thread
 
 
 def doit():
     hwserial = ""
     hwserial = micropython_proxy.HWSERIAL_SIMULATE
-    ldt = labberdriver_thread.LabberDriverThread(hwserial=hwserial)
+    ht = heater_thread.HeaterThread(hwserial=hwserial)
     time.sleep(4.0)
-    ldt.stop()
+    ht.stop()
 
 
 if __name__ == "__main__":

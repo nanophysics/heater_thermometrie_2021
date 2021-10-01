@@ -1,33 +1,33 @@
 import time
-import labberdriver_wrapper
+import heater_wrapper
 import micropython_proxy
 
 
 def doit():
     hwserial = micropython_proxy.HWSERIAL_SIMULATE
     hwserial = ""
-    driver = labberdriver_wrapper.LabberDriverWrapper(hwserial=hwserial)
+    ht = heater_wrapper.HeaterWrapper(hwserial=hwserial)
     if False:
-        driver.sync_set_geophone_led_threshold_percent_FS(10.0)
+        ht.sync_set_geophone_led_threshold_percent_FS(10.0)
 
         if False:
             while True:
-                driver.sync_status_get()
-                driver.debug_geophone_print()
+                ht.sync_status_get()
+                ht.debug_geophone_print()
                 time.sleep(0.4)
 
         if False:
             start = time.time()
             COUNT = 200
             for i in range(COUNT):
-                driver.sync_dac_set_all(
+                ht.sync_dac_set_all(
                     {
                         0: {
                             "f_DA_OUT_desired_V": -2.5,
                         }
                     }
                 )
-                driver.sync_dac_set_all(
+                ht.sync_dac_set_all(
                     {
                         0: {
                             "f_DA_OUT_desired_V": 2.5,
@@ -50,10 +50,10 @@ def doit():
                     d[i] = {
                         "f_DA_OUT_desired_V": f,
                     }
-                driver.sync_dac_set_all(d)
+                ht.sync_dac_set_all(d)
 
         for f_DA_OUT_desired_V in (-2.0, 0.0, 2.0):
-            driver.sync_dac_set_all(
+            ht.sync_dac_set_all(
                 {
                     0: {
                         "f_DA_OUT_desired_V": f_DA_OUT_desired_V,
@@ -70,8 +70,8 @@ def doit():
         def set(dict_requested_values):
             start_s = time.perf_counter()
             while True:
-                b_done, dict_changed_values = driver.sync_dac_set_all(dict_requested_values)
-                print("{:3.1f}%, dict_changed_values: {}".format(driver.get_geophone_percent_FS(), dict_changed_values))
+                b_done, dict_changed_values = ht.sync_dac_set_all(dict_requested_values)
+                print("{:3.1f}%, dict_changed_values: {}".format(ht.get_geophone_percent_FS(), dict_changed_values))
                 if b_done:
                     print("done {:3.1f}ms".format(1000.0 * (time.perf_counter() - start_s)))
                     break
@@ -124,7 +124,7 @@ def doit():
             }
         )
 
-    driver.close()
+    ht.close()
 
 
 if __name__ == "__main__":

@@ -59,6 +59,7 @@ class Quantity(EnumMixin, enum.Enum):
     """
     Readable name => value as in 'heater_thermometrie_2021.ini'
     """
+
     Heating = "Heating"
     Expert = "Expert"
     Thermometrie = "Thermometrie"
@@ -74,7 +75,7 @@ class Quantity(EnumMixin, enum.Enum):
     DefrostUserInteraction = "Defrost - User interaction"
 
 
-class LabberDriverWrapper:
+class HeaterWrapper:
     def __init__(self, hwserial):
         self.dict_values = {}
         self.mxy = MicropythonInterface(hwserial)
@@ -82,10 +83,7 @@ class LabberDriverWrapper:
         self.__calibrationLookup = None
         self.ignore_str_dac12 = False
         self.f_write_file_time_s = 0.0
-        self.filename_values = (
-            DIRECTORY_OF_THIS_FILE
-            / f"Values-{self.mxy.heater_thermometrie_2021_serial}.txt"
-        )
+        self.filename_values = DIRECTORY_OF_THIS_FILE / f"Values-{self.mxy.heater_thermometrie_2021_serial}.txt"
 
         # The time when the dac was set last.
         self.f_last_dac_set_s = 0.0
@@ -108,26 +106,19 @@ class LabberDriverWrapper:
     def load_calibration_lookup(self):
         if self.heater_thermometrie_2021_serial is None:
             return
-        calib_correction_data = calib_prepare_lib.CalibCorrectionData(
-            self.heater_thermometrie_2021_serial
-        )
+        calib_correction_data = calib_prepare_lib.CalibCorrectionData(self.heater_thermometrie_2021_serial)
         self.__calibrationLookup = calib_correction_data.load()
 
     def reset_calibration_lookup(self):
         self.__calibrationLookup = None
 
     def tick(self):
-        self.dict_values[
-            Quantity.Temperature
-        ] = self.mxy.temperature_tail.get_voltage(carbon=True)
-        self.dict_values[
-            Quantity.Temperature
-        ] = self.mxy.temperature_tail.get_voltage(carbon=False)
+        self.dict_values[Quantity.Temperature] = self.mxy.temperature_tail.get_voltage(carbon=True)
+        self.dict_values[Quantity.Temperature] = self.mxy.temperature_tail.get_voltage(carbon=False)
         self.dict_values[Quantity.DefrostSwitchOnBox] = self.mxy.get_defrost()
         self.dict_values[Quantity.SerialNumberHeater] = self.mxy.heater_thermometrie_2021_serial
         self.dict_values[Quantity.Power] = 0.53
         self.dict_values[Quantity.Thermometrie] = True
-
 
     def set_value(self, name: str, value):
         quantity = Quantity(name)
@@ -277,14 +268,8 @@ class LabberDriverWrapper:
         if b_need_wait_before_DAC_set:
             # We have to make sure, that the last call was not closer than F_SWEEPINTERVAL_S
             OVERHEAD_TIME_SLEEP_S = 0.001
-            time_to_sleep_s = (
-                F_SWEEPINTERVAL_S
-                - (time.perf_counter() - self.f_last_dac_set_s)
-                - OVERHEAD_TIME_SLEEP_S
-            )
-            if (
-                time_to_sleep_s > 0.001
-            ):  # It doesn't make sense for the operarting system to stop for less than 1ms
+            time_to_sleep_s = F_SWEEPINTERVAL_S - (time.perf_counter() - self.f_last_dac_set_s) - OVERHEAD_TIME_SLEEP_S
+            if time_to_sleep_s > 0.001:  # It doesn't make sense for the operarting system to stop for less than 1ms
                 assert time_to_sleep_s <= F_SWEEPINTERVAL_S
                 time.sleep(time_to_sleep_s)
 
@@ -299,17 +284,11 @@ class LabberDriverWrapper:
         Send to new dac values to the pyboard.
         Return pyboard_status.
         """
-        f_values_plus_min_v = list(
-            map(lambda obj_Dac: obj_Dac.f_value_V, self.list_dacs)
-        )
-        str_dac20, str_dac12 = compact_2012_dac.getDAC20DAC12HexStringFromValues(
-            f_values_plus_min_v, calibrationLookup=self.__calibrationLookup
-        )
+        f_values_plus_min_v = list(map(lambda obj_Dac: obj_Dac.f_value_V, self.list_dacs))
+        str_dac20, str_dac12 = compact_2012_dac.getDAC20DAC12HexStringFromValues(f_values_plus_min_v, calibrationLookup=self.__calibrationLookup)
         if self.ignore_str_dac12:
             str_dac12 = "0" * DACS_COUNT * DAC12_NIBBLES
-        s_py_command = 'micropython_logic.set_dac("{}", "{}")'.format(
-            str_dac20, str_dac12
-        )
+        s_py_command = 'micropython_logic.set_dac("{}", "{}")'.format(str_dac20, str_dac12)
         self.obj_time_span_set_dac.start()
 
         str_status = self.fe.eval(s_py_command)
@@ -343,9 +322,7 @@ class LabberDriverWrapper:
         assert 0.0 <= threshold_percent_FS <= 100.0
         threshold_dac = threshold_percent_FS * 4096.0 // 100.0
         assert 0.0 <= threshold_dac <= 4096
-        self.fe.eval(
-            "micropython_logic.set_geophone_threshold_dac({})".format(threshold_dac)
-        )
+        self.fe.eval("micropython_logic.set_geophone_threshold_dac({})".format(threshold_dac))
 
     def debug_geophone_print(self):
         print(
@@ -372,9 +349,7 @@ class LabberDriverWrapper:
         return f_percent_FS
 
     def get_geophone_particle_velocity(self):
-        return (
-            self.__read_geophone_voltage() / GEOPHONE_VOLTAGE_TO_PARTICLEVELOCITY_FACTOR
-        )
+        return self.__read_geophone_voltage() / GEOPHONE_VOLTAGE_TO_PARTICLEVELOCITY_FACTOR
 
     #
     # Logic for 'calib_' only
@@ -386,9 +361,7 @@ class LabberDriverWrapper:
         self.fe.eval("micropython_logic.calib_raw_init()")
 
     def sync_calib_read_ADC24(self, iDac_index):
-        strADC24 = self.fe.eval(
-            "micropython_logic.calib_read_ADC24({})".format(iDac_index)
-        )
+        strADC24 = self.fe.eval("micropython_logic.calib_read_ADC24({})".format(iDac_index))
         iADC24 = int(strADC24)
 
         fADC24 = convert_ADC24_signed_to_V(iADC24)
@@ -402,15 +375,9 @@ class LabberDriverWrapper:
         assert iDacEnd < DAC20_MAX
         assert iDacStart < iDacEnd
         assert 0 <= iDac_index < DACS_COUNT
-        self.fe.eval(
-            'micropython_logic.calib_raw_measure("{}", {}, {}, {})'.format(
-                filename, iDac_index, iDacStart, iDacEnd
-            )
-        )
+        self.fe.eval('micropython_logic.calib_raw_measure("{}", {}, {}, {})'.format(filename, iDac_index, iDacStart, iDacEnd))
         pass
 
     def calib_raw_readfile(self, filename):
-        filenameFull = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), filename
-        )
+        filenameFull = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
         self.fe.get(filename, filenameFull)

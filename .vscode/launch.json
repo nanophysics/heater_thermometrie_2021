@@ -40,21 +40,21 @@
       "console": "integratedTerminal"
     },
     {
-      "name": "Python: labberdriver_wrapper_test.py",
+      "name": "Python: heater_wrapper_test.py",
       "type": "python",
       "request": "launch",
       "justMyCode": true,
-      "program": "${workspaceFolder}/labberdriver_wrapper_test.py",
+      "program": "${workspaceFolder}/heater_wrapper_test.py",
       "cwd": "${workspaceFolder}",
       "args": [],
       "console": "integratedTerminal"
     },
     {
-      "name": "Python: labberdriver_thread_test.py",
+      "name": "Python: heater_thread_test.py",
       "type": "python",
       "request": "launch",
       "justMyCode": true,
-      "program": "${workspaceFolder}/labberdriver_thread_test.py",
+      "program": "${workspaceFolder}/heater_thread_test.py",
       "cwd": "${workspaceFolder}",
       "args": [],
       "console": "integratedTerminal"

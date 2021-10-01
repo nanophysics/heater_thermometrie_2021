@@ -4,8 +4,8 @@ import logging
 import InstrumentDriver
 
 import micropython_proxy
-import labberdriver_thread
-from labberdriver_wrapper import QuantityNotFoundException
+import heater_thread
+from heater_wrapper import QuantityNotFoundException
 
 logger = logging.getLogger("LabberDriver")
 
@@ -32,14 +32,14 @@ class Driver(InstrumentDriver.InstrumentWorker):
         hwserial = self.comCfg.address
         if self.getModel() == MODEL_SIMULATION:
             hwserial = micropython_proxy.HWSERIAL_SIMULATE
-        self.ldt = labberdriver_thread.LabberDriverThread(hwserial=hwserial)
+        self.ht = heater_thread.HeaterThread(hwserial=hwserial)
 
         # Reset the usb connection (it must not change the applied voltages)
         self.log(f"ETH Heater Thermometrie 2021: Connection resetted at startup. hwserial={hwserial} model={self.getModel()}")
 
     def performClose(self, bError=False, options={}):
         """Perform the close instrument connection operation"""
-        self.ldt.stop()
+        self.ht.stop()
 
     def performSetValue(self, quant, value, sweepRate=0.0, options={}):
         """Perform the Set Value instrument operation. This function should
@@ -56,7 +56,7 @@ class Driver(InstrumentDriver.InstrumentWorker):
         if quant.name in LABBER_INTERNAL_QUANTITIES:
             return value
         try:
-            value = self.ldt.set_value(name=quant.name, value=value)
+            value = self.ht.set_value(name=quant.name, value=value)
             logger.info(f"performSetValue: {quant.name}. Set {value} to driver.")
             return value
         except QuantityNotFoundException as e:
@@ -68,17 +68,17 @@ class Driver(InstrumentDriver.InstrumentWorker):
         #     # print(f"quant.getValueString() {quant.getValueString()}")
         #     # print(f"self.getValue('Heating') {self.getValue('Heating')}")
         #     # print(f"options {options}")
-        #     self.ldt.set_control_heating(EnumControlHeating.get_value(value))
+        #     self.ht.set_control_heating(EnumControlHeating.get_value(value))
         #     return value
         # if quant.name == "Expert":
-        #     self.ldt.set_control_expert(EnumControlExpert.get_value(value))
+        #     self.ht.set_control_expert(EnumControlExpert.get_value(value))
         #     return value
         # if quant.name == "Thermometrie":
-        #     self.ldt.set_control_thermometrie(EnumControlThermometrie.get_value(value))
+        #     self.ht.set_control_thermometrie(EnumControlThermometrie.get_value(value))
         #     return value
         # if quant.name == "Green LED":
         #     # set user LED
-        #     self.ldt.sync_set_user_led(bool(value))
+        #     self.ht.sync_set_user_led(bool(value))
         # elif quant.name.endswith("-voltage"):
         #     # get index of channel to set
         #     # Hack...
@@ -105,15 +105,15 @@ class Driver(InstrumentDriver.InstrumentWorker):
         # # if final call and voltages have been changed, send them at once
         # elif quant.name == "red LED threshold percent FS":
         #     value = max(0.0, min(100.0, value))
-        #     self.ldt.sync_set_geophone_led_threshold_percent_FS(value)
+        #     self.ht.sync_set_geophone_led_threshold_percent_FS(value)
         # # if self.isFinalCall(options):
         #     # print(f"self.isFinalCall({options}): self.getValue('Heating') {self.getValue('Heating')}")
         #     # if options.get('quant', None) == "Heating":
         #         # set user LED
         #         # print(f"self.getValue('Heating') {options['value']}")
-        #         # self.ldt.set_control_heating(text=options['value'])
+        #         # self.ht.set_control_heating(text=options['value'])
         #     # print(f"self.getValue('Heating') {self.getValue('Heating')}")
-        #     # self.ldt.set_control_heating(text=self.getValue('Heating'))
+        #     # self.ht.set_control_heating(text=self.getValue('Heating'))
         # if self.isFinalCall(options) and len(self.dict_requested_values) > 0:
         #     self.sync_DACs()
         return value
@@ -121,7 +121,7 @@ class Driver(InstrumentDriver.InstrumentWorker):
     def sync_DACs(self):
         """Set multiple values at once, with support for sweeping"""
         while True:
-            b_done, dict_changed_values = self.ldt.sync_dac_set_all(self.dict_requested_values)
+            b_done, dict_changed_values = self.ht.sync_dac_set_all(self.dict_requested_values)
             # print('dict_changed_values: {}'.format(dict_changed_values))
             for indx0, value in dict_changed_values.items():
                 # update the quantity to keep driver up-to-date
@@ -146,7 +146,7 @@ class Driver(InstrumentDriver.InstrumentWorker):
         if quant.name in LABBER_INTERNAL_QUANTITIES:
             return quant.getValue()
         try:
-            value = self.ldt.get_value(name=quant.name)
+            value = self.ht.get_value(name=quant.name)
             logger.info(f"performGetValue: '{quant.name}'. Got value '{value}' from driver.")
             return value
         except QuantityNotFoundException as e:
@@ -154,11 +154,11 @@ class Driver(InstrumentDriver.InstrumentWorker):
 
         # if quant.name == "Defrost - Switch on box":
         #     logger.info(f"performGetValue: {quant.name}")
-        #     return self.ldt.get_defrost()
+        #     return self.ht.get_defrost()
         if quant.name == "percent FS":
-            value = self.ldt.get_geophone_percent_FS()
+            value = self.ht.get_geophone_percent_FS()
         elif quant.name == "particle velocity":
-            value = self.ldt.get_geophone_particle_velocity()
+            value = self.ht.get_geophone_particle_velocity()
         elif quant.name == "red LED threshold percent FS":
             value = quant.getValue()
         elif quant.name.endswith("-voltage"):
@@ -169,7 +169,7 @@ class Driver(InstrumentDriver.InstrumentWorker):
             # get value from driver, then return scaled value
             str_gain = self.getValue("DA%d-jumper setting" % (indx0 + 1))
             gain = compact_2012_driver.DICT_GAIN_2_VALUE[str_gain]
-            value = gain * self.ldt.get_dac(indx0)
+            value = gain * self.ht.get_dac(indx0)
         else:
             # just return the quantity value
             value = quant.getValue()
