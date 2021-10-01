@@ -11,6 +11,7 @@ import config_all
 import calib_prepare_lib
 
 from micropython_proxy import mp, MicropythonInterface
+import heater_hsm
 
 logger = logging.getLogger("heater_thermometrie_2012")
 
@@ -79,6 +80,8 @@ class HeaterWrapper:
     def __init__(self, hwserial):
         self.dict_values = {}
         self.mxy = MicropythonInterface(hwserial)
+        self.hsm_heater = heater_hsm.HeaterHsm()
+        self.hsm_defrost = heater_hsm.DefrostHsm()
 
         self.__calibrationLookup = None
         self.ignore_str_dac12 = False
@@ -92,6 +95,20 @@ class HeaterWrapper:
         self.b_pyboard_error = False
         self.i_pyboard_geophone_dac = 0
         self.f_pyboard_geophone_read_s = 0
+
+
+        def init_hsm(hsm, name):
+            def log_main(strLine):
+                logger.debug(f"{name} main: {strLine}")
+
+            def log_sub(strLine):
+                logger.debug(f"{name} sub: {strLine}")
+
+            hsm.setLogger(log_main, log_sub)
+            hsm.reset()
+
+        init_hsm(self.hsm_heater, "heater_hsm")
+        init_hsm(self.hsm_defrost, "defrost_hsm")
 
         self.mxy.init()
 
@@ -113,6 +130,8 @@ class HeaterWrapper:
         self.__calibrationLookup = None
 
     def tick(self):
+        self.hsm_defrost.dispatch(heater_hsm.SIGNAL_TICK)
+        self.hsm_heater.dispatch(heater_hsm.SIGNAL_TICK)
         self.dict_values[Quantity.Temperature] = self.mxy.temperature_tail.get_voltage(carbon=True)
         self.dict_values[Quantity.Temperature] = self.mxy.temperature_tail.get_voltage(carbon=False)
         self.dict_values[Quantity.DefrostSwitchOnBox] = self.mxy.get_defrost()
