@@ -1,3 +1,4 @@
+import pathlib
 import hsm
 
 
@@ -96,61 +97,68 @@ def analyse():
     sm.setLogger(funcLogMain, funcLogSub)
     sm.reset()
 
-    def testEntryExit(sm, a, b, c, d, e):
+    def test_entry_exit(sm, a, b, c, d, e):
         pass
 
-    def testTransition(sm, objSignal, expectState):
+    def test_transition(sm, objSignal, expectState):
         sm.dispatch(objSignal)
         expectStateName = expectState.__name__[len("state_") :]
         assert expectStateName == sm.private_strStateActual
 
     # TRIPTEST_ASSERT(hsm_Statemachine.state == sm.state_011)
-    testEntryExit(sm, 1, 0, 1, 0, 1)
+    test_entry_exit(sm, 1, 0, 1, 0, 1)
 
-    testTransition(sm, "G", sm.state_0_2_1_1)
-    testEntryExit(sm, 0, 0, 0, 1, 0)
+    test_transition(sm, "G", sm.state_0_2_1_1)
+    test_entry_exit(sm, 0, 0, 0, 1, 0)
 
-    testTransition(sm, "F", sm.state_0_1_1)
-    testEntryExit(sm, 0, 0, 1, 0, 1)
+    test_transition(sm, "F", sm.state_0_1_1)
+    test_entry_exit(sm, 0, 0, 1, 0, 1)
 
-    testTransition(sm, "E", sm.state_0_2_1_1)
-    testEntryExit(sm, 0, 0, 0, 1, 0)
+    test_transition(sm, "E", sm.state_0_2_1_1)
+    test_entry_exit(sm, 0, 0, 0, 1, 0)
 
-    testTransition(sm, "C", sm.state_0_2_2)
-    testEntryExit(sm, 0, 0, 0, 0, 0)
+    test_transition(sm, "C", sm.state_0_2_2)
+    test_entry_exit(sm, 0, 0, 0, 0, 0)
 
-    testTransition(sm, "B", sm.state_0_2_2)
-    testEntryExit(sm, 0, 0, 0, 0, 0)
+    test_transition(sm, "B", sm.state_0_2_2)
+    test_entry_exit(sm, 0, 0, 0, 0, 0)
 
-    testTransition(sm, "E", sm.state_0_2_1_1)
-    testEntryExit(sm, 1, 1, 0, 0, 0)
+    test_transition(sm, "E", sm.state_0_2_1_1)
+    test_entry_exit(sm, 1, 1, 0, 0, 0)
 
-    testTransition(sm, "D", sm.state_0_2_1)
-    testEntryExit(sm, 0, 0, 0, 0, 0)
+    test_transition(sm, "D", sm.state_0_2_1)
+    test_entry_exit(sm, 0, 0, 0, 0, 0)
 
-    testTransition(sm, "C", sm.state_0_1_1)
-    testEntryExit(sm, 0, 0, 1, 0, 1)
+    test_transition(sm, "C", sm.state_0_1_1)
+    test_entry_exit(sm, 0, 0, 1, 0, 1)
 
-    testTransition(sm, "A", sm.state_0_1_1)
-    testEntryExit(sm, 0, 0, 1, 1, 1)
+    test_transition(sm, "A", sm.state_0_1_1)
+    test_entry_exit(sm, 0, 0, 1, 1, 1)
 
-    testTransition(sm, "I", sm.state_0_1_1)
-    testEntryExit(sm, 1, 1, 1, 1, 1)
+    test_transition(sm, "I", sm.state_0_1_1)
+    test_entry_exit(sm, 1, 1, 1, 1, 1)
 
-    testTransition(sm, "G", sm.state_0_2_1_1)
-    testEntryExit(sm, 0, 0, 0, 1, 0)
+    test_transition(sm, "G", sm.state_0_2_1_1)
+    test_entry_exit(sm, 0, 0, 0, 1, 0)
 
-    testTransition(sm, "I", sm.state_0_1_1)
-    testEntryExit(sm, 1, 1, 1, 0, 1)
+    test_transition(sm, "I", sm.state_0_1_1)
+    test_entry_exit(sm, 1, 1, 1, 0, 1)
 
-    testTransition(sm, "J", sm.state_0_1_1)
-    testEntryExit(sm, 0, 0, 0, 0, 0)
+    test_transition(sm, "J", sm.state_0_1_1)
+    test_entry_exit(sm, 0, 0, 0, 0, 0)
 
     print("\nIf you got here, the statemachine seems to work ok!\n\n")
 
-    print(sm.doc())
-    open("test_hsm_out.html", "w").write(sm.doc())
+    # print(sm.doc)
+    pathlib.Path("test_hsm_out.html").write_text(sm.doc)
 
+def run_doctest():
+    import doctest, hsm
+
+    rc = doctest.testmod(hsm)
+    if rc.failed > 0:
+        raise Exception(rc)
 
 if __name__ == "__main__":
+    run_doctest()
     analyse()

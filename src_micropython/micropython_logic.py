@@ -1,4 +1,5 @@
 # pylint: disable=import-error
+# pylint: disable=consider-using-f-string
 
 import time
 

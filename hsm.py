@@ -96,13 +96,9 @@ class Statemachine:
 
     def get_method_list(self, strType):
         results = []
-        for strKey in dir(self):
-            objValue = getattr(self, strKey)
-            if inspect.ismethod(objValue):
-                # if objValue.__name__.find(strType) == 0:
-                if strKey.startswith(strType):
-                    # results.append(objValue.__name__[len(strType):])
-                    results.append(strKey[len(strType) :])
+        for name, value in inspect.getmembers(self, predicate=inspect.ismethod):
+            if name.startswith(strType):
+                results.append(name[len(strType) :])
         results.sort()
         return results
 
@@ -296,6 +292,7 @@ class Statemachine:
             f.write(strStateEnd)
         return f.getvalue()
 
+    @property
     def doc(self):
         """
         Return a HTML-Page which describes the HSM

@@ -90,8 +90,8 @@ def analyse():
     defrost.reset()
 
     with pathlib.Path("thermometrie_hsm_out.html").open("w") as f:
-        f.write(defrost.doc())
-        f.write(header.doc())
+        f.write(defrost.doc)
+        f.write(header.doc)
 
 
 if __name__ == "__main__":
