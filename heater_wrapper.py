@@ -1,6 +1,4 @@
 import os
-import sys
-import re
 import enum
 import math
 import time
@@ -10,7 +8,7 @@ import logging
 import config_all
 import calib_prepare_lib
 
-from micropython_proxy import mp, MicropythonInterface
+from micropython_proxy import MicropythonInterface
 import heater_hsm
 
 logger = logging.getLogger("heater_thermometrie_2012")
@@ -95,7 +93,6 @@ class HeaterWrapper:
         self.b_pyboard_error = False
         self.i_pyboard_geophone_dac = 0
         self.f_pyboard_geophone_read_s = 0
-
 
         def init_hsm(hsm, name):
             def log_main(strLine):

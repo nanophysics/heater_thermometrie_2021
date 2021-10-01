@@ -2,10 +2,14 @@ import pathlib
 
 import hsm
 
+
 class SignalTick:
     pass
 
+
 SIGNAL_TICK = SignalTick()
+
+
 class DefrostHsm(hsm.Statemachine):
     """
     This is a sample Statemachine as in figure 6.2 on page 170
@@ -75,23 +79,23 @@ class HeaterHsm(hsm.Statemachine):
 
 
 def analyse():
-    def funcLogMain(strLine):
+    def func_log_main(strLine):
         print("Main: " + strLine)
 
-    def funcLogSub(strLine):
+    def func_log_sub(strLine):
         print("Sub:  " + strLine)
 
     header = heater_hsm()
-    header.setLogger(funcLogMain, funcLogSub)
+    header.setLogger(func_log_main, func_log_sub)
     header.reset()
 
     defrost = defrost_hsm()
-    defrost.setLogger(funcLogMain, funcLogSub)
+    defrost.setLogger(func_log_main, func_log_sub)
     defrost.reset()
 
     with pathlib.Path("thermometrie_hsm_out.html").open("w") as f:
-        f.write(defrost.doc)
-        f.write(header.doc)
+        f.write(defrost.doc())
+        f.write(header.doc())
 
 
 if __name__ == "__main__":

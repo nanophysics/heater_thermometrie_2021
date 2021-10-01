@@ -13,8 +13,8 @@
       "args": [
         "--rcfile=${workspaceFolder}/.pylintrc",
         "--verbose",
-        ".",
-        "src_micropython"
+        "src_micropython",
+        "*.py"
       ],
       "console": "integratedTerminal"
     },
@@ -55,6 +55,26 @@
       "request": "launch",
       "justMyCode": true,
       "program": "${workspaceFolder}/heater_thread_test.py",
+      "cwd": "${workspaceFolder}",
+      "args": [],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Python: hsm_test.py",
+      "type": "python",
+      "request": "launch",
+      "justMyCode": true,
+      "program": "${workspaceFolder}/hsm_test.py",
+      "cwd": "${workspaceFolder}",
+      "args": [],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Python: hsm.py (doctest)",
+      "type": "python",
+      "request": "launch",
+      "justMyCode": true,
+      "program": "${workspaceFolder}/hsm.py",
       "cwd": "${workspaceFolder}",
       "args": [],
       "console": "integratedTerminal"
