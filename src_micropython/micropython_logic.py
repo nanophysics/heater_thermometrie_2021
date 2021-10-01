@@ -1,6 +1,7 @@
 # pylint: disable=import-error
 
 import time
+
 # import errno
 import ubinascii
 from machine import Pin, I2C

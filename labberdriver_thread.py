@@ -1,5 +1,4 @@
 import time
-import wrapt
 import logging
 import threading
 
@@ -9,21 +8,18 @@ logger = logging.getLogger("heater_thermometrie_2012")
 
 LOCK = threading.Lock()
 
-def synchronized(lock):
-    # See: https://wrapt.readthedocs.io/en/latest/examples.html
-    # Alternative implementation: https://de.slideshare.net/GrahamDumpleton/implementing-a-decorator-for-thread-synchronisation
-    @wrapt.decorator
-    def _wrapper(wrapped, _instance, args, kwargs):
-        with lock:
+
+def synchronized(func):
+    def wrapper(*args, **kwargs):
+        with LOCK:
             try:
-                return wrapped(*args, **kwargs)
+                return func(*args, **kwargs)
             except:  # pylint: disable=bare-except
-                logger.exception(
-                    'Exception in method "FlaskEnvironmentWrapper.%s"', wrapped.__name__
-                )
+                logger.exception('Exception in method "LabberDriverThread.%s"', func.__name__)
                 raise
 
-    return _wrapper
+    return wrapper
+
 
 class LabberDriverThread(threading.Thread):
     def __init__(self, hwserial: str):
@@ -45,14 +41,14 @@ class LabberDriverThread(threading.Thread):
         self._stopping = True
         self.join(timeout=10.0)
 
-    @synchronized(LOCK)
+    @synchronized
     def _tick(self):
-        print("Tick")
+        self.ldw.tick()
 
-    @synchronized(LOCK)
-    def set_value(self, name:str, value):
+    @synchronized
+    def set_value(self, name: str, value):
         self.ldw.set_value(name=name, value=value)
 
-    @synchronized(LOCK)
-    def get_value(self, name:str):
+    @synchronized
+    def get_value(self, name: str):
         return self.ldw.get_value(name=name)

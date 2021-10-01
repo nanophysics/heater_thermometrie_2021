@@ -3,16 +3,16 @@ import logging
 
 import InstrumentDriver
 
-import micropython_interface
+import micropython_proxy
 import labberdriver_thread
 from labberdriver_wrapper import QuantityNotFoundException
 
-logger = logging.getLogger('LabberDriver')
+logger = logging.getLogger("LabberDriver")
 
 
-fh = logging.FileHandler(r'c:\tmp\labber.log')
+fh = logging.FileHandler(r"c:\tmp\labber.log")
 fh.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 fh.setFormatter(formatter)
 # add the handlers to the logger
 logger.addHandler(fh)
@@ -21,8 +21,9 @@ logger.setLevel(logging.DEBUG)
 LABBER_INTERNAL_QUANTITIES = ("Expert",)
 MODEL_SIMULATION = "Simulation"
 
+
 class Driver(InstrumentDriver.InstrumentWorker):
-    """ This class implements the Compact 2012 driver"""
+    """This class implements the Compact 2012 driver"""
 
     def performOpen(self, options={}):
         """Perform the operation of opening the instrument connection"""
@@ -30,12 +31,11 @@ class Driver(InstrumentDriver.InstrumentWorker):
         # open connection
         hwserial = self.comCfg.address
         if self.getModel() == MODEL_SIMULATION:
-            hwserial = micropython_interface.HWSERIAL_SIMULATE
+            hwserial = micropython_proxy.HWSERIAL_SIMULATE
         self.ldt = labberdriver_thread.LabberDriverThread(hwserial=hwserial)
 
         # Reset the usb connection (it must not change the applied voltages)
         self.log(f"ETH Heater Thermometrie 2021: Connection resetted at startup. hwserial={hwserial} model={self.getModel()}")
-
 
     def performClose(self, bError=False, options={}):
         """Perform the close instrument connection operation"""
@@ -147,7 +147,7 @@ class Driver(InstrumentDriver.InstrumentWorker):
             return quant.getValue()
         try:
             value = self.ldt.get_value(name=quant.name)
-            logger.info(f"performGetValue: {quant.name}. Got value {value} from driver.")
+            logger.info(f"performGetValue: '{quant.name}'. Got value '{value}' from driver.")
             return value
         except QuantityNotFoundException as e:
             raise

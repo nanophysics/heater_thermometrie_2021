@@ -45,19 +45,16 @@ try:
     import mp.micropythonshell
     import mp.pyboard_query
 except ModuleNotFoundError as ex:
-    raise Exception(
-        'The module "mpfshell2" is missing. Did you call "pip -r requirements.txt"?'
-    )
+    raise Exception('The module "mpfshell2" is missing. Did you call "pip -r requirements.txt"?')
 
 HWSERIAL_SIMULATE = "SIMULATE"
 
 REQUIRED_MPFSHELL_VERSION = "100.9.17"
 if mp.version.FULL < REQUIRED_MPFSHELL_VERSION:
-    raise Exception(
-        f'Your "mpfshell" has version "{mp.version.FULL}" but should be higher than "{REQUIRED_MPFSHELL_VERSION}". Call "pip install --upgrade mpfshell2"!'
-    )
+    raise Exception(f'Your "mpfshell" has version "{mp.version.FULL}" but should be higher than "{REQUIRED_MPFSHELL_VERSION}". Call "pip install --upgrade mpfshell2"!')
 
 HWTYPE_HEATER_THERMOMETRIE_2021 = "heater_thermometrie_2021"
+
 
 class FeSimulator:
     def exec(self, cmd: str) -> None:
@@ -146,15 +143,11 @@ class TemperatureTail:
 
     def set_thermometrie(self, on: bool) -> None:
         assert isinstance(on, bool)
-        return self.proxy.eval_as_none(
-            f"proxy.temperature_tail.set_thermometrie(on={on})"
-        )
+        return self.proxy.eval_as_none(f"proxy.temperature_tail.set_thermometrie(on={on})")
 
     def get_voltage(self, carbon=True) -> float:
         assert isinstance(carbon, bool)
-        return self.proxy.eval_as(
-            float, f"proxy.temperature_tail.get_voltage(carbon={carbon})"
-        )
+        return self.proxy.eval_as(float, f"proxy.temperature_tail.get_voltage(carbon={carbon})")
 
     # hw.adc.set_channel(ADS1219.CHANNEL_AIN2_AIN3) # carbon
     # voltage_carbon = hw.adc.read_data_signed() * electronics.ADC24_FACTOR_CARBON
@@ -219,6 +212,7 @@ class MicropythonProxy:
     def get_defrost(self) -> bool:
         return self.eval_as(bool, "proxy.get_defrost()")
 
+
 class MicropythonInterface:
     def __init__(self, hwserial):
         if hwserial == HWSERIAL_SIMULATE:
@@ -245,26 +239,16 @@ class MicropythonInterface:
         self.board.systemexit_firmware_required(min="1.14.0", max="1.14.0")
         self.heater_thermometrie_2021_serial = self.board.identification.HWSERIAL
         try:
-            self.compact_2012_config = config_all.dict_compact2012[
-                self.heater_thermometrie_2021_serial
-            ]
+            self.compact_2012_config = config_all.dict_compact2012[self.heater_thermometrie_2021_serial]
         except KeyError:
-            self.compact_2012_config = config_all.dict_compact2012[
-                config_all.SERIAL_UNDEFINED
-            ]
+            self.compact_2012_config = config_all.dict_compact2012[config_all.SERIAL_UNDEFINED]
             print()
-            print(
-                f'WARNING: The connected "compact_2012" has serial "{self.heater_thermometrie_2021_serial}". However, this serial in unknown!'
-            )
+            print(f'WARNING: The connected "compact_2012" has serial "{self.heater_thermometrie_2021_serial}". However, this serial in unknown!')
             serials_defined = sorted(config_all.dict_compact2012.keys())
             serials_defined.remove(config_all.SERIAL_UNDEFINED)
-            print(
-                f'INFO: "config_all.py" lists these serials: {",".join(serials_defined)}'
-            )
+            print(f'INFO: "config_all.py" lists these serials: {",".join(serials_defined)}')
 
-        print(
-            f"INFO: {HWTYPE_HEATER_THERMOMETRIE_2021} connected: {self.compact_2012_config}"
-        )
+        print(f"INFO: {HWTYPE_HEATER_THERMOMETRIE_2021} connected: {self.compact_2012_config}")
 
         self.shell = self.board.mpfshell
         self.fe = self.shell.MpFileExplorer
@@ -275,7 +259,6 @@ class MicropythonInterface:
         )
 
     def init(self):
-
         self.proxy = MicropythonProxy(self.fe)
         self.display = DisplayProxy(self.proxy)
         self.onewire_id = OnewireID(self.proxy)
@@ -312,10 +295,7 @@ class MicropythonInterface:
             (False, "PT1000", Thermometrie.CURRENT_A_PT1000),
         ):
             temperature_V = self.temperature_tail.get_voltage(carbon=carbon)
-            print(
-                "%s: %f V, %f Ohm"
-                % (label, temperature_V, temperature_V / current_factor)
-            )
+            print("%s: %f V, %f Ohm" % (label, temperature_V, temperature_V / current_factor))
 
         self.temperature_tail.set_thermometrie(on=False)
 

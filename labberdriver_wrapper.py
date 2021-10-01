@@ -10,7 +10,7 @@ import logging
 import config_all
 import calib_prepare_lib
 
-from micropython_interface import mp, MicropythonInterface
+from micropython_proxy import mp, MicropythonInterface
 
 logger = logging.getLogger("heater_thermometrie_2012")
 
@@ -18,43 +18,73 @@ logger.setLevel(logging.DEBUG)
 
 DIRECTORY_OF_THIS_FILE = pathlib.Path(__file__).absolute().parent
 
+
 class QuantityNotFoundException(Exception):
     pass
 
-class EnumBase(enum.Enum):
+
+class EnumMixin:
     @classmethod
-    def get_value(cls, text):
-        for v in cls:
-            if v.value == text:
-                return v
-        raise AttributeError()
+    def all_text(cls):
+        return ", ".join(sorted([f'"{d.name}"' for d in cls]))
+
+    @classmethod
+    def get_exception(cls, configuration: str, value: str):
+        assert isinstance(configuration, str)
+        assert isinstance(value, str)
+        err = f'{configuration}: Unkown "{value}". Expect one of {cls.all_text()}!'
+        try:
+            return cls[value]
+        except KeyError as e:
+            raise Exception(err) from e
 
 
-class EnumControlHeating(EnumBase):
+class EnumControlHeating(EnumMixin, enum.Enum):
     OFF = "off"
     MANUAL = "manual"
     CONTROLLED = "controlled"
 
 
-class EnumControlExpert(EnumBase):
+class EnumControlExpert(EnumMixin, enum.Enum):
     SIMPLE = "simple"
     EXPERT = "expert"
 
-class EnumControlThermometrie(EnumBase):
+
+class EnumControlThermometrie(EnumMixin, enum.Enum):
     ON = "on"
     OFF = "off"
 
 
+class Quantity(EnumMixin, enum.Enum):
+    """
+    Readable name => value as in 'heater_thermometrie_2021.ini'
+    """
+    Heating = "Heating"
+    Expert = "Expert"
+    Thermometrie = "Thermometrie"
+    GreenLED = "Green LED"
+    Power = "power"
+    Temperature = "temperature"
+    TemperatureBox = "Temperature Box"
+    TemperatureToleranceBand = "temperature tolerance band"
+    SettleTime = "settle time"
+    TimeoutTime = "timeout time"
+    SerialNumberHeater = "Serial Number Heater"
+    DefrostSwitchOnBox = "Defrost - Switch on box"
+    DefrostUserInteraction = "Defrost - User interaction"
+
+
 class LabberDriverWrapper:
     def __init__(self, hwserial):
-        self.mpi = MicropythonInterface(hwserial)
+        self.dict_values = {}
+        self.mxy = MicropythonInterface(hwserial)
 
         self.__calibrationLookup = None
         self.ignore_str_dac12 = False
         self.f_write_file_time_s = 0.0
         self.filename_values = (
             DIRECTORY_OF_THIS_FILE
-            / f"Values-{self.mpi.heater_thermometrie_2021_serial}.txt"
+            / f"Values-{self.mxy.heater_thermometrie_2021_serial}.txt"
         )
 
         # The time when the dac was set last.
@@ -65,7 +95,7 @@ class LabberDriverWrapper:
         self.i_pyboard_geophone_dac = 0
         self.f_pyboard_geophone_read_s = 0
 
-        self.mpi.init()
+        self.mxy.init()
 
         return
         self.sync_status_get()
@@ -73,7 +103,7 @@ class LabberDriverWrapper:
         self.load_calibration_lookup()
 
     def close(self):
-        self.mpi.close()
+        self.mxy.close()
 
     def load_calibration_lookup(self):
         if self.heater_thermometrie_2021_serial is None:
@@ -86,43 +116,71 @@ class LabberDriverWrapper:
     def reset_calibration_lookup(self):
         self.__calibrationLookup = None
 
-    def set_value(self, name:str, value):
-        if name == "Heating":
-            # set user LED
-            # print(f"quant.name {quant.name}, value {value}")
-            # print(f"dir(quant) {dir(quant)}")
-            # print(f"quant.getValueString() {quant.getValueString()}")
-            # print(f"self.getValue('Heating') {self.getValue('Heating')}")
-            # print(f"options {options}")
-            value_new = EnumControlHeating.get_value(value)
-            print(f"set_control_heating({value_new})")
-            return value_new
-        if name == "Expert":
-            value_new = EnumControlExpert.get_value(value)
-            print(f"set_control_expert({value_new})")
-            return value_new
-        if name == "Thermometrie":
-            value_new = EnumControlThermometrie.get_value(value)
-            print(f"set_control_thermometrie({value_new})")
-            return value_new
-        if name == "Green LED":
+    def tick(self):
+        self.dict_values[
+            Quantity.Temperature
+        ] = self.mxy.temperature_tail.get_voltage(carbon=True)
+        self.dict_values[
+            Quantity.Temperature
+        ] = self.mxy.temperature_tail.get_voltage(carbon=False)
+        self.dict_values[Quantity.DefrostSwitchOnBox] = self.mxy.get_defrost()
+        self.dict_values[Quantity.SerialNumberHeater] = self.mxy.heater_thermometrie_2021_serial
+        self.dict_values[Quantity.Power] = 0.53
+        self.dict_values[Quantity.Thermometrie] = True
+
+
+    def set_value(self, name: str, value):
+        quantity = Quantity(name)
+        # comboboxes = {
+        #     Quantity.Heating: EnumControlHeating,
+        #     Quantity.Expert: EnumControlExpert,
+        #     Quantity.Thermometrie: EnumControlThermometrie,
+        #     Quantity.GreenLED: bool,
+        # }
+        # try:
+        #     combobox_class = comboboxes[quantity]
+        # except KeyError:
+        #     pass
+        # else:
+        #     value_enum = combobox_class(value)
+        #     print(f"set_control_heating({value_new})")
+        #     self.dict_values[quantity] = value_enum
+        #     return value
+
+        if quantity == Quantity.Heating:
+            value_new = EnumControlHeating(value)
+            self.dict_values[quantity] = value_new
+            return value
+        if quantity == Quantity.Expert:
+            value_new = EnumControlExpert(value)
+            self.dict_values[quantity] = value_new
+            return value
+        if quantity == Quantity.Thermometrie:
+            value_new = EnumControlThermometrie(value)
+            self.dict_values[quantity] = value_new
+            return value
+        if quantity == Quantity.GreenLED:
             value_new = bool(value)
-            print(f"set_user_led({value_new})")
-            return value_new
-        if name in ("power", "temperature", "Temperature Box", "temperature tolerance band", "settle time", "timeout time"):
+            self.dict_values[quantity] = value_new
+            return value
+        if quantity in (
+            Quantity.Power,
+            Quantity.Temperature,
+            Quantity.TemperatureBox,
+            Quantity.TemperatureToleranceBand,
+            Quantity.SettleTime,
+            Quantity.TimeoutTime,
+        ):
+            self.dict_values[quantity] = value
             return value
         raise QuantityNotFoundException(name)
 
-    def get_value(self, name:str):
-        if name == "Serial Number Heater":
-            return self.mpi.heater_thermometrie_2021_serial
-        if name == "Defrost - Switch on box":
-            return self.mpi.get_defrost()
-        if name == "power":
-            return 0.53
-        if name == "Thermometrie":
-            return True
-        raise QuantityNotFoundException(name)
+    def get_value(self, name: str):
+        quantity = Quantity(name)
+        try:
+            return self.dict_values.get(quantity, None)
+        except KeyboardInterrupt:
+            raise QuantityNotFoundException(name)
 
     def get_dac(self, index):
         """

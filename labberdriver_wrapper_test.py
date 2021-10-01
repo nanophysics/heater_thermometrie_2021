@@ -1,10 +1,10 @@
 import time
 import labberdriver_wrapper
-import micropython_interface
+import micropython_proxy
 
 
 def doit():
-    hwserial = micropython_interface.HWSERIAL_SIMULATE
+    hwserial = micropython_proxy.HWSERIAL_SIMULATE
     hwserial = ""
     driver = labberdriver_wrapper.LabberDriverWrapper(hwserial=hwserial)
     if False:
