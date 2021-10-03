@@ -8,9 +8,9 @@ import logging
 import config_all
 import calib_prepare_lib
 
-from micropython_proxy import MicropythonInterface
+from micropython_proxy import MicropythonInterface, HWTYPE_HEATER_THERMOMETRIE_2021
 import heater_hsm
-from heater_thermometrie_2021_utils import (
+from heater_driver_utils import (
     EnumLogging,
     Quantity,
     EnumHeating,
@@ -38,16 +38,17 @@ class HeaterWrapper:
     def __init__(self, hwserial):
         self.dict_values = {}
         self.mxy = MicropythonInterface(hwserial)
+
+        self.compact_2012_config = HeaterWrapper.load_config(serial=self.mxy.heater_thermometrie_2021_serial)
+        print(f"INFO: {HWTYPE_HEATER_THERMOMETRIE_2021} connected: {self.compact_2012_config}")
+
         self.hsm_heater = heater_hsm.HeaterHsm(self)
         self.hsm_defrost = heater_hsm.DefrostHsm(self)
 
         self.__calibrationLookup = None
         self.ignore_str_dac12 = False
         self.f_write_file_time_s = 0.0
-        self.filename_values = (
-            DIRECTORY_OF_THIS_FILE
-            / f"Values-{self.mxy.heater_thermometrie_2021_serial}.txt"
-        )
+        self.filename_values = DIRECTORY_OF_THIS_FILE / f"Values-{self.mxy.heater_thermometrie_2021_serial}.txt"
 
         # The time when the dac was set last.
         self.f_last_dac_set_s = 0.0
@@ -90,45 +91,44 @@ class HeaterWrapper:
     def close(self):
         self.mxy.close()
 
+    @staticmethod
+    def load_config(serial: str) -> dict:
+        try:
+            return config_all.dict_heater2021[serial]
+        except KeyError:
+            print(f'WARNING: The connected "compact_2012" has serial "{serial}". However, this serial in unknown!')
+            serials_defined = sorted(config_all.dict_heater2021.keys())
+            serials_defined.remove(config_all.SERIAL_UNDEFINED)
+            print(f'INFO: "config_all.py" lists these serials: {",".join(serials_defined)}')
+            return config_all.dict_heater2021[config_all.SERIAL_UNDEFINED]
+
     def load_calibration_lookup(self):
         if self.heater_thermometrie_2021_serial is None:
             return
-        calib_correction_data = calib_prepare_lib.CalibCorrectionData(
-            self.heater_thermometrie_2021_serial
-        )
+        calib_correction_data = calib_prepare_lib.CalibCorrectionData(self.heater_thermometrie_2021_serial)
         self.__calibrationLookup = calib_correction_data.load()
 
     def reset_calibration_lookup(self):
         self.__calibrationLookup = None
 
     def tick(self):
-        self.dict_values[Quantity.Temperature] = self.mxy.temperature_tail.get_voltage(
-            carbon=True
-        )
-        self.dict_values[Quantity.Temperature] = self.mxy.temperature_tail.get_voltage(
-            carbon=False
-        )
-        self.dict_values[
-            Quantity.SerialNumberHeater
-        ] = self.mxy.heater_thermometrie_2021_serial
+        self.dict_values[Quantity.Temperature] = self.mxy.temperature_tail.get_voltage(carbon=True)
+        self.dict_values[Quantity.Temperature] = self.mxy.temperature_tail.get_voltage(carbon=False)
+        self.dict_values[Quantity.SerialNumberHeater] = self.mxy.heater_thermometrie_2021_serial
         self.dict_values[Quantity.Power] = 0.53
         self.dict_values[Quantity.Thermometrie] = True
 
         self._set_value(
             Quantity.DefrostSwitchOnBox,
             self.mxy.get_defrost(),
-            lambda value: self.hsm_defrost.dispatch(
-                heater_hsm.SignalDefrostOnOff(on=value)
-            ),
+            lambda value: self.hsm_defrost.dispatch(heater_hsm.SignalDefrostOnOff(on=value)),
         )
 
         self.mxy.onewire_tail.set_power(on=True)
         self._set_value(
             Quantity.SerialNumberInsert,
             self.mxy.onewire_tail.scan(),
-            lambda value: self.hsm_heater.dispatch(
-                heater_hsm.SignalInsertSerialChanged(serial=value)
-            ),
+            lambda value: self.hsm_heater.dispatch(heater_hsm.SignalInsertSerialChanged(serial=value)),
         )
         self.mxy.onewire_tail.set_power(on=True)
 
@@ -179,9 +179,7 @@ class HeaterWrapper:
             return value
         if quantity == Quantity.Thermometrie:
             value_new = EnumThermometrie(value)
-            self.hsm_heater.dispatch(
-                heater_hsm.SignalThermometrieOnOff(value=value_new)
-            )
+            self.hsm_heater.dispatch(heater_hsm.SignalThermometrieOnOff(value=value_new))
             return value
         if quantity == Quantity.GreenLED:
             value_new = bool(value)
@@ -305,14 +303,8 @@ class HeaterWrapper:
         if b_need_wait_before_DAC_set:
             # We have to make sure, that the last call was not closer than F_SWEEPINTERVAL_S
             OVERHEAD_TIME_SLEEP_S = 0.001
-            time_to_sleep_s = (
-                F_SWEEPINTERVAL_S
-                - (time.perf_counter() - self.f_last_dac_set_s)
-                - OVERHEAD_TIME_SLEEP_S
-            )
-            if (
-                time_to_sleep_s > 0.001
-            ):  # It doesn't make sense for the operarting system to stop for less than 1ms
+            time_to_sleep_s = F_SWEEPINTERVAL_S - (time.perf_counter() - self.f_last_dac_set_s) - OVERHEAD_TIME_SLEEP_S
+            if time_to_sleep_s > 0.001:  # It doesn't make sense for the operarting system to stop for less than 1ms
                 assert time_to_sleep_s <= F_SWEEPINTERVAL_S
                 time.sleep(time_to_sleep_s)
 
@@ -327,17 +319,11 @@ class HeaterWrapper:
         Send to new dac values to the pyboard.
         Return pyboard_status.
         """
-        f_values_plus_min_v = list(
-            map(lambda obj_Dac: obj_Dac.f_value_V, self.list_dacs)
-        )
-        str_dac20, str_dac12 = compact_2012_dac.getDAC20DAC12HexStringFromValues(
-            f_values_plus_min_v, calibrationLookup=self.__calibrationLookup
-        )
+        f_values_plus_min_v = list(map(lambda obj_Dac: obj_Dac.f_value_V, self.list_dacs))
+        str_dac20, str_dac12 = compact_2012_dac.getDAC20DAC12HexStringFromValues(f_values_plus_min_v, calibrationLookup=self.__calibrationLookup)
         if self.ignore_str_dac12:
             str_dac12 = "0" * DACS_COUNT * DAC12_NIBBLES
-        s_py_command = 'micropython_logic.set_dac("{}", "{}")'.format(
-            str_dac20, str_dac12
-        )
+        s_py_command = 'micropython_logic.set_dac("{}", "{}")'.format(str_dac20, str_dac12)
         self.obj_time_span_set_dac.start()
 
         str_status = self.fe.eval(s_py_command)
@@ -371,9 +357,7 @@ class HeaterWrapper:
         assert 0.0 <= threshold_percent_FS <= 100.0
         threshold_dac = threshold_percent_FS * 4096.0 // 100.0
         assert 0.0 <= threshold_dac <= 4096
-        self.fe.eval(
-            "micropython_logic.set_geophone_threshold_dac({})".format(threshold_dac)
-        )
+        self.fe.eval("micropython_logic.set_geophone_threshold_dac({})".format(threshold_dac))
 
     def debug_geophone_print(self):
         print(
@@ -400,9 +384,7 @@ class HeaterWrapper:
         return f_percent_FS
 
     def get_geophone_particle_velocity(self):
-        return (
-            self.__read_geophone_voltage() / GEOPHONE_VOLTAGE_TO_PARTICLEVELOCITY_FACTOR
-        )
+        return self.__read_geophone_voltage() / GEOPHONE_VOLTAGE_TO_PARTICLEVELOCITY_FACTOR
 
     #
     # Logic for 'calib_' only
@@ -414,9 +396,7 @@ class HeaterWrapper:
         self.fe.eval("micropython_logic.calib_raw_init()")
 
     def sync_calib_read_ADC24(self, iDac_index):
-        strADC24 = self.fe.eval(
-            "micropython_logic.calib_read_ADC24({})".format(iDac_index)
-        )
+        strADC24 = self.fe.eval("micropython_logic.calib_read_ADC24({})".format(iDac_index))
         iADC24 = int(strADC24)
 
         fADC24 = convert_ADC24_signed_to_V(iADC24)
@@ -430,15 +410,9 @@ class HeaterWrapper:
         assert iDacEnd < DAC20_MAX
         assert iDacStart < iDacEnd
         assert 0 <= iDac_index < DACS_COUNT
-        self.fe.eval(
-            'micropython_logic.calib_raw_measure("{}", {}, {}, {})'.format(
-                filename, iDac_index, iDacStart, iDacEnd
-            )
-        )
+        self.fe.eval('micropython_logic.calib_raw_measure("{}", {}, {}, {})'.format(filename, iDac_index, iDacStart, iDacEnd))
         pass
 
     def calib_raw_readfile(self, filename):
-        filenameFull = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), filename
-        )
+        filenameFull = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
         self.fe.get(filename, filenameFull)

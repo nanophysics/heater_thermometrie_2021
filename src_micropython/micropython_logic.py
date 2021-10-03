@@ -37,6 +37,7 @@ class OnewireTemp:
     """
     DS18 blue heater box
     """
+
     def __init__(self, pin=Pin(PIN_DS18_TEMP)):
         assert isinstance(pin, Pin)
         ow = OneWire(pin)
@@ -63,6 +64,7 @@ class OnewireTail(OnewireTemp):
     DS18 located in the tail and connected using the green Fischer cable.
     The blue heater box may powered on/off this DS18.
     """
+
     def __init__(self):
         super().__init__(pin=Pin(PIN_DS18_ID))
         self.DS18_PWR = Pin(PIN_DS18_PWD, Pin.OUT_PP)

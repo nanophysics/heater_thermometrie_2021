@@ -1,7 +1,7 @@
 import time
 import micropython_proxy
 import heater_thread
-from heater_thermometrie_2021_utils import Quantity, EnumThermometrie
+from heater_driver_utils import Quantity, EnumThermometrie
 
 
 def doit():

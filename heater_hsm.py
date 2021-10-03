@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import pathlib
 import logging
 
-from heater_thermometrie_2021_utils import EnumInsertConnected, EnumThermometrie
+from heater_driver_utils import EnumInsertConnected, EnumThermometrie
 import hsm
 
 
