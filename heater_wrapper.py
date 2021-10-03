@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 import os
-import enum
 import math
 import time
 import pathlib
@@ -11,6 +10,14 @@ import calib_prepare_lib
 
 from micropython_proxy import MicropythonInterface
 import heater_hsm
+from heater_thermometrie_2021_utils import (
+    EnumLogging,
+    Quantity,
+    EnumHeating,
+    EnumExpert,
+    EnumThermometrie,
+    QuantityNotFoundException,
+)
 
 logger = logging.getLogger("LabberDriver")
 
@@ -18,75 +25,21 @@ logger.setLevel(logging.DEBUG)
 
 DIRECTORY_OF_THIS_FILE = pathlib.Path(__file__).absolute().parent
 
+
 @dataclass
 class NotInitialized:
     pass
 
+
 NOT_INITIALIZED = NotInitialized()
-
-class QuantityNotFoundException(Exception):
-    pass
-
-
-class EnumMixin:
-    @classmethod
-    def all_text(cls):
-        return ", ".join(sorted([f'"{d.name}"' for d in cls]))
-
-    @classmethod
-    def get_exception(cls, configuration: str, value: str):
-        assert isinstance(configuration, str)
-        assert isinstance(value, str)
-        err = f'{configuration}: Unkown "{value}". Expect one of {cls.all_text()}!'
-        try:
-            return cls[value]
-        except KeyError as e:
-            raise Exception(err) from e
-
-
-class EnumControlHeating(EnumMixin, enum.Enum):
-    OFF = "off"
-    MANUAL = "manual"
-    CONTROLLED = "controlled"
-
-
-class EnumControlExpert(EnumMixin, enum.Enum):
-    SIMPLE = "simple"
-    EXPERT = "expert"
-
-
-class EnumControlThermometrie(EnumMixin, enum.Enum):
-    ON = "on"
-    OFF = "off"
-
-
-class Quantity(EnumMixin, enum.Enum):
-    """
-    Readable name => value as in 'heater_thermometrie_2021.ini'
-    """
-
-    Heating = "Heating"
-    Expert = "Expert"
-    Thermometrie = "Thermometrie"
-    GreenLED = "Green LED"
-    Power = "power"
-    Temperature = "temperature"
-    TemperatureBox = "Temperature Box"
-    TemperatureToleranceBand = "temperature tolerance band"
-    SettleTime = "settle time"
-    TimeoutTime = "timeout time"
-    SerialNumberHeater = "Serial Number Heater"
-    SerialNumberTail = "Serial Number Tail"
-    DefrostSwitchOnBox = "Defrost - Switch on box"
-    DefrostUserInteraction = "Defrost - User interaction"
 
 
 class HeaterWrapper:
     def __init__(self, hwserial):
         self.dict_values = {}
         self.mxy = MicropythonInterface(hwserial)
-        self.hsm_heater = heater_hsm.HeaterHsm()
-        self.hsm_defrost = heater_hsm.DefrostHsm()
+        self.hsm_heater = heater_hsm.HeaterHsm(self)
+        self.hsm_defrost = heater_hsm.DefrostHsm(self)
 
         self.__calibrationLookup = None
         self.ignore_str_dac12 = False
@@ -106,15 +59,13 @@ class HeaterWrapper:
 
         def init_hsm(hsm, name):
             def log_main(msg):
-                return
                 logger.debug(f"{name}: *** {msg}")
 
             def log_sub(msg):
-                return
                 logger.debug(f"{name}:      {msg}")
 
             def log_state_change(handling_state, state_before, new_state):
-                 logger.info(f"{name}: {handling_state}: {state_before} -> {new_state}")
+                logger.info(f"{name}: {handling_state}: {state_before} -> {new_state}")
 
             hsm.func_log_main = log_main
             hsm.func_log_sub = log_sub
@@ -150,17 +101,6 @@ class HeaterWrapper:
     def reset_calibration_lookup(self):
         self.__calibrationLookup = None
 
-    def _set_value(self, quantity: Quantity, value, func=None) -> bool:
-        """
-        Returns true if value changes
-        """
-        before = self.dict_values.get(quantity, NOT_INITIALIZED)
-        after = self.dict_values[quantity] = value
-        value_changed = before != after
-        if value_changed and func is not None:
-            func(value)
-        return value_changed
-
     def tick(self):
         self.dict_values[Quantity.Temperature] = self.mxy.temperature_tail.get_voltage(
             carbon=True
@@ -184,10 +124,10 @@ class HeaterWrapper:
 
         self.mxy.onewire_tail.set_power(on=True)
         self._set_value(
-            Quantity.SerialNumberTail,
+            Quantity.SerialNumberInsert,
             self.mxy.onewire_tail.scan(),
             lambda value: self.hsm_heater.dispatch(
-                heater_hsm.SignalTailSerialChanged(serial=value)
+                heater_hsm.SignalInsertSerialChanged(serial=value)
             ),
         )
         self.mxy.onewire_tail.set_power(on=True)
@@ -195,12 +135,23 @@ class HeaterWrapper:
         # self.hsm_defrost.dispatch(heater_hsm.SIGNAL_TICK)
         # self.hsm_heater.dispatch(heater_hsm.SIGNAL_TICK)
 
+    def get_value(self, name: str):
+        quantity = Quantity(name)
+        if quantity == Quantity.Thermometrie:
+            return self.hsm_heater.get_labber_thermometrie
+        if quantity == Quantity.InsertConnected:
+            return self.hsm_heater.get_labber_insert_connected
+        try:
+            return self.dict_values[quantity]
+        except KeyError:
+            raise QuantityNotFoundException(name)
+
     def set_value(self, name: str, value):
         quantity = Quantity(name)
         # comboboxes = {
-        #     Quantity.Heating: EnumControlHeating,
-        #     Quantity.Expert: EnumControlExpert,
-        #     Quantity.Thermometrie: EnumControlThermometrie,
+        #     Quantity.Heating: EnumHeating,
+        #     Quantity.Expert: EnumExpert,
+        #     Quantity.Thermometrie: EnumThermometrie,
         #     Quantity.GreenLED: bool,
         # }
         # try:
@@ -214,16 +165,23 @@ class HeaterWrapper:
         #     return value
 
         if quantity == Quantity.Heating:
-            value_new = EnumControlHeating(value)
+            value_new = EnumHeating(value)
             self.dict_values[quantity] = value_new
             return value
         if quantity == Quantity.Expert:
-            value_new = EnumControlExpert(value)
+            value_new = EnumExpert(value)
             self.dict_values[quantity] = value_new
             return value
-        if quantity == Quantity.Thermometrie:
-            value_new = EnumControlThermometrie(value)
+        if quantity == Quantity.Logging:
+            value_new = EnumLogging(value)
             self.dict_values[quantity] = value_new
+            value_new.setLevel()
+            return value
+        if quantity == Quantity.Thermometrie:
+            value_new = EnumThermometrie(value)
+            self.hsm_heater.dispatch(
+                heater_hsm.SignalThermometrieOnOff(value=value_new)
+            )
             return value
         if quantity == Quantity.GreenLED:
             value_new = bool(value)
@@ -241,12 +199,16 @@ class HeaterWrapper:
             return value
         raise QuantityNotFoundException(name)
 
-    def get_value(self, name: str):
-        quantity = Quantity(name)
-        try:
-            return self.dict_values.get(quantity, None)
-        except KeyboardInterrupt:
-            raise QuantityNotFoundException(name)
+    def _set_value(self, quantity: Quantity, value, func=None) -> bool:
+        """
+        Returns true if value changes
+        """
+        before = self.dict_values.get(quantity, NOT_INITIALIZED)
+        after = self.dict_values[quantity] = value
+        value_changed = before != after
+        if value_changed and func is not None:
+            func(value)
+        return value_changed
 
     def get_dac(self, index):
         """

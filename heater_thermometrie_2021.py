@@ -68,13 +68,13 @@ class Driver(InstrumentDriver.InstrumentWorker):
         #     # print(f"quant.getValueString() {quant.getValueString()}")
         #     # print(f"self.getValue('Heating') {self.getValue('Heating')}")
         #     # print(f"options {options}")
-        #     self.ht.set_control_heating(EnumControlHeating.get_value(value))
+        #     self.ht.set_control_heating(EnumHeating.get_value(value))
         #     return value
         # if quant.name == "Expert":
-        #     self.ht.set_control_expert(EnumControlExpert.get_value(value))
+        #     self.ht.set_control_expert(EnumExpert.get_value(value))
         #     return value
         # if quant.name == "Thermometrie":
-        #     self.ht.set_control_thermometrie(EnumControlThermometrie.get_value(value))
+        #     self.ht.set_control_thermometrie(EnumThermometrie.get_value(value))
         #     return value
         # if quant.name == "Green LED":
         #     # set user LED
