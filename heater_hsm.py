@@ -59,7 +59,7 @@ class DefrostHsm(hsm.Statemachine):
         assert hw.__class__.__name__ == "HeaterWrapper"
         self._hw = hw
 
-    def state_off(self, signal):
+    def state_off(self, signal) -> None:
         "Defrost off"
         # if isinstance(signal, SignalTick):
         #     raise hsm.StateChangeException(self.state_off)
@@ -68,7 +68,7 @@ class DefrostHsm(hsm.Statemachine):
                 raise hsm.StateChangeException(self.state_on)
         raise hsm.DontChangeStateException()
 
-    def state_on(self, signal):
+    def state_on(self, signal) -> None:
         "Defrost on"
         # if isinstance(signal, SignalTick):
         #     raise hsm.StateChangeException(self.state_on)
@@ -101,14 +101,14 @@ class HeaterHsm(hsm.Statemachine):
         connected = self._state_actual.startswith("connected")
         return EnumInsertConnected.get_labber(connected)
 
-    def state_disconnected(self, signal):
+    def state_disconnected(self, signal) -> None:
         "The insert is not connected by the cable"
         if isinstance(signal, SignalInsertSerialChanged):
             if signal.is_connected:
                 raise hsm.StateChangeException(self.state_connected)
         raise hsm.DontChangeStateException()
 
-    def _handle_connected(self, signal):
+    def _handle_connected(self, signal) -> None:
         if isinstance(signal, SignalInsertSerialChanged):
             if not signal.is_connected:
                 raise hsm.StateChangeException(self.state_disconnected)
@@ -116,63 +116,65 @@ class HeaterHsm(hsm.Statemachine):
             if signal.on:
                 raise hsm.StateChangeException(self.state_connected_thermon)
 
-    def state_connected(self, signal):
+    def state_connected(self, signal) -> None:
         "This insert is connected by the cable and the id was read successfully"
         self._handle_connected(signal)
         raise hsm.DontChangeStateException()
 
-    def state_connected_thermoff(self, signal):
+    def state_connected_thermoff(self, signal) -> None:
         "Thermometrie switch is off"
         self._handle_connected(signal)
         raise hsm.DontChangeStateException()
 
-    def _handle_connected_thermon(self, signal):
+    def _handle_connected_thermon(self, signal) -> None:
         self._handle_connected(signal)
         if isinstance(signal, SignalThermometrieOnOff):
             if not signal.on:
                 raise hsm.StateChangeException(self.state_connected_thermoff)
 
-    def state_connected_thermon(self, signal):
+    def state_connected_thermon(self, signal) -> None:
         "Thermometrie switch is on"
         self._handle_connected_thermon(signal)
         raise hsm.DontChangeStateException()
 
-    def state_connected_thermon_heatingoff(self, signal):
+    def state_connected_thermon_heatingoff(self, signal) -> None:
         "Heating off"
-        pass
 
-    def state_connected_thermon_heatingmanual(self, signal):
+    def state_connected_thermon_heatingmanual(self, signal) -> None:
         "Heating manual"
-        pass
 
-    def state_connected_thermon_heatingcontrolled(self, signal):
+    def state_connected_thermon_heatingcontrolled(self, signal) -> None:
         "Heating controlled by PID"
-        pass
 
-    def state_connected_thermon_heatingcontrolled_settling(self, signal):
+    def state_connected_thermon_heatingcontrolled_settling(self, signal) -> None:
         "The temperature is about to be settled"
-        pass
 
-    def state_connected_thermon_heatingcontrolled_settled(self, signal):
+    def state_connected_thermon_heatingcontrolled_settled(self, signal) -> None:
         "The temperature is settled"
-        pass
 
     init_ = state_disconnected
 
 
 def analyse():
     def func_log_main(msg):
-        print("Main: " + msg)
+        pass
 
     def func_log_sub(msg):
-        print("Sub:  " + msg)
+        pass
 
-    header = heater_hsm()
-    header.setLogger(func_log_main, func_log_sub)
+    # pylint: disable=cyclic-import
+    import heater_wrapper
+    import micropython_proxy
+
+    hw = heater_wrapper.HeaterWrapper(hwserial=micropython_proxy.HWSERIAL_SIMULATE)
+    header = HeaterHsm(hw)
+    header.func_log_main = func_log_main
+    header.func_log_sub = func_log_sub
     header.reset()
 
-    defrost = defrost_hsm()
-    defrost.setLogger(func_log_main, func_log_sub)
+    defrost = DefrostHsm(hw)
+    defrost.func_log_main = func_log_main
+    defrost.func_log_sub = func_log_sub
     defrost.reset()
 
     with pathlib.Path("thermometrie_hsm_out.html").open("w") as f:

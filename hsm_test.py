@@ -1,5 +1,4 @@
 import pathlib
-import doctest
 import hsm
 
 
@@ -99,7 +98,7 @@ def analyse():
     sm.func_log_sub = func_log_sub
     sm.reset()
 
-    def test_entry_exit(sm, a, b, c, d, e):
+    def test_entry_exit(sm, a, b, c, d, e):  # pylint: disable=too-many-arguments
         pass
 
     def test_transition(sm, signal, expect_state):
@@ -155,12 +154,6 @@ def analyse():
     pathlib.Path("test_hsm_out.html").write_text(sm.doc())
 
 
-def run_doctest():
-    rc = doctest.testmod(hsm)
-    if rc.failed > 0:
-        raise Exception(rc)
-
-
 if __name__ == "__main__":
-    run_doctest()
+    hsm.run_doctest()
     analyse()

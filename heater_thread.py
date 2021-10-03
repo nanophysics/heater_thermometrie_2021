@@ -40,7 +40,7 @@ class HeaterThread(threading.Thread):
                 logger.fatal(f"Probably, the USB cable to the heater_thermometrie_2021 was disconnected: {repr(ex)}")
                 os._exit(42)
                 return
-            except Exception as ex:
+            except Exception as ex:  # pylint: disable=broad-except
                 logger.exception(ex)
             time.sleep(1.0)
 

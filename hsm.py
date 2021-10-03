@@ -54,7 +54,7 @@ class Statemachine:
         state_before = self._state_actual
 
         try:
-            self.func_log_main(f"{repr(signal)}: will be handled by 'state_{self._state_actual}'")
+            self.func_log_main(f"{repr(signal)}: was handled by 'state_{self._state_actual}'")
             self.func_log_sub(f"  calling state 'state_{state_before}({signal})'")
             handling_state = self._state_actual
             while True:
@@ -74,7 +74,7 @@ class Statemachine:
             self.func_log_sub("  Empty Transition!")
             return
         except StateChangeException as e:
-            self.func_log_sub(f"{signal}: was handled by 'state_{handling_state}'")
+            self.func_log_sub(f"{repr(signal)}: was handled by 'state_{handling_state}'")
             # Evaluate init-state
             new_state = e.meth_new_state.__name__.replace("state_", "")
             if self._state_actual != new_state:
@@ -134,14 +134,12 @@ class Statemachine:
                 self.func_log_sub(f"  Calling {func_entry.__name__}")
                 func_entry(signal)
 
-        return
-
     def get_top_state_obsolete(self, list_state):
         top_state = None
         for state in list_state:
             if len(state.split("_")) == 1:
                 top_state = state
-        if top_state == None:
+        if top_state is None:
             raise BadStatemachineException("No Top State found")
         return top_state
 
@@ -154,7 +152,7 @@ class Statemachine:
                 try:
                     meth = getattr(self, "state_" + entry)
                 except AttributeError as e:
-                    raise BadStatemachineException(f"No corresponding state_{entry}() for {action}{entry}()!") from e
+                    raise BadStatemachineException(f"No corresponding 'state_{entry}()' for '{action}{entry}()'!") from e
 
     def reset(self):
         self._list_state_names = self.get_method_list("state_")
@@ -166,7 +164,7 @@ class Statemachine:
             self._dict_init_state[init_state] = objValue.__name__[len("state_") :]
 
         # Find top state
-        if not "" in self._dict_init_state:
+        if "" not in self._dict_init_state:
             raise BadStatemachineException('Init-State on top-level is required but missing. Example "init_ = state_XYZ".')
 
         # Evaluate the init-state
@@ -200,13 +198,13 @@ class Statemachine:
         return ""
 
     def get_hierarchy_(self, parent_state=""):
-        listLevel = []
+        list_level = []
         for state in self._list_state_names:
             if state.find(parent_state) != 0:
                 continue
             if len(state.split("_")) == len(parent_state.split("_")) + 1:
                 strName = state.split("_")[-1]
-                listLevel.append(
+                list_level.append(
                     {
                         "fullname": state,
                         "name": strName,
@@ -214,21 +212,21 @@ class Statemachine:
                     }
                 )
                 continue
-        return listLevel
+        return list_level
 
     def get_hierarchy(self, parent_state=None):
-        listLevel = []
+        list_level = []
         for state in self._list_state_names:
             if not parent_state:
                 if len(state.split("_")) == 1:
-                    listLevel.append((state, self.get_hierarchy(state)))
+                    list_level.append((state, self.get_hierarchy(state)))
                 continue
             if state.find(parent_state) != 0:
                 continue
             if len(state.split("_")) != len(parent_state.split("_")) + 1:
                 continue
-            listLevel.append((state, self.get_hierarchy(state)))
-        return listLevel
+            list_level.append((state, self.get_hierarchy(state)))
+        return list_level
 
     def doc_state(self, state):
         f = io.StringIO()
@@ -276,9 +274,9 @@ class Statemachine:
                 f.write(f'<td valign="top" height="100%"><pre class="small">{strSource}</pre></td>')
         return f.getvalue(), "</table>"
 
-    def doc_state_recursive(self, list_state):
+    def doc_state_recursive(self, list_level):
         f = io.StringIO()
-        for state, list_state in list_state:
+        for state, list_state in list_level:
             state_begin, state_end = self.doc_state(state)
             state_sub = self.doc_state_recursive(list_state)
             f.write(state_begin)
@@ -301,8 +299,8 @@ class Statemachine:
         docstring = inspect.getdoc(self)
         if docstring:
             f.write("<p>" + docstring + "</p><br>")
-        listHierarchy = self.get_hierarchy()
-        s = self.doc_state_recursive(listHierarchy)
+        list_level = self.get_hierarchy()
+        s = self.doc_state_recursive(list_level)
         f.write(s)
         f.write("</body>\n")
         f.write("</html>\n")
@@ -351,7 +349,7 @@ class Test_UnmatchedEntryAction(Statemachine):
     >>> sm.reset()
     Traceback (most recent call last):
     ...
-    hsm.BadStatemachineException: No corresponding state_TopA_SubB() for entry_TopA_SubB()!
+    BadStatemachineException: No corresponding 'state_TopA_SubB()' for 'entry_TopA_SubB()'!
     """
 
     def state_TopA(self, signal):
@@ -369,7 +367,7 @@ class Test_UnmatchedExitAction(Statemachine):
     >>> sm.reset()
     Traceback (most recent call last):
     ...
-    hsm.BadStatemachineException: No corresponding state_TopA_SubB() for exit_TopA_SubB()!
+    BadStatemachineException: No corresponding 'state_TopA_SubB()' for 'exit_TopA_SubB()'!
     """
 
     def state_TopA(self, signal):
@@ -386,8 +384,8 @@ class Test_SimpleStatemachineTopStateHandlesSignal(Statemachine):
     >>> sm = Test_SimpleStatemachineTopStateHandlesSignal()
     >>> sm.reset()
     >>> sm.dispatch('a')
-    'a': will be handled by TopA_SubA
-        calling state "state_TopA_SubA(a)"
+    'a': was handled by 'state_TopA_SubA'
+        calling state 'state_TopA_SubA(a)'
         No state change!
     """
 
@@ -407,22 +405,25 @@ class Test_SimpleStatemachine(Statemachine):
     >>> sm = Test_SimpleStatemachine()
     >>> sm.reset()
     >>> sm.dispatch('a')
-    'a': will be handled by TopA
-        calling state "state_TopA(a)"
-      a: was handled by state_TopA
+    'a': was handled by 'state_TopA'
+        calling state 'state_TopA(a)'
+      'a': was handled by 'state_TopA'
+      TopA: TopA -> TopA_SubA
     >>> sm.dispatch('b')
-    'b': will be handled by TopA_SubA
-        calling state "state_TopA_SubA(b)"
-      b: was handled by state_TopA_SubA
+    'b': was handled by 'state_TopA_SubA'
+        calling state 'state_TopA_SubA(b)'
+      'b': was handled by 'state_TopA_SubA'
+      TopA_SubA: TopA_SubA -> TopA_SubB
         Calling entry_TopA_SubB
     >>> sm.dispatch('b')
-    'b': will be handled by TopA_SubB
-        calling state "state_TopA_SubB(b)"
+    'b': was handled by 'state_TopA_SubB'
+        calling state 'state_TopA_SubB(b)'
         Empty Transition!
     >>> sm.dispatch('a')
-    'a': will be handled by TopA_SubB
-        calling state "state_TopA_SubB(a)"
-      a: was handled by state_TopA
+    'a': was handled by 'state_TopA_SubB'
+        calling state 'state_TopA_SubB(a)'
+      'a': was handled by 'state_TopA'
+      TopA: TopA_SubB -> TopA_SubA
         Calling exit_TopA_SubB
     """
 
@@ -452,23 +453,26 @@ class Test_StatemachineWithEntryExitActions(Statemachine):
     >>> sm = Test_StatemachineWithEntryExitActions()
     >>> sm.reset()
     >>> sm.dispatch('r')
-    'r': will be handled by TopA
-        calling state "state_TopA(r)"
-      r: was handled by state_TopA
+    'r': was handled by 'state_TopA'
+        calling state 'state_TopA(r)'
+      'r': was handled by 'state_TopA'
+      TopA: TopA -> TopC
         Calling exit_TopA
         Calling entry_TopC
     >>> sm.dispatch('s')
-    's': will be handled by TopC
-        calling state "state_TopC(s)"
-      s: was handled by state_TopC
+    's': was handled by 'state_TopC'
+        calling state 'state_TopC(s)'
+      's': was handled by 'state_TopC'
+      TopC: TopC -> TopB_SubA_SubsubA
         Calling exit_TopC
         Calling entry_TopB
         Calling entry_TopB_SubA
         Calling entry_TopB_SubA_SubsubA
     >>> sm.dispatch('t')
-    't': will be handled by TopB_SubA_SubsubA
-        calling state "state_TopB_SubA_SubsubA(t)"
-      t: was handled by state_TopB_SubA_SubsubA
+    't': was handled by 'state_TopB_SubA_SubsubA'
+        calling state 'state_TopB_SubA_SubsubA(t)'
+      't': was handled by 'state_TopB_SubA_SubsubA'
+      TopB_SubA_SubsubA: TopB_SubA_SubsubA -> TopC
         Calling exit_TopB_SubA_SubsubA
         Calling exit_TopB_SubA
         Calling exit_TopB
@@ -524,11 +528,13 @@ class Test_StatemachineWithEntryExitActions(Statemachine):
     init_ = state_TopA
 
 
-def test():
+def run_doctest():
     import doctest
 
-    return doctest.testmod()
+    rc = doctest.testmod()
+    if rc.failed > 0:
+        raise Exception(rc)
 
 
 if __name__ == "__main__":
-    test()
+    run_doctest()

@@ -96,6 +96,7 @@ class Quantity(EnumMixin, enum.Enum):
     SettleTime = "settle time"
     TimeoutTime = "timeout time"
     SerialNumberHeater = "Serial Number Heater"
+    SerialNumberInsertHidden = "SerialNumberInsertHidden"
     SerialNumberInsert = "Serial Number Insert"
     DefrostSwitchOnBox = "Defrost - Switch on box"
     DefrostUserInteraction = "Defrost - User interaction"

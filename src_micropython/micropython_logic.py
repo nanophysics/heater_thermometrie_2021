@@ -59,9 +59,9 @@ class OnewireTemp:
         return self.temp.read_temp(rom)
 
 
-class OnewireTail(OnewireTemp):
+class OnewireInsert(OnewireTemp):
     """
-    DS18 located in the tail and connected using the green Fischer cable.
+    DS18 located in the insert and connected using the green Fischer cable.
     The blue heater box may powered on/off this DS18.
     """
 
@@ -84,7 +84,7 @@ class OnewireTail(OnewireTemp):
         # pin_power.value(True)
 
 
-class TemperatureTail:
+class TemperatureInsert:
     def __init__(self, i2c):
         self.short_carb = Pin(PIN_SHORT_CARB, Pin.OUT_PP)
         self.short_pt1000 = Pin(PIN_SHORT_PT1000, Pin.OUT_PP)
@@ -225,8 +225,8 @@ class Proxy:
         self.display = Display(i2c=i2c_OLED)
         self.display_clear()
         self.onewire_temp = OnewireTemp()
-        self.onewire_tail = OnewireTail()
-        self.temperature_tail = TemperatureTail(i2c=i2c_AD_DA)
+        self.onewire_insert = OnewireInsert()
+        self.temperature_insert = TemperatureInsert(i2c=i2c_AD_DA)
         self.heater = Heater(i2c=i2c_AD_DA)
 
     def display_clear(self):

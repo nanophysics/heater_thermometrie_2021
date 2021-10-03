@@ -1,10 +1,16 @@
 import time
+import logging
+
 import micropython_proxy
 import heater_thread
 from heater_driver_utils import Quantity, EnumThermometrie
 
+logger = logging.getLogger("LabberDriver")
+
 
 def doit():
+    logger.setLevel(logging.INFO)
+
     hwserial = micropython_proxy.HWSERIAL_SIMULATE
     hwserial = ""
     ht = heater_thread.HeaterThread(hwserial=hwserial)
