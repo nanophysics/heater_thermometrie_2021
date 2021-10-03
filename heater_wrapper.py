@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import os
 import enum
 import math
@@ -11,12 +12,17 @@ import calib_prepare_lib
 from micropython_proxy import MicropythonInterface
 import heater_hsm
 
-logger = logging.getLogger("heater_thermometrie_2012")
+logger = logging.getLogger("LabberDriver")
 
 logger.setLevel(logging.DEBUG)
 
 DIRECTORY_OF_THIS_FILE = pathlib.Path(__file__).absolute().parent
 
+@dataclass
+class NotInitialized:
+    pass
+
+NOT_INITIALIZED = NotInitialized()
 
 class QuantityNotFoundException(Exception):
     pass
@@ -70,6 +76,7 @@ class Quantity(EnumMixin, enum.Enum):
     SettleTime = "settle time"
     TimeoutTime = "timeout time"
     SerialNumberHeater = "Serial Number Heater"
+    SerialNumberTail = "Serial Number Tail"
     DefrostSwitchOnBox = "Defrost - Switch on box"
     DefrostUserInteraction = "Defrost - User interaction"
 
@@ -84,7 +91,10 @@ class HeaterWrapper:
         self.__calibrationLookup = None
         self.ignore_str_dac12 = False
         self.f_write_file_time_s = 0.0
-        self.filename_values = DIRECTORY_OF_THIS_FILE / f"Values-{self.mxy.heater_thermometrie_2021_serial}.txt"
+        self.filename_values = (
+            DIRECTORY_OF_THIS_FILE
+            / f"Values-{self.mxy.heater_thermometrie_2021_serial}.txt"
+        )
 
         # The time when the dac was set last.
         self.f_last_dac_set_s = 0.0
@@ -95,19 +105,31 @@ class HeaterWrapper:
         self.f_pyboard_geophone_read_s = 0
 
         def init_hsm(hsm, name):
-            def log_main(strLine):
-                logger.debug(f"{name} main: {strLine}")
+            def log_main(msg):
+                return
+                logger.debug(f"{name}: *** {msg}")
 
-            def log_sub(strLine):
-                logger.debug(f"{name} sub: {strLine}")
+            def log_sub(msg):
+                return
+                logger.debug(f"{name}:      {msg}")
 
-            hsm.setLogger(log_main, log_sub)
+            def log_state_change(handling_state, state_before, new_state):
+                 logger.info(f"{name}: {handling_state}: {state_before} -> {new_state}")
+
+            hsm.func_log_main = log_main
+            hsm.func_log_sub = log_sub
+            hsm.func_state_change = log_state_change
             hsm.reset()
 
-        init_hsm(self.hsm_heater, "heater_hsm")
-        init_hsm(self.hsm_defrost, "defrost_hsm")
+        init_hsm(self.hsm_heater, "heater")
+        init_hsm(self.hsm_defrost, "defrost")
 
         self.mxy.init()
+
+        self._set_value(
+            Quantity.SerialNumberHeater,
+            self.mxy.onewire_temp.scan(),
+        )
 
         return
         self.sync_status_get()
@@ -120,21 +142,58 @@ class HeaterWrapper:
     def load_calibration_lookup(self):
         if self.heater_thermometrie_2021_serial is None:
             return
-        calib_correction_data = calib_prepare_lib.CalibCorrectionData(self.heater_thermometrie_2021_serial)
+        calib_correction_data = calib_prepare_lib.CalibCorrectionData(
+            self.heater_thermometrie_2021_serial
+        )
         self.__calibrationLookup = calib_correction_data.load()
 
     def reset_calibration_lookup(self):
         self.__calibrationLookup = None
 
+    def _set_value(self, quantity: Quantity, value, func=None) -> bool:
+        """
+        Returns true if value changes
+        """
+        before = self.dict_values.get(quantity, NOT_INITIALIZED)
+        after = self.dict_values[quantity] = value
+        value_changed = before != after
+        if value_changed and func is not None:
+            func(value)
+        return value_changed
+
     def tick(self):
-        self.hsm_defrost.dispatch(heater_hsm.SIGNAL_TICK)
-        self.hsm_heater.dispatch(heater_hsm.SIGNAL_TICK)
-        self.dict_values[Quantity.Temperature] = self.mxy.temperature_tail.get_voltage(carbon=True)
-        self.dict_values[Quantity.Temperature] = self.mxy.temperature_tail.get_voltage(carbon=False)
-        self.dict_values[Quantity.DefrostSwitchOnBox] = self.mxy.get_defrost()
-        self.dict_values[Quantity.SerialNumberHeater] = self.mxy.heater_thermometrie_2021_serial
+        self.dict_values[Quantity.Temperature] = self.mxy.temperature_tail.get_voltage(
+            carbon=True
+        )
+        self.dict_values[Quantity.Temperature] = self.mxy.temperature_tail.get_voltage(
+            carbon=False
+        )
+        self.dict_values[
+            Quantity.SerialNumberHeater
+        ] = self.mxy.heater_thermometrie_2021_serial
         self.dict_values[Quantity.Power] = 0.53
         self.dict_values[Quantity.Thermometrie] = True
+
+        self._set_value(
+            Quantity.DefrostSwitchOnBox,
+            self.mxy.get_defrost(),
+            lambda value: self.hsm_defrost.dispatch(
+                heater_hsm.SignalDefrostOnOff(on=value)
+            ),
+        )
+
+        self.mxy.onewire_tail.set_power(on=True)
+        self._set_value(
+            Quantity.SerialNumberTail,
+            self.mxy.onewire_tail.scan(),
+            lambda value: self.hsm_heater.dispatch(
+                heater_hsm.SignalTailSerialChanged(serial=value)
+            ),
+        )
+        self.mxy.onewire_tail.set_power(on=True)
+
+        # self.hsm_defrost.dispatch(heater_hsm.SIGNAL_TICK)
+        # self.hsm_heater.dispatch(heater_hsm.SIGNAL_TICK)
 
     def set_value(self, name: str, value):
         quantity = Quantity(name)
@@ -284,8 +343,14 @@ class HeaterWrapper:
         if b_need_wait_before_DAC_set:
             # We have to make sure, that the last call was not closer than F_SWEEPINTERVAL_S
             OVERHEAD_TIME_SLEEP_S = 0.001
-            time_to_sleep_s = F_SWEEPINTERVAL_S - (time.perf_counter() - self.f_last_dac_set_s) - OVERHEAD_TIME_SLEEP_S
-            if time_to_sleep_s > 0.001:  # It doesn't make sense for the operarting system to stop for less than 1ms
+            time_to_sleep_s = (
+                F_SWEEPINTERVAL_S
+                - (time.perf_counter() - self.f_last_dac_set_s)
+                - OVERHEAD_TIME_SLEEP_S
+            )
+            if (
+                time_to_sleep_s > 0.001
+            ):  # It doesn't make sense for the operarting system to stop for less than 1ms
                 assert time_to_sleep_s <= F_SWEEPINTERVAL_S
                 time.sleep(time_to_sleep_s)
 
@@ -300,11 +365,17 @@ class HeaterWrapper:
         Send to new dac values to the pyboard.
         Return pyboard_status.
         """
-        f_values_plus_min_v = list(map(lambda obj_Dac: obj_Dac.f_value_V, self.list_dacs))
-        str_dac20, str_dac12 = compact_2012_dac.getDAC20DAC12HexStringFromValues(f_values_plus_min_v, calibrationLookup=self.__calibrationLookup)
+        f_values_plus_min_v = list(
+            map(lambda obj_Dac: obj_Dac.f_value_V, self.list_dacs)
+        )
+        str_dac20, str_dac12 = compact_2012_dac.getDAC20DAC12HexStringFromValues(
+            f_values_plus_min_v, calibrationLookup=self.__calibrationLookup
+        )
         if self.ignore_str_dac12:
             str_dac12 = "0" * DACS_COUNT * DAC12_NIBBLES
-        s_py_command = 'micropython_logic.set_dac("{}", "{}")'.format(str_dac20, str_dac12)
+        s_py_command = 'micropython_logic.set_dac("{}", "{}")'.format(
+            str_dac20, str_dac12
+        )
         self.obj_time_span_set_dac.start()
 
         str_status = self.fe.eval(s_py_command)
@@ -338,7 +409,9 @@ class HeaterWrapper:
         assert 0.0 <= threshold_percent_FS <= 100.0
         threshold_dac = threshold_percent_FS * 4096.0 // 100.0
         assert 0.0 <= threshold_dac <= 4096
-        self.fe.eval("micropython_logic.set_geophone_threshold_dac({})".format(threshold_dac))
+        self.fe.eval(
+            "micropython_logic.set_geophone_threshold_dac({})".format(threshold_dac)
+        )
 
     def debug_geophone_print(self):
         print(
@@ -365,7 +438,9 @@ class HeaterWrapper:
         return f_percent_FS
 
     def get_geophone_particle_velocity(self):
-        return self.__read_geophone_voltage() / GEOPHONE_VOLTAGE_TO_PARTICLEVELOCITY_FACTOR
+        return (
+            self.__read_geophone_voltage() / GEOPHONE_VOLTAGE_TO_PARTICLEVELOCITY_FACTOR
+        )
 
     #
     # Logic for 'calib_' only
@@ -377,7 +452,9 @@ class HeaterWrapper:
         self.fe.eval("micropython_logic.calib_raw_init()")
 
     def sync_calib_read_ADC24(self, iDac_index):
-        strADC24 = self.fe.eval("micropython_logic.calib_read_ADC24({})".format(iDac_index))
+        strADC24 = self.fe.eval(
+            "micropython_logic.calib_read_ADC24({})".format(iDac_index)
+        )
         iADC24 = int(strADC24)
 
         fADC24 = convert_ADC24_signed_to_V(iADC24)
@@ -391,9 +468,15 @@ class HeaterWrapper:
         assert iDacEnd < DAC20_MAX
         assert iDacStart < iDacEnd
         assert 0 <= iDac_index < DACS_COUNT
-        self.fe.eval('micropython_logic.calib_raw_measure("{}", {}, {}, {})'.format(filename, iDac_index, iDacStart, iDacEnd))
+        self.fe.eval(
+            'micropython_logic.calib_raw_measure("{}", {}, {}, {})'.format(
+                filename, iDac_index, iDacStart, iDacEnd
+            )
+        )
         pass
 
     def calib_raw_readfile(self, filename):
-        filenameFull = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+        filenameFull = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), filename
+        )
         self.fe.get(filename, filenameFull)

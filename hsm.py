@@ -11,7 +11,7 @@ class StateChangeException(Exception):
         self.meth_new_state = meth_new_state
 
 
-class IgnoreEventException(Exception):
+class IgnoreSignalException(Exception):
     pass
 
 
@@ -28,18 +28,22 @@ class Statemachine:
     def __init__(self):
         self._list_state_names: list = None
         self._list_init_names: list = None
-        self._list_entry_names : list = None
-        self._list_exit_names : list = None
+        self._list_entry_names: list = None
+        self._list_exit_names: list = None
         self._dict_init_state = {}
 
-        def log_main(strLine):
-            print(strLine)
+        def log_main(msg):
+            print(msg)
 
-        def log_sub(strLine):
-            print(f"  {strLine}")
+        def log_sub(msg):
+            print(f"  {msg}")
+
+        def log_state_change(handling_state, state_before, new_state):
+            print(f"  {handling_state}: {state_before} -> {new_state}")
 
         self.func_log_main = log_main
         self.func_log_sub = log_sub
+        self.func_state_change = log_state_change
         self._state_actual = "NOT-INITIALIZED-YET"
 
     @property
@@ -47,18 +51,18 @@ class Statemachine:
         return self._state_actual
 
     def dispatch(self, signal):
-        strStateBefore = self._state_actual
+        state_before = self._state_actual
 
         try:
-            self.func_log_main(f"{repr(signal)}: will be handled by {self._state_actual}")
-            self.func_log_sub(f'  calling state "state_{strStateBefore}({signal})"')
+            self.func_log_main(f"{repr(signal)}: will be handled by 'state_{self._state_actual}'")
+            self.func_log_sub(f"  calling state 'state_{state_before}({signal})'")
             handling_state = self._state_actual
             while True:
                 meth = getattr(self, "state_" + handling_state)
                 meth(signal)
                 i = handling_state.rfind("_")
                 if i < 0:
-                    raise Exception(f"Signal {signal} was not handled!")
+                    raise Exception(f"  Signal '{repr(signal)}' was not handled by state 'state_{state_before}'!")
                     # print('Empty Transition!')
                     # return
                 handling_state = handling_state[:i]
@@ -66,20 +70,23 @@ class Statemachine:
         except DontChangeStateException as e:
             self.func_log_sub("  No state change!")
             return
-        except IgnoreEventException as e:
+        except IgnoreSignalException as e:
             self.func_log_sub("  Empty Transition!")
             return
         except StateChangeException as e:
-            self.func_log_sub(f"{signal}: was handled by state_{handling_state}")
+            self.func_log_sub(f"{signal}: was handled by 'state_{handling_state}'")
             # Evaluate init-state
             new_state = e.meth_new_state.__name__.replace("state_", "")
+            if self._state_actual != new_state:
+                if self.func_state_change is not None:
+                    self.func_state_change(handling_state=handling_state, state_before=state_before, new_state=new_state)
             init_state = self.get_init_state(new_state)
             if init_state != new_state:
                 self.func_log_sub(f"  Init-State for {new_state} is {init_state}.")
             self._state_actual = init_state
 
         # Call the exit/entry-actions
-        self.call_exit_entry_actions(signal, strStateBefore, init_state)
+        self.call_exit_entry_actions(signal, state_before, init_state)
 
     def get_init_state(self, state):
         try:
@@ -95,8 +102,8 @@ class Statemachine:
         results.sort()
         return results
 
-    def call_exit_entry_actions(self, signal, strStateBefore, strStateAfter):
-        list_state_before = strStateBefore.split("_")
+    def call_exit_entry_actions(self, signal, state_before, strStateAfter):
+        list_state_before = state_before.split("_")
         list_state_after = strStateAfter.split("_")
 
         # Find toppest state
@@ -422,7 +429,7 @@ class Test_SimpleStatemachine(Statemachine):
     def state_TopA(self, signal):
         if signal == "a":
             raise StateChangeException(self.state_TopA_SubA)
-        raise IgnoreEventException()
+        raise IgnoreSignalException()
 
     def state_TopA_SubA(self, signal):
         if signal == "b":

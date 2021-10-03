@@ -1,11 +1,29 @@
+from dataclasses import dataclass
 import pathlib
 
 import hsm
 
 
 class SignalTick:
-    pass
+    def __repr__(self):
+        return "SignalTick"
 
+
+@dataclass
+class SignalDefrostOnOff:
+    on: bool = None
+
+
+@dataclass
+class SignalTailSerialChanged:
+    serial: str = None
+
+    @property
+    def is_connected(self):
+        return self.serial is not None
+
+class SignalHeaterSerialChanged(SignalTailSerialChanged):
+    pass
 
 SIGNAL_TICK = SignalTick()
 
@@ -19,13 +37,23 @@ class DefrostHsm(hsm.Statemachine):
     def __init__(self):
         super().__init__()
 
-    def state_off(self, objSignal):
+    def state_off(self, signal):
         "Defrost off"
-        pass
+        # if isinstance(signal, SignalTick):
+        #     raise hsm.StateChangeException(self.state_off)
+        if isinstance(signal, SignalDefrostOnOff):
+            if signal.on:
+                raise hsm.StateChangeException(self.state_on)
+        raise hsm.DontChangeStateException()
 
-    def state_on(self, objSignal):
+    def state_on(self, signal):
         "Defrost on"
-        pass
+        # if isinstance(signal, SignalTick):
+        #     raise hsm.StateChangeException(self.state_on)
+        if isinstance(signal, SignalDefrostOnOff):
+            if not signal.on:
+                raise hsm.StateChangeException(self.state_off)
+        raise hsm.DontChangeStateException()
 
     init_ = state_off
 
@@ -39,39 +67,49 @@ class HeaterHsm(hsm.Statemachine):
     def __init__(self):
         super().__init__()
 
-    def state_disconnected(self, objSignal):
+    def state_disconnected(self, signal):
         "The insert is not connected by the cable"
-        pass
+        if isinstance(signal, SignalTick):
+            raise hsm.StateChangeException(self.state_connected)
+        if isinstance(signal, SignalTailSerialChanged):
+            if signal.is_connected:
+                raise hsm.StateChangeException(self.state_connected)
+        raise hsm.DontChangeStateException()
 
-    def state_connected(self, objSignal):
+    def state_connected(self, signal):
         "This insert is connected by the cable and the id was read successfully"
-        pass
+        if isinstance(signal, SignalTick):
+            raise hsm.StateChangeException(self.state_connected)
+        if isinstance(signal, SignalTailSerialChanged):
+            if not signal.is_connected:
+                raise hsm.StateChangeException(self.state_disconnected)
+        raise hsm.DontChangeStateException()
 
-    def state_connected_termoff(self, objSignal):
+    def state_connected_thermoff(self, signal):
         "Thermometrie switch is off"
         pass
 
-    def state_connected_termon(self, objSignal):
+    def state_connected_thermon(self, signal):
         "Thermometrie switch is on"
         pass
 
-    def state_connected_termon_heatingoff(self, objSignal):
+    def state_connected_thermon_heatingoff(self, signal):
         "Heating off"
         pass
 
-    def state_connected_termon_heatingmanual(self, objSignal):
+    def state_connected_thermon_heatingmanual(self, signal):
         "Heating manual"
         pass
 
-    def state_connected_termon_heatingcontrolled(self, objSignal):
+    def state_connected_thermon_heatingcontrolled(self, signal):
         "Heating controlled by PID"
         pass
 
-    def state_connected_termon_heatingcontrolled_settling(self, objSignal):
+    def state_connected_thermon_heatingcontrolled_settling(self, signal):
         "The temperature is about to be settled"
         pass
 
-    def state_connected_termon_heatingcontrolled_settled(self, objSignal):
+    def state_connected_thermon_heatingcontrolled_settled(self, signal):
         "The temperature is settled"
         pass
 
@@ -79,11 +117,11 @@ class HeaterHsm(hsm.Statemachine):
 
 
 def analyse():
-    def func_log_main(strLine):
-        print("Main: " + strLine)
+    def func_log_main(msg):
+        print("Main: " + msg)
 
-    def func_log_sub(strLine):
-        print("Sub:  " + strLine)
+    def func_log_sub(msg):
+        print("Sub:  " + msg)
 
     header = heater_hsm()
     header.setLogger(func_log_main, func_log_sub)

@@ -1,10 +1,13 @@
+import os
 import time
 import logging
 import threading
 
+import serial
+
 import heater_wrapper
 
-logger = logging.getLogger("heater_thermometrie_2012")
+logger = logging.getLogger("LabberDriver")
 
 LOCK = threading.Lock()
 
@@ -33,6 +36,10 @@ class HeaterThread(threading.Thread):
         while not self._stopping:
             try:
                 self._tick()
+            except serial.serialutil.SerialException as ex:
+                logger.fatal(f"Probably, the USB cable to the heater_thermometrie_2021 was disconnected: {repr(ex)}")
+                os._exit(42)
+                return
             except Exception as ex:
                 logger.exception(ex)
             time.sleep(1.0)

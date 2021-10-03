@@ -20,7 +20,7 @@ class test_hsm(hsm.Statemachine):
         if signal == "I":
             raise hsm.StateChangeException(self.state_0)
         if signal == "J":
-            raise hsm.IgnoreEventException()
+            raise hsm.IgnoreSignalException()
 
     def state_0_1(self, signal):
         if signal == "A":
@@ -63,7 +63,7 @@ class test_hsm(hsm.Statemachine):
 
     def state_0_2_2(self, signal):
         if signal == "B":
-            raise hsm.IgnoreEventException()
+            raise hsm.IgnoreSignalException()
         if signal == "G":
             raise hsm.StateChangeException(self.state_0_2_1)
 
@@ -88,11 +88,11 @@ class test_hsm(hsm.Statemachine):
 
 
 def analyse():
-    def func_log_main(strLine):
-        print("Main: " + strLine)
+    def func_log_main(msg):
+        print("Main: " + msg)
 
-    def func_log_sub(strLine):
-        print("Sub:  " + strLine)
+    def func_log_sub(msg):
+        print("Sub:  " + msg)
 
     sm = test_hsm()
     sm.func_log_main = func_log_main

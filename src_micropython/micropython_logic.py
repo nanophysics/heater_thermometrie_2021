@@ -28,13 +28,16 @@ PIN_SHORT_CARB = "X1"
 PIN_DS18_SHORT = "X6"
 PIN_DS18_PWD = "X5"
 PIN_DS18_ID = "X4"
-PIN_D18_TEMP = "Y4"
+PIN_DS18_TEMP = "Y4"
 PIN_ADS1219_RESET = "X11"
 PIN_ADS1219_DRDY = "X12"
 
 
-class OnewireID:
-    def __init__(self, pin=Pin(PIN_D18_TEMP)):
+class OnewireTemp:
+    """
+    DS18 blue heater box
+    """
+    def __init__(self, pin=Pin(PIN_DS18_TEMP)):
         assert isinstance(pin, Pin)
         ow = OneWire(pin)
         self.temp = DS18X20(ow)
@@ -55,10 +58,13 @@ class OnewireID:
         return self.temp.read_temp(rom)
 
 
-class OnewireTail(OnewireID):
+class OnewireTail(OnewireTemp):
+    """
+    DS18 located in the tail and connected using the green Fischer cable.
+    The blue heater box may powered on/off this DS18.
+    """
     def __init__(self):
         super().__init__(pin=Pin(PIN_DS18_ID))
-        # DS18 in insert2019
         self.DS18_PWR = Pin(PIN_DS18_PWD, Pin.OUT_PP)
         self.DS18_SHORT = Pin(PIN_DS18_SHORT, Pin.OUT_PP)
         self.set_power(on=False)
@@ -216,7 +222,7 @@ class Proxy:
         i2c_OLED = I2C(2, freq=40000)
         self.display = Display(i2c=i2c_OLED)
         self.display_clear()
-        self.onewire_id = OnewireID()
+        self.onewire_temp = OnewireTemp()
         self.onewire_tail = OnewireTail()
         self.temperature_tail = TemperatureTail(i2c=i2c_AD_DA)
         self.heater = Heater(i2c=i2c_AD_DA)

@@ -34,7 +34,7 @@ from src_micropython.micropython_portable import Thermometrie
 
 """
 
-logger = logging.getLogger("heater_thermometrie_2012")
+logger = logging.getLogger("LabberDriver")
 
 logger.setLevel(logging.DEBUG)
 
@@ -45,13 +45,17 @@ try:
     import mp.micropythonshell
     import mp.pyboard_query
 except ModuleNotFoundError as ex:
-    raise Exception('The module "mpfshell2" is missing. Did you call "pip -r requirements.txt"?')
+    raise Exception(
+        'The module "mpfshell2" is missing. Did you call "pip -r requirements.txt"?'
+    )
 
 HWSERIAL_SIMULATE = "SIMULATE"
 
 REQUIRED_MPFSHELL_VERSION = "100.9.17"
 if mp.version.FULL < REQUIRED_MPFSHELL_VERSION:
-    raise Exception(f'Your "mpfshell" has version "{mp.version.FULL}" but should be higher than "{REQUIRED_MPFSHELL_VERSION}". Call "pip install --upgrade mpfshell2"!')
+    raise Exception(
+        f'Your "mpfshell" has version "{mp.version.FULL}" but should be higher than "{REQUIRED_MPFSHELL_VERSION}". Call "pip install --upgrade mpfshell2"!'
+    )
 
 HWTYPE_HEATER_THERMOMETRIE_2021 = "heater_thermometrie_2021"
 
@@ -63,9 +67,9 @@ class FeSimulator:
     def eval(self, cmd: str):
         if cmd.startswith("proxy.display."):
             return b"None"
-        if cmd == "proxy.onewire_id.scan()":
+        if cmd == "proxy.onewire_temp.scan()":
             return b"28E3212E0D00002E"
-        if cmd == "proxy.onewire_id.read_temp('28E3212E0D00002E')":
+        if cmd == "proxy.onewire_temp.read_temp('28E3212E0D00002E')":
             return b"42.42"
         if cmd.startswith("proxy.onewire_tail.set_power("):
             return b"None"
@@ -105,36 +109,28 @@ class DisplayProxy:
         self.proxy.eval_as_none(f"proxy.display.zeile({line}, '{text}')")
 
 
-class OnewireID:
-    def __init__(self, proxy):
-        self.proxy = proxy
+class OnewireTemp:
+    def __init__(self, proxy, name="proxy.onewire_temp"):
+        self._name = name
+        self._proxy = proxy
 
     def scan(self) -> str:
         # '28E3212E0D00002E'
-        return self.proxy.eval_as(str, "proxy.onewire_id.scan()")
+        return self._proxy.eval_as(str, f"{self._name}.scan()", accept_none=True)
 
     def read_temp(self, ident: str) -> float:
         assert isinstance(ident, str)
         assert len(ident) == 16
-        return self.proxy.eval_as(float, f"proxy.onewire_id.read_temp('{ident}')")
+        return self._proxy.eval_as(float, f"{self._name}.read_temp('{ident}')", accept_none=True)
 
 
-class OnewireTail:
+class OnewireTail(OnewireTemp):
     def __init__(self, proxy):
-        self.proxy = proxy
+        super().__init__(proxy=proxy, name="proxy.onewire_tail")
 
     def set_power(self, on: bool) -> None:
         isinstance(on, bool)
-        return self.proxy.eval_as_none(f"proxy.onewire_tail.set_power(on={on})")
-
-    def scan(self) -> str:
-        # '28E3212E0D00002E'
-        return self.proxy.eval_as(str, "proxy.onewire_tail.scan()", accept_none=True)
-
-    def read_temp(self, ident: str) -> float:
-        assert isinstance(ident, str)
-        assert len(ident) == 16
-        return self.proxy.eval_as(float, f"proxy.onewire_tail.read_temp('{ident}')")
+        return self._proxy.eval_as_none(f"{self._name}.set_power(on={on})")
 
 
 class TemperatureTail:
@@ -143,11 +139,15 @@ class TemperatureTail:
 
     def set_thermometrie(self, on: bool) -> None:
         assert isinstance(on, bool)
-        return self.proxy.eval_as_none(f"proxy.temperature_tail.set_thermometrie(on={on})")
+        return self.proxy.eval_as_none(
+            f"proxy.temperature_tail.set_thermometrie(on={on})"
+        )
 
     def get_voltage(self, carbon=True) -> float:
         assert isinstance(carbon, bool)
-        return self.proxy.eval_as(float, f"proxy.temperature_tail.get_voltage(carbon={carbon})")
+        return self.proxy.eval_as(
+            float, f"proxy.temperature_tail.get_voltage(carbon={carbon})"
+        )
 
     # hw.adc.set_channel(ADS1219.CHANNEL_AIN2_AIN3) # carbon
     # voltage_carbon = hw.adc.read_data_signed() * electronics.ADC24_FACTOR_CARBON
@@ -170,12 +170,12 @@ class TemperatureTail:
 
 class Heater:
     def __init__(self, proxy):
-        self.proxy = proxy
+        self._proxy = proxy
 
     def set_power(self, power: int) -> None:
         assert isinstance(power, int)
         assert 0 <= power < 2 ** 16
-        return self.proxy.eval_as(str, f"proxy.heater.set_power(power={power})")
+        return self._proxy.eval_as(str, f"proxy.heater.set_power(power={power})")
 
 
 class MicropythonProxy:
@@ -239,16 +239,26 @@ class MicropythonInterface:
         self.board.systemexit_firmware_required(min="1.14.0", max="1.14.0")
         self.heater_thermometrie_2021_serial = self.board.identification.HWSERIAL
         try:
-            self.compact_2012_config = config_all.dict_compact2012[self.heater_thermometrie_2021_serial]
+            self.compact_2012_config = config_all.dict_compact2012[
+                self.heater_thermometrie_2021_serial
+            ]
         except KeyError:
-            self.compact_2012_config = config_all.dict_compact2012[config_all.SERIAL_UNDEFINED]
+            self.compact_2012_config = config_all.dict_compact2012[
+                config_all.SERIAL_UNDEFINED
+            ]
             print()
-            print(f'WARNING: The connected "compact_2012" has serial "{self.heater_thermometrie_2021_serial}". However, this serial in unknown!')
+            print(
+                f'WARNING: The connected "compact_2012" has serial "{self.heater_thermometrie_2021_serial}". However, this serial in unknown!'
+            )
             serials_defined = sorted(config_all.dict_compact2012.keys())
             serials_defined.remove(config_all.SERIAL_UNDEFINED)
-            print(f'INFO: "config_all.py" lists these serials: {",".join(serials_defined)}')
+            print(
+                f'INFO: "config_all.py" lists these serials: {",".join(serials_defined)}'
+            )
 
-        print(f"INFO: {HWTYPE_HEATER_THERMOMETRIE_2021} connected: {self.compact_2012_config}")
+        print(
+            f"INFO: {HWTYPE_HEATER_THERMOMETRIE_2021} connected: {self.compact_2012_config}"
+        )
 
         self.shell = self.board.mpfshell
         self.fe = self.shell.MpFileExplorer
@@ -261,7 +271,7 @@ class MicropythonInterface:
     def init(self):
         self.proxy = MicropythonProxy(self.fe)
         self.display = DisplayProxy(self.proxy)
-        self.onewire_id = OnewireID(self.proxy)
+        self.onewire_temp = OnewireTemp(self.proxy)
         self.onewire_tail = OnewireTail(self.proxy)
         self.temperature_tail = TemperatureTail(self.proxy)
         self.heater = Heater(self.proxy)
@@ -275,19 +285,20 @@ class MicropythonInterface:
 
         self.display.show()
 
-        ident = self.onewire_id.scan()
+        ident = self.onewire_temp.scan()
         if ident is not None:
-            temp = self.onewire_id.read_temp(ident=ident)
+            temp = self.onewire_temp.read_temp(ident=ident)
             print(f"ID vom heater_thermometrie_2021={ident} temp={temp}")
 
-        self.onewire_tail.set_power(on=True)
-        ident = self.onewire_tail.scan()
-        if ident is not None:
-            temp = self.onewire_tail.read_temp(ident=ident)
-            print(f"ID vom tail={ident} temp={temp}")
-        else:
-            print(f"Onewire of tail did not respond")
-        self.onewire_tail.set_power(on=False)
+        if False:
+            self.onewire_tail.set_power(on=True)
+            ident = self.onewire_tail.scan()
+            if ident is not None:
+                temp = self.onewire_tail.read_temp(ident=ident)
+                print(f"ID vom tail={ident} temp={temp}")
+            else:
+                print("Onewire of tail did not respond")
+            self.onewire_tail.set_power(on=False)
 
         self.temperature_tail.set_thermometrie(on=True)
         for carbon, label, current_factor in (
@@ -295,7 +306,10 @@ class MicropythonInterface:
             (False, "PT1000", Thermometrie.CURRENT_A_PT1000),
         ):
             temperature_V = self.temperature_tail.get_voltage(carbon=carbon)
-            print("%s: %f V, %f Ohm" % (label, temperature_V, temperature_V / current_factor))
+            print(
+                "%s: %f V, %f Ohm"
+                % (label, temperature_V, temperature_V / current_factor)
+            )
 
         self.temperature_tail.set_thermometrie(on=False)
 
