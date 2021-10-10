@@ -40,7 +40,7 @@ class HeaterWrapper:
         self.dict_values[Quantity.SerialNumberHeater] = repr(self.heater_2021_config)
 
         self.hsm_heater = heater_hsm.HeaterHsm(self)
-        self.hsm_defrost = heater_hsm.DefrostHsm(self)
+        # self.hsm_defrost = heater_hsm.DefrostHsm(self)
 
         self.filename_values = DIRECTORY_OF_THIS_FILE / f"Values-{self.mpi.heater_thermometrie_2021_serial}.txt"
 
@@ -60,7 +60,7 @@ class HeaterWrapper:
             hsm.reset()
 
         init_hsm(self.hsm_heater, "heater")
-        init_hsm(self.hsm_defrost, "defrost")
+        # init_hsm(self.hsm_defrost, "defrost")
 
         self.mpi.init()
 
@@ -68,6 +68,10 @@ class HeaterWrapper:
         id_box_expected = self.heater_2021_config.ONEWIRE_ID_HEATER
         if id_box != id_box_expected:
             logger.warning(f"Expected onewire_id of heater '{id_box_expected}' but got '{id_box}")
+
+        # Read all initial values from the pyboard
+        self.dict_values[Quantity.Heating] = EnumHeating.DEFROST
+        self.tick()
 
     def close(self):
         self.mpi.close()
@@ -80,8 +84,7 @@ class HeaterWrapper:
 
         self._set_value(
             Quantity.DefrostSwitchOnBox,
-            self.mpi.get_defrost(),
-            lambda value: self.hsm_defrost.dispatch(heater_hsm.SignalDefrostOnOff(on=value)),
+            self.mpi.defrost_switch.is_on()
         )
 
         def insert_onewire_id_changed(onewire_id: str) -> str:
@@ -99,9 +102,14 @@ class HeaterWrapper:
         self.mpi.onewire_insert.set_power(on=False)
 
         # self.hsm_defrost.dispatch(heater_hsm.SIGNAL_TICK)
-        # self.hsm_heater.dispatch(heater_hsm.SIGNAL_TICK)
+        self.hsm_heater.dispatch(heater_hsm.SIGNAL_TICK)
+
+    def get_quantity(self, quantity: Quantity):
+        assert isinstance(quantity, Quantity)
+        return self.get_value(quantity.value)
 
     def get_value(self, name: str):
+        assert isinstance(name, str)
         quantity = Quantity(name)
         if quantity == Quantity.Thermometrie:
             return self.hsm_heater.get_labber_thermometrie

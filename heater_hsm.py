@@ -2,7 +2,12 @@ from dataclasses import dataclass
 import pathlib
 import logging
 
-from heater_driver_utils import EnumInsertConnected, EnumThermometrie
+from heater_driver_utils import (
+    EnumHeating,
+    EnumInsertConnected,
+    EnumThermometrie,
+    Quantity,
+)
 import hsm
 
 
@@ -12,11 +17,6 @@ logger = logging.getLogger("LabberDriver")
 class SignalTick:
     def __repr__(self):
         return "SignalTick"
-
-
-@dataclass
-class SignalDefrostOnOff:
-    on: bool = None
 
 
 @dataclass
@@ -48,56 +48,57 @@ class SignalHeaterSerialChanged(SignalInsertSerialChanged):
 SIGNAL_TICK = SignalTick()
 
 
-class DefrostHsm(hsm.Statemachine):
-    """
-    This statemachine represents the defrost logic.
-    This logic is implemented in micropython, so defrosting may be done without labber.
-    """
+# class DefrostHsm(hsm.Statemachine):
+#     """
+#     This statemachine represents the defrost logic.
+#     This logic is implemented in micropython, so defrosting may be done without labber.
+#     """
 
-    def __init__(self, hw: "HeaterWrapper"):
-        super().__init__()
-        assert hw.__class__.__name__ == "HeaterWrapper"
-        self._hw = hw
+#     def __init__(self, hw: "HeaterWrapper"):
+#         super().__init__()
+#         assert hw.__class__.__name__ == "HeaterWrapper"
+#         self._hw = hw
 
-    def state_off(self, signal) -> None:
-        """
-        Defrost switch set to OFF
-        """
-        # if isinstance(signal, SignalTick):
-        #     raise hsm.StateChangeException(self.state_off)
-        if isinstance(signal, SignalDefrostOnOff):
-            if signal.on:
-                raise hsm.StateChangeException(self.state_on)
-        raise hsm.DontChangeStateException()
+#     def state_off(self, signal) -> None:
+#         """
+#         Defrost switch set to OFF
+#         """
+#         if isinstance(signal, SignalDefrostOnOff):
+#             if signal.on:
+#                 raise hsm.StateChangeException(self.state_on)
+#         raise hsm.DontChangeStateException()
 
-    def state_on(self, signal) -> None:
-        """
-        NONSTATE(entry=state_on_heating)
-        Defrost switch set to ON.
-        """
-        # if isinstance(signal, SignalTick):
-        #     raise hsm.StateChangeException(self.state_on)
-        if isinstance(signal, SignalDefrostOnOff):
-            if not signal.on:
-                raise hsm.StateChangeException(self.state_off)
-        raise hsm.DontChangeStateException()
+#     def state_on(self, signal) -> None:
+#         """
+#         NONSTATE(entry=state_on_heating)
+#         Defrost switch set to ON.
+#         """
+#         assert False
 
-    def state_on_heating(self, signal) -> None:
-        """
-        The insert is still cold: heating is on.
-        """
+#     def _handle_state_on(self, signal) -> None:
+#         if isinstance(signal, SignalDefrostOnOff):
+#             if not signal.on:
+#                 raise hsm.StateChangeException(self.state_off)
 
-    def state_on_warm(self, signal) -> None:
-        """
-        The insert is meanwhile warm: heating is off.
-        """
+#     def state_on_heating(self, signal) -> None:
+#         """
+#         The insert is still cold: heating is on.
+#         """
+#         self._handle_state_on(signal)
 
-    init_ = state_off
+#         raise hsm.DontChangeStateException()
+
+#     def state_on_warm(self, signal) -> None:
+#         """
+#         The insert is meanwhile warm: heating is off.
+#         """
+
+#     init_ = state_off
 
 
 class HeaterHsm(hsm.Statemachine):
     """
-    Statemachine Heater
+    Statemachine Heater.
     """
 
     def __init__(self, hw: "HeaterWrapper"):
@@ -119,29 +120,45 @@ class HeaterHsm(hsm.Statemachine):
         """
         The insert is not connected by the cable.
         Poll periodically for onewire id of insert.
-        .
-        Bound to this state if defrost statemachine "on".
         """
         if isinstance(signal, SignalInsertSerialChanged):
             if signal.is_connected:
-                raise hsm.StateChangeException(self.state_connected)
+                raise hsm.StateChangeException(self.state_connected_thermon)
         raise hsm.DontChangeStateException()
 
-    def _handle_connected(self, signal) -> None:
+    def state_connected(self, signal) -> None:
+        """
+        NONSTATE(entry=state_connected_thermon_xxx)
+        The insert is connected by the cable and the id was read successfully.
+
+        Periodically:
+        -> If defrost_switch.is_on() => state_connected_thermon_heatingoff
+        """
         if isinstance(signal, SignalInsertSerialChanged):
             if not signal.is_connected:
                 raise hsm.StateChangeException(self.state_disconnected)
         if isinstance(signal, SignalThermometrieOnOff):
             if signal.on:
                 raise hsm.StateChangeException(self.state_connected_thermon)
+        if isinstance(signal, SignalTick):
+            def get_requested_state():
+                if self._hw.get_quantity(Quantity.DefrostSwitchOnBox):
+                    return self.state_connected_thermon_defrost
+                heating = self._hw.get_quantity(Quantity.Heating)
+                if heating == EnumHeating.DEFROST:
+                    return self.state_connected_thermon_defrost
+                if heating == EnumHeating.OFF:
+                    return self.state_connected_thermon_heatingoff
+                if heating == EnumHeating.MANUAL:
+                    return self.state_connected_thermon_heatingmanual
+                if heating == EnumHeating.CONTROLLED:
+                    return self.state_connected_thermon_heatingoff
+                raise AttributeError(f"Case {heating.name} not handled.")
 
-    def state_connected(self, signal) -> None:
-        """
-        NONSTATE(entry=state_connected_thermon_xxx)
-        The insert is connected by the cable and the id was read successfully.
-        """
-        self._handle_connected(signal)
-        raise hsm.DontChangeStateException()
+            requested_state = get_requested_state()
+            if requested_state != self.actual_meth():
+                raise hsm.StateChangeException(requested_state)
+            raise hsm.DontChangeStateException()
 
     def state_connected_thermoff(self, signal) -> None:
         """
@@ -150,7 +167,6 @@ class HeaterHsm(hsm.Statemachine):
 
         A insert disconnect is NOT detected in this state.
         """
-        self._handle_connected(signal)
         raise hsm.DontChangeStateException()
 
     def entry_connected_thermoff(self, signal) -> None:
@@ -158,12 +174,6 @@ class HeaterHsm(hsm.Statemachine):
         heater.set_power(0)
         temperature_insert.enable_thermometrie(False)
         """
-
-    def _handle_connected_thermon(self, signal) -> None:
-        self._handle_connected(signal)
-        if isinstance(signal, SignalThermometrieOnOff):
-            if not signal.on:
-                raise hsm.StateChangeException(self.state_connected_thermoff)
 
     def state_connected_thermon(self, signal) -> None:
         """
@@ -178,8 +188,9 @@ class HeaterHsm(hsm.Statemachine):
         - Read temperature_insert.get_voltage(carbon=False)
         - Calibration table -> temperature
         """
-        self._handle_connected_thermon(signal)
-        raise hsm.DontChangeStateException()
+        if isinstance(signal, SignalThermometrieOnOff):
+            if not signal.on:
+                raise hsm.StateChangeException(self.state_connected_thermoff)
 
     def entry_connected_thermon(self, signal) -> None:
         """
@@ -191,7 +202,6 @@ class HeaterHsm(hsm.Statemachine):
     def state_connected_thermon_heatingoff(self, signal) -> None:
         """
         Heating off
-        Bound to this state if defrost statemachine "on".
         """
 
     def entry_connected_thermon_heatingoff(self, signal) -> None:
@@ -219,13 +229,19 @@ class HeaterHsm(hsm.Statemachine):
           settle_time_start_s = time.now()
           Quantity.ErrorCounter += 1
         - settled = time.now() > settle_time_start_s + Quantiy.SettleTime
-
         """
 
     def entry_connected_thermon_heatingcontrolled(self, signal) -> None:
         """
         Initialize PI controller
         settle_time_start_s = time.now()
+        """
+
+    def state_connected_thermon_defrost(self, signal) -> None:
+        """
+        Heating controlled by the pyboard.
+
+        We just display the state.
         """
 
     init_ = state_disconnected

@@ -9,6 +9,7 @@ from micropython_proxy import (
     OnewireInsert,
     TemperatureInsert,
     Heater,
+    DefrostSwitch,
     mp,
     FeSimulator,
     HWSERIAL_SIMULATE,
@@ -29,6 +30,7 @@ class MicropythonInterface:
         self.onewire_insert = None
         self.temperature_insert = None
         self.heater = None
+        self.defrost_switch = None
 
         if hwserial == HWSERIAL_SIMULATE:
             self.heater_thermometrie_2021_serial = "v42"
@@ -69,6 +71,7 @@ class MicropythonInterface:
         self.onewire_insert = OnewireInsert(self.proxy)
         self.temperature_insert = TemperatureInsert(self.proxy)
         self.heater = Heater(self.proxy)
+        self.defrost_switch = DefrostSwitch(self.proxy)
 
         self.display.clear()
         self.display.zeile(0, "heater")
@@ -113,5 +116,3 @@ class MicropythonInterface:
         # print("voltage_carbon: %f V, voltage_pt1000: %f V" % (voltage_carbon, voltage_pt1000))
         # print("resistance_carbon: %f Ohm, resistance_pt1000: %f Ohm" % (voltage_carbon/electronics.CURRENT_A_CARBON, voltage_pt1000/electronics.CURRENT_A_PT1000))
 
-    def get_defrost(self) -> bool:
-        return self.proxy.get_defrost()

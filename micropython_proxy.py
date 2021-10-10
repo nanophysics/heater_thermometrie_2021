@@ -135,6 +135,12 @@ class Heater:
         assert 0 <= power < 2 ** 16
         return self._proxy.eval_as(str, f"proxy.heater.set_power(power={power})")
 
+class DefrostSwitch:
+    def __init__(self, proxy):
+        self._proxy = proxy
+
+    def is_on(self) -> bool:
+        return self._proxy.eval_as(bool, "proxy.get_defrost()")
 
 class MicropythonProxy:
     def __init__(self, fe):
@@ -166,6 +172,3 @@ class MicropythonProxy:
 
     def eval_as_none(self, cmd):
         self.eval_as(type_expected=type(None), cmd=cmd)
-
-    def get_defrost(self) -> bool:
-        return self.eval_as(bool, "proxy.get_defrost()")

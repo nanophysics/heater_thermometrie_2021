@@ -116,8 +116,8 @@
             <root>
                 <mxCell id="B5BXyt-culo4BOTms-vx-0"/>
                 <mxCell id="B5BXyt-culo4BOTms-vx-1" parent="B5BXyt-culo4BOTms-vx-0"/>
-                <mxCell id="flTPCOjiz9wExJepbPtT-5" value="??" style="dashed=1;rounded=1;absoluteArcSize=1;arcSize=20;html=1;verticalAlign=top;align=right;spacingTop=5;spacingLeft=10;" parent="B5BXyt-culo4BOTms-vx-1" vertex="1">
-                    <mxGeometry x="210" y="400" width="230" height="80" as="geometry"/>
+                <mxCell id="flTPCOjiz9wExJepbPtT-5" value="defrost_switch" style="dashed=1;rounded=1;absoluteArcSize=1;arcSize=20;html=1;verticalAlign=top;align=right;spacingTop=5;spacingLeft=10;" parent="B5BXyt-culo4BOTms-vx-1" vertex="1">
+                    <mxGeometry x="210" y="400" width="290" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="B5BXyt-culo4BOTms-vx-55" value="temperature_insert" style="dashed=1;rounded=1;absoluteArcSize=1;arcSize=20;html=1;verticalAlign=top;align=right;spacingTop=5;spacingLeft=10;" parent="B5BXyt-culo4BOTms-vx-1" vertex="1">
                     <mxGeometry x="500" y="510" width="220" height="250" as="geometry"/>

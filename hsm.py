@@ -4,7 +4,7 @@ import sys
 import inspect
 
 REGEX_SPACES = re.compile(r"^(?P<spaces>.*?)(\S(.*)$)", re.M)
-
+NOT_INITIALIZED_YET = "NOT-INITIALIZED-YET"
 
 class StateChangeException(Exception):
     def __init__(self, meth_new_state):
@@ -45,11 +45,14 @@ class Statemachine:
         self.func_log_main = log_main
         self.func_log_sub = log_sub
         self.func_state_change = log_state_change
-        self._state_actual = "NOT-INITIALIZED-YET"
+        self._state_actual = NOT_INITIALIZED_YET
 
     @property
     def state(self):
         return self._state_actual
+
+    def actual_meth(self):
+        return getattr(self, "state_" + self._state_actual)
 
     def dispatch(self, signal):
         state_before = self._state_actual
