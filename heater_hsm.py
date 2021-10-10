@@ -72,7 +72,6 @@ class DefrostHsm(hsm.Statemachine):
     def state_on(self, signal) -> None:
         """
         Defrost switch set to ON.
-        TODO: Add state for 'heating' / 'warm'
         """
         # if isinstance(signal, SignalTick):
         #     raise hsm.StateChangeException(self.state_on)
@@ -80,6 +79,16 @@ class DefrostHsm(hsm.Statemachine):
             if not signal.on:
                 raise hsm.StateChangeException(self.state_off)
         raise hsm.DontChangeStateException()
+
+    def state_on_heating(self, signal) -> None:
+        """
+        The insert is still cold: heating is on.
+        """
+
+    def state_on_warm(self, signal) -> None:
+        """
+        The insert is meanwhile warm: heating is off.
+        """
 
     init_ = state_off
 

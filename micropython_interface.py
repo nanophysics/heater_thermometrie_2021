@@ -5,7 +5,7 @@ import logging
 from micropython_proxy import (
     MicropythonProxy,
     DisplayProxy,
-    OnewireTemp,
+    OnewireBox,
     OnewireInsert,
     TemperatureInsert,
     Heater,
@@ -25,7 +25,7 @@ class MicropythonInterface:
     def __init__(self, hwserial):
         self.proxy = None
         self.display = None
-        self.onewire_temp = None
+        self.onewire_box = None
         self.onewire_insert = None
         self.temperature_insert = None
         self.heater = None
@@ -65,7 +65,7 @@ class MicropythonInterface:
     def init(self):
         self.proxy = MicropythonProxy(self.fe)
         self.display = DisplayProxy(self.proxy)
-        self.onewire_temp = OnewireTemp(self.proxy)
+        self.onewire_box = OnewireBox(self.proxy)
         self.onewire_insert = OnewireInsert(self.proxy)
         self.temperature_insert = TemperatureInsert(self.proxy)
         self.heater = Heater(self.proxy)

@@ -64,10 +64,10 @@ class HeaterWrapper:
 
         self.mpi.init()
 
-        id_temp = self.mpi.onewire_temp.scan()
-        id_temp_expected = self.heater_2021_config.ONEWIRE_ID_HEATER
-        if id_temp != id_temp_expected:
-            logger.warning(f"Expected onewire_id of heater '{id_temp_expected}' but got '{id_temp}")
+        id_box = self.mpi.onewire_box.scan()
+        id_box_expected = self.heater_2021_config.ONEWIRE_ID_HEATER
+        if id_box != id_box_expected:
+            logger.warning(f"Expected onewire_id of heater '{id_box_expected}' but got '{id_box}")
 
     def close(self):
         self.mpi.close()

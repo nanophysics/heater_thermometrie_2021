@@ -29,9 +29,9 @@ class FeSimulator:
     def eval(self, cmd: str):  # pylint: disable=too-many-return-statements
         if cmd.startswith("proxy.display."):
             return b"None"
-        if cmd == "proxy.onewire_temp.scan()":
+        if cmd == "proxy.onewire_box.scan()":
             return b"28E3212E0D00002E"
-        if cmd == "proxy.onewire_temp.read_temp('28E3212E0D00002E')":
+        if cmd == "proxy.onewire_box.read_temp('28E3212E0D00002E')":
             return b"42.42"
         if cmd.startswith("proxy.onewire_insert.set_power("):
             return b"None"
@@ -71,8 +71,8 @@ class DisplayProxy:
         self.proxy.eval_as_none(f"proxy.display.zeile({line}, '{text}')")
 
 
-class OnewireTemp:
-    def __init__(self, proxy, name="proxy.onewire_temp"):
+class OnewireBox:
+    def __init__(self, proxy, name="proxy.onewire_box"):
         self._name = name
         self._proxy = proxy
 
@@ -86,7 +86,7 @@ class OnewireTemp:
         return self._proxy.eval_as(float, f"{self._name}.read_temp('{ident}')", accept_none=True)
 
 
-class OnewireInsert(OnewireTemp):
+class OnewireInsert(OnewireBox):
     def __init__(self, proxy):
         super().__init__(proxy=proxy, name="proxy.onewire_insert")
 

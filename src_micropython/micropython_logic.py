@@ -33,7 +33,7 @@ PIN_ADS1219_RESET = "X11"
 PIN_ADS1219_DRDY = "X12"
 
 
-class OnewireTemp:
+class OnewireBox:
     """
     DS18 blue heater box
     """
@@ -59,7 +59,7 @@ class OnewireTemp:
         return self.temp.read_temp(rom)
 
 
-class OnewireInsert(OnewireTemp):
+class OnewireInsert(OnewireBox):
     """
     DS18 located in the insert and connected using the green Fischer cable.
     The blue heater box may powered on/off this DS18.
@@ -224,7 +224,7 @@ class Proxy:
         i2c_OLED = I2C(2, freq=40000)
         self.display = Display(i2c=i2c_OLED)
         self.display_clear()
-        self.onewire_temp = OnewireTemp()
+        self.onewire_box = OnewireBox()
         self.onewire_insert = OnewireInsert()
         self.temperature_insert = TemperatureInsert(i2c=i2c_AD_DA)
         self.heater = Heater(i2c=i2c_AD_DA)
