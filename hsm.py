@@ -1,5 +1,6 @@
 import io
 import re
+import sys
 import inspect
 
 REGEX_SPACES = re.compile(r"^(?P<spaces>.*?)(\S(.*)$)", re.M)
@@ -79,7 +80,11 @@ class Statemachine:
             new_state = e.meth_new_state.__name__.replace("state_", "")
             if self._state_actual != new_state:
                 if self.func_state_change is not None:
-                    self.func_state_change(handling_state=handling_state, state_before=state_before, new_state=new_state)
+                    self.func_state_change(
+                        handling_state=handling_state,
+                        state_before=state_before,
+                        new_state=new_state,
+                    )
             init_state = self.get_init_state(new_state)
             if init_state != new_state:
                 self.func_log_sub(f"  Init-State for {new_state} is {init_state}.")
@@ -178,24 +183,26 @@ class Statemachine:
         # self.call_exit_entry_actions(self.top_state, self._state_actual)
         self.call_exit_entry_actions(None, "", self._state_actual)
 
-    def _beautify_docstring(self, docstring):
-        docstring = "\n" + docstring.replace("\r\n", "\n")
-        docstring = docstring.replace("\r", "")
-        # remove empty lines at the begin
-        objMatch = REGEX_SPACES.search(docstring)
-        if objMatch:
-            strSpaces = objMatch.groupdict(0)["spaces"]
-            docstring = docstring.replace("\n" + strSpaces, "\n")
-        docstring = docstring.strip()
-        docstring = docstring.replace("\n", "<br>\n")
-        return docstring.replace(" ", "&nbsp;")
+    @staticmethod
+    def _beautify_docstring(docstring):
+        if docstring is None:
+            return None
+        docstring = docstring.replace("\r\n", "\n")
+        lines = []
+        for line in docstring.split("\n"):
+            line = line.strip()
+            if line == "":
+                continue
+            lines.append(line)
+        if len(lines) == 0:
+            return None
+        return "<br>".join(lines)
 
     def get_docstring(self, methodname):
         docstring = inspect.getdoc(getattr(self, methodname))
         if docstring:
-            # docstring = docstring.strip().replace('\n', '<br>')
             return self._beautify_docstring(docstring)
-        return ""
+        return None
 
     def get_hierarchy_(self, parent_state=""):
         list_level = []
@@ -296,7 +303,7 @@ class Statemachine:
         """
         f = io.StringIO()
         f.write(html_header)
-        docstring = inspect.getdoc(self)
+        docstring = self._beautify_docstring(self.__doc__)
         if docstring:
             f.write("<p>" + docstring + "</p><br>")
         list_level = self.get_hierarchy()
@@ -308,9 +315,8 @@ class Statemachine:
 
 
 html_header = """
-<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
-<?xml version='1.0' encoding='iso-8859-1' ?>
-<html xmlns='http://www.w3.org/1999/xhtml'>
+<!DOCTYPE html>
+<html lang="en">
   <head>
     <title>Hierarchical State Machine</title> 
     <meta http-equiv='content-type' content='text/html;charset=iso-8859-1'>
@@ -319,8 +325,9 @@ html_header = """
     <!--
     /*  common styles  */
     table.table_state {width: 100%; border-left: 2px solid #000000; border-right: 2px solid #000000; border-top: 0px solid #000000; border-bottom: 0px solid #000000}
-    td.td_header { background-color: #EEEEEE; border-bottom: 1px solid #000000; border-top: 1px solid #000000; font-weight: bold}
-    td.td_label {width: 1%; font-size: smaller; font-style: italic}
+    td {padding-left:3px; padding-right:3px}
+    td.td_header {background-color: #EEEEEE; border-bottom: 1px solid #000000; border-top: 1px solid #000000; font-weight: bold}
+    td.td_label {font-size: smaller; width: 1%; font-style: italic}
     td.td_text {font-size: smaller}
     td.td_space {width: 1%}
     td.td_substate {width: 100%}
@@ -531,7 +538,7 @@ class Test_StatemachineWithEntryExitActions(Statemachine):
 def run_doctest():
     import doctest
 
-    rc = doctest.testmod()
+    rc = doctest.testmod(m=sys.modules.get(__name__))
     if rc.failed > 0:
         raise Exception(rc)
 

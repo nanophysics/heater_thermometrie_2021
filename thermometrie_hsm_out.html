@@ -1,7 +1,6 @@
 
-<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
-<?xml version='1.0' encoding='iso-8859-1' ?>
-<html xmlns='http://www.w3.org/1999/xhtml'>
+<!DOCTYPE html>
+<html lang="en">
   <head>
     <title>Hierarchical State Machine</title> 
     <meta http-equiv='content-type' content='text/html;charset=iso-8859-1'>
@@ -10,8 +9,9 @@
     <!--
     /*  common styles  */
     table.table_state {width: 100%; border-left: 2px solid #000000; border-right: 2px solid #000000; border-top: 0px solid #000000; border-bottom: 0px solid #000000}
-    td.td_header { background-color: #EEEEEE; border-bottom: 1px solid #000000; border-top: 1px solid #000000; font-weight: bold}
-    td.td_label {width: 1%; font-size: smaller; font-style: italic}
+    td {padding-left:3px; padding-right:3px}
+    td.td_header {background-color: #EEEEEE; border-bottom: 1px solid #000000; border-top: 1px solid #000000; font-weight: bold}
+    td.td_label {font-size: smaller; width: 1%; font-style: italic}
     td.td_text {font-size: smaller}
     td.td_space {width: 1%}
     td.td_substate {width: 100%}
@@ -19,13 +19,11 @@
     </style>
   </head>
   <body>
-<p>This is a sample Statemachine as in figure 6.2 on page 170
-in 'Practical Statecharts in C/C++', ISBN 1-57820-110-1.</p><br><table class="table_state">  <tr>    <td class="td_header" colSpan="3">off</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">Defrost&nbsp;off</td></tr></table><table class="table_state">  <tr>    <td class="td_header" colSpan="3">on</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">Defrost&nbsp;on</td></tr></table></body>
+<p>This statemachine represents the defrost switch.</p><br><table class="table_state">  <tr>    <td class="td_header" colSpan="3">off</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">Defrost switch set to OFF</td></tr></table><table class="table_state">  <tr>    <td class="td_header" colSpan="3">on</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">Defrost switch set to ON.<br>TODO: Add state for 'heating' / 'warm'</td></tr></table></body>
 </html>
 
-<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
-<?xml version='1.0' encoding='iso-8859-1' ?>
-<html xmlns='http://www.w3.org/1999/xhtml'>
+<!DOCTYPE html>
+<html lang="en">
   <head>
     <title>Hierarchical State Machine</title> 
     <meta http-equiv='content-type' content='text/html;charset=iso-8859-1'>
@@ -34,8 +32,9 @@ in 'Practical Statecharts in C/C++', ISBN 1-57820-110-1.</p><br><table class="ta
     <!--
     /*  common styles  */
     table.table_state {width: 100%; border-left: 2px solid #000000; border-right: 2px solid #000000; border-top: 0px solid #000000; border-bottom: 0px solid #000000}
-    td.td_header { background-color: #EEEEEE; border-bottom: 1px solid #000000; border-top: 1px solid #000000; font-weight: bold}
-    td.td_label {width: 1%; font-size: smaller; font-style: italic}
+    td {padding-left:3px; padding-right:3px}
+    td.td_header {background-color: #EEEEEE; border-bottom: 1px solid #000000; border-top: 1px solid #000000; font-weight: bold}
+    td.td_label {font-size: smaller; width: 1%; font-style: italic}
     td.td_text {font-size: smaller}
     td.td_space {width: 1%}
     td.td_substate {width: 100%}
@@ -43,6 +42,5 @@ in 'Practical Statecharts in C/C++', ISBN 1-57820-110-1.</p><br><table class="ta
     </style>
   </head>
   <body>
-<p>This is a sample Statemachine as in figure 6.2 on page 170
-in 'Practical Statecharts in C/C++', ISBN 1-57820-110-1.</p><br><table class="table_state">  <tr>    <td class="td_header" colSpan="3">connected</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">This&nbsp;insert&nbsp;is&nbsp;connected&nbsp;by&nbsp;the&nbsp;cable&nbsp;and&nbsp;the&nbsp;id&nbsp;was&nbsp;read&nbsp;successfully</td></tr>  <tr class="tr_sub">    <td class="td_space">&nbsp;&nbsp;&nbsp;</td>    <td class="td_substate" colSpan="2"><table class="table_state">  <tr>    <td class="td_header" colSpan="3">thermoff</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">Thermometrie&nbsp;switch&nbsp;is&nbsp;off</td></tr></table><table class="table_state">  <tr>    <td class="td_header" colSpan="3">thermon</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">Thermometrie&nbsp;switch&nbsp;is&nbsp;on</td></tr>  <tr class="tr_sub">    <td class="td_space">&nbsp;&nbsp;&nbsp;</td>    <td class="td_substate" colSpan="2"><table class="table_state">  <tr>    <td class="td_header" colSpan="3">heatingcontrolled</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">Heating&nbsp;controlled&nbsp;by&nbsp;PID</td></tr>  <tr class="tr_sub">    <td class="td_space">&nbsp;&nbsp;&nbsp;</td>    <td class="td_substate" colSpan="2"><table class="table_state">  <tr>    <td class="td_header" colSpan="3">settled</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">The&nbsp;temperature&nbsp;is&nbsp;settled</td></tr></table><table class="table_state">  <tr>    <td class="td_header" colSpan="3">settling</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">The&nbsp;temperature&nbsp;is&nbsp;about&nbsp;to&nbsp;be&nbsp;settled</td></tr></table>    </td>  </tr></table><table class="table_state">  <tr>    <td class="td_header" colSpan="3">heatingmanual</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">Heating&nbsp;manual</td></tr></table><table class="table_state">  <tr>    <td class="td_header" colSpan="3">heatingoff</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">Heating&nbsp;off</td></tr></table>    </td>  </tr></table>    </td>  </tr></table><table class="table_state">  <tr>    <td class="td_header" colSpan="3">disconnected</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">The&nbsp;insert&nbsp;is&nbsp;not&nbsp;connected&nbsp;by&nbsp;the&nbsp;cable</td></tr></table></body>
+<p>Statemachine Heater<br>TODO: When may be polled for the Insert-ID?</p><br><table class="table_state">  <tr>    <td class="td_header" colSpan="3">connected</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">This insert is connected by the cable and the id was read successfully</td></tr>  <tr class="tr_sub">    <td class="td_space">&nbsp;&nbsp;&nbsp;</td>    <td class="td_substate" colSpan="2"><table class="table_state">  <tr>    <td class="td_header" colSpan="3">thermoff</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">Thermometrie is off<br>TODO:<br>bei OFF keinen Strom durch Messwiderstände und keine Temperatur zurück geben und nicht heizen, nicht regeln.<br>SHORT_CARB.value(0)<br>SHORT_PT1000.value(0)</td></tr></table><table class="table_state">  <tr>    <td class="td_header" colSpan="3">thermon</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">Thermometrie is on</td></tr>  <tr class="tr_sub">    <td class="td_space">&nbsp;&nbsp;&nbsp;</td>    <td class="td_substate" colSpan="2"><table class="table_state">  <tr>    <td class="td_header" colSpan="3">heatingcontrolled</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">Heating controlled by PID</td></tr>  <tr class="tr_sub">    <td class="td_space">&nbsp;&nbsp;&nbsp;</td>    <td class="td_substate" colSpan="2"><table class="table_state">  <tr>    <td class="td_header" colSpan="3">settled</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">The temperature is settled</td></tr></table><table class="table_state">  <tr>    <td class="td_header" colSpan="3">settling</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">The temperature is about to be settled</td></tr></table>    </td>  </tr></table><table class="table_state">  <tr>    <td class="td_header" colSpan="3">heatingmanual</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">Heating manual</td></tr></table><table class="table_state">  <tr>    <td class="td_header" colSpan="3">heatingoff</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">Heating off</td></tr></table>    </td>  </tr></table>    </td>  </tr></table><table class="table_state">  <tr>    <td class="td_header" colSpan="3">disconnected</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">The insert is not connected by the cable</td></tr></table></body>
 </html>

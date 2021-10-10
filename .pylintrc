@@ -35,7 +35,7 @@ disable=
         # I1101, # c-extension-no-member
         R0201, # Method could be a function (no-self-use)
         # R0205, # useless-object-inheritance
-        R0801, # duplicate-code  # TODO: This is a very good test and a lot of code is duplicated!
+        R0801, # duplicate-code
         R0902, # too-many-instance-attributes
         R0903, # too-few-public-methods
         # R0904, # too-many-public-methods

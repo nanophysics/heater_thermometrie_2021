@@ -50,8 +50,7 @@ SIGNAL_TICK = SignalTick()
 
 class DefrostHsm(hsm.Statemachine):
     """
-    This is a sample Statemachine as in figure 6.2 on page 170
-    in 'Practical Statecharts in C/C++', ISBN 1-57820-110-1.
+    This statemachine represents the defrost switch.
     """
 
     def __init__(self, hw: "HeaterWrapper"):
@@ -60,7 +59,9 @@ class DefrostHsm(hsm.Statemachine):
         self._hw = hw
 
     def state_off(self, signal) -> None:
-        "Defrost off"
+        """
+        Defrost switch set to OFF
+        """
         # if isinstance(signal, SignalTick):
         #     raise hsm.StateChangeException(self.state_off)
         if isinstance(signal, SignalDefrostOnOff):
@@ -69,7 +70,10 @@ class DefrostHsm(hsm.Statemachine):
         raise hsm.DontChangeStateException()
 
     def state_on(self, signal) -> None:
-        "Defrost on"
+        """
+        Defrost switch set to ON.
+        TODO: Add state for 'heating' / 'warm'
+        """
         # if isinstance(signal, SignalTick):
         #     raise hsm.StateChangeException(self.state_on)
         if isinstance(signal, SignalDefrostOnOff):
@@ -82,8 +86,8 @@ class DefrostHsm(hsm.Statemachine):
 
 class HeaterHsm(hsm.Statemachine):
     """
-    This is a sample Statemachine as in figure 6.2 on page 170
-    in 'Practical Statecharts in C/C++', ISBN 1-57820-110-1.
+    Statemachine Heater
+    TODO: When may be polled for the Insert-ID?
     """
 
     def __init__(self, hw: "HeaterWrapper"):
@@ -102,7 +106,9 @@ class HeaterHsm(hsm.Statemachine):
         return EnumInsertConnected.get_labber(connected)
 
     def state_disconnected(self, signal) -> None:
-        "The insert is not connected by the cable"
+        """
+        The insert is not connected by the cable
+        """
         if isinstance(signal, SignalInsertSerialChanged):
             if signal.is_connected:
                 raise hsm.StateChangeException(self.state_connected)
@@ -117,12 +123,20 @@ class HeaterHsm(hsm.Statemachine):
                 raise hsm.StateChangeException(self.state_connected_thermon)
 
     def state_connected(self, signal) -> None:
-        "This insert is connected by the cable and the id was read successfully"
+        """
+        This insert is connected by the cable and the id was read successfully
+        """
         self._handle_connected(signal)
         raise hsm.DontChangeStateException()
 
     def state_connected_thermoff(self, signal) -> None:
-        "Thermometrie switch is off"
+        """
+        Thermometrie is off
+        TODO:
+        bei OFF keinen Strom durch Messwiderstände und keine Temperatur zurück geben und nicht heizen, nicht regeln.
+        SHORT_CARB.value(0)
+        SHORT_PT1000.value(0)
+        """
         self._handle_connected(signal)
         raise hsm.DontChangeStateException()
 
@@ -133,24 +147,36 @@ class HeaterHsm(hsm.Statemachine):
                 raise hsm.StateChangeException(self.state_connected_thermoff)
 
     def state_connected_thermon(self, signal) -> None:
-        "Thermometrie switch is on"
+        """
+        Thermometrie is on
+        """
         self._handle_connected_thermon(signal)
         raise hsm.DontChangeStateException()
 
     def state_connected_thermon_heatingoff(self, signal) -> None:
-        "Heating off"
+        """
+        Heating off
+        """
 
     def state_connected_thermon_heatingmanual(self, signal) -> None:
-        "Heating manual"
+        """
+        Heating manual
+        """
 
     def state_connected_thermon_heatingcontrolled(self, signal) -> None:
-        "Heating controlled by PID"
+        """
+        Heating controlled by PID
+        """
 
     def state_connected_thermon_heatingcontrolled_settling(self, signal) -> None:
-        "The temperature is about to be settled"
+        """
+        The temperature is about to be settled
+        """
 
     def state_connected_thermon_heatingcontrolled_settled(self, signal) -> None:
-        "The temperature is settled"
+        """
+        The temperature is settled
+        """
 
     init_ = state_disconnected
 
