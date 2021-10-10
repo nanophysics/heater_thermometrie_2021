@@ -50,7 +50,8 @@ SIGNAL_TICK = SignalTick()
 
 class DefrostHsm(hsm.Statemachine):
     """
-    This statemachine represents the defrost switch.
+    This statemachine represents the defrost logic.
+    This logic is implemented in micropython, so defrosting may be done without labber.
     """
 
     def __init__(self, hw: "HeaterWrapper"):
@@ -71,6 +72,7 @@ class DefrostHsm(hsm.Statemachine):
 
     def state_on(self, signal) -> None:
         """
+        NONSTATE(entry=state_on_heating)
         Defrost switch set to ON.
         """
         # if isinstance(signal, SignalTick):
@@ -96,7 +98,6 @@ class DefrostHsm(hsm.Statemachine):
 class HeaterHsm(hsm.Statemachine):
     """
     Statemachine Heater
-    TODO: When may be polled for the Insert-ID?
     """
 
     def __init__(self, hw: "HeaterWrapper"):
@@ -116,7 +117,10 @@ class HeaterHsm(hsm.Statemachine):
 
     def state_disconnected(self, signal) -> None:
         """
-        The insert is not connected by the cable
+        The insert is not connected by the cable.
+        Poll periodically for onewire id of insert.
+        .
+        Bound to this state if defrost statemachine "on".
         """
         if isinstance(signal, SignalInsertSerialChanged):
             if signal.is_connected:
@@ -133,21 +137,27 @@ class HeaterHsm(hsm.Statemachine):
 
     def state_connected(self, signal) -> None:
         """
-        This insert is connected by the cable and the id was read successfully
+        NONSTATE(entry=state_connected_thermon_xxx)
+        The insert is connected by the cable and the id was read successfully.
         """
         self._handle_connected(signal)
         raise hsm.DontChangeStateException()
 
     def state_connected_thermoff(self, signal) -> None:
         """
-        Thermometrie is off
-        TODO:
-        bei OFF keinen Strom durch Messwiderstände und keine Temperatur zurück geben und nicht heizen, nicht regeln.
-        SHORT_CARB.value(0)
-        SHORT_PT1000.value(0)
+        Thermometrie is off.
+        No current in Carbon or PT1000 to avoid heating.
+
+        A insert disconnect is NOT detected in this state.
         """
         self._handle_connected(signal)
         raise hsm.DontChangeStateException()
+
+    def entry_connected_thermoff(self, signal) -> None:
+        """
+        heater.set_power(0)
+        temperature_insert.enable_thermometrie(False)
+        """
 
     def _handle_connected_thermon(self, signal) -> None:
         self._handle_connected(signal)
@@ -157,14 +167,36 @@ class HeaterHsm(hsm.Statemachine):
 
     def state_connected_thermon(self, signal) -> None:
         """
+        NONSTATE(entry=state_connected_thermon_xxx)
+
         Thermometrie is on
+
+        Periodically:
+        - Observe two pins of the pyboard to see if insert was disconnected
+        Periodically:
+        - Read temperature_insert.get_voltage(carbon=True)
+        - Read temperature_insert.get_voltage(carbon=False)
+        - Calibration table -> temperature
         """
         self._handle_connected_thermon(signal)
         raise hsm.DontChangeStateException()
 
+    def entry_connected_thermon(self, signal) -> None:
+        """
+        Read onewire id from insert.
+        Load calibration tables for this insert.
+        temperature_insert.enable_thermometrie(True)
+        """
+
     def state_connected_thermon_heatingoff(self, signal) -> None:
         """
         Heating off
+        Bound to this state if defrost statemachine "on".
+        """
+
+    def entry_connected_thermon_heatingoff(self, signal) -> None:
+        """
+        heater.set_power(0)
         """
 
     def state_connected_thermon_heatingmanual(self, signal) -> None:
@@ -172,19 +204,28 @@ class HeaterHsm(hsm.Statemachine):
         Heating manual
         """
 
+    def entry_connected_thermon_heatingmanual(self, signal) -> None:
+        """
+        heater.set_power(Quantity.Power)
+        """
+
     def state_connected_thermon_heatingcontrolled(self, signal) -> None:
         """
-        Heating controlled by PID
+        Heating controlled by PI
+        Periodically:
+        - temperature -> PI controller -> power, 'in range' (Quantity.TemperatureToleranceBand)
+        - heater.set_power(power)
+        - if not 'in range':
+          settle_time_start_s = time.now()
+          Quantity.ErrorCounter += 1
+        - settled = time.now() > settle_time_start_s + Quantiy.SettleTime
+
         """
 
-    def state_connected_thermon_heatingcontrolled_settling(self, signal) -> None:
+    def entry_connected_thermon_heatingcontrolled(self, signal) -> None:
         """
-        The temperature is about to be settled
-        """
-
-    def state_connected_thermon_heatingcontrolled_settled(self, signal) -> None:
-        """
-        The temperature is settled
+        Initialize PI controller
+        settle_time_start_s = time.now()
         """
 
     init_ = state_disconnected

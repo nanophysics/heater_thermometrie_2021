@@ -41,7 +41,7 @@ class FeSimulator:
             return b"43.43"
         if cmd == "proxy.get_defrost()":
             return b"True"
-        if cmd.startswith("proxy.temperature_insert.set_thermometrie(on="):
+        if cmd.startswith("proxy.temperature_insert.enable_thermometrie(enable="):
             return b"None"
         if cmd.startswith("proxy.temperature_insert.get_voltage(carbon="):
             return b"4.711"
@@ -99,9 +99,9 @@ class TemperatureInsert:
     def __init__(self, proxy):
         self.proxy = proxy
 
-    def set_thermometrie(self, on: bool) -> None:
-        assert isinstance(on, bool)
-        return self.proxy.eval_as_none(f"proxy.temperature_insert.set_thermometrie(on={on})")
+    def enable_thermometrie(self, enable: bool) -> None:
+        assert isinstance(enable, bool)
+        return self.proxy.eval_as_none(f"proxy.temperature_insert.enable_thermometrie(enable={enable})")
 
     def get_voltage(self, carbon=True) -> float:
         assert isinstance(carbon, bool)

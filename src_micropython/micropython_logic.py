@@ -114,12 +114,12 @@ class TemperatureInsert:
             self.adc.set_gain(ADS1219.GAIN_1X)  # GAIN_1X, GAIN_4X
             self.adc.set_data_rate(ADS1219.DR_20_SPS)  # DR_20_SPS -> 50 ms
 
-        self.set_thermometrie(on=False)
+        self.enable_thermometrie(enable=False)
 
-    def set_thermometrie(self, on):
-        assert isinstance(on, bool)
-        self.short_carb.value(not on)
-        self.short_pt1000.value(not on)
+    def enable_thermometrie(self, enable):
+        assert isinstance(enable, bool)
+        self.short_carb.value(not enable)
+        self.short_pt1000.value(not enable)
 
     def get_voltage(self, carbon):
         assert isinstance(carbon, bool)

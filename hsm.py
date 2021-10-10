@@ -242,13 +242,6 @@ class Statemachine:
         text = state.split("_")[-1]
         f.write(f'    <td class="td_header" colSpan="3">{text}</td>')
         f.write("  </tr>")
-        docstring = self.get_docstring(f"state_{state}")
-        if docstring:
-            f.write('<tr class="tr_comment">')
-            f.write('  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>')
-            f.write('  <td class="td_label">comment</td>')
-            f.write(f'  <td class="td_text">{docstring}</td>')
-            f.write("</tr>")
         if state in self._list_init_names:
             init_state = self._dict_init_state[state]
             f.write('<TR class="tr_init">')
@@ -264,6 +257,13 @@ class Statemachine:
                 f.write('  <TD class="td_label">entry</TD>')
                 f.write(f'  <TD class="td_text">{docstring}</TD>')
                 f.write("</TR>")
+        docstring = self.get_docstring(f"state_{state}")
+        if docstring:
+            f.write('<tr class="tr_comment">')
+            f.write('  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>')
+            f.write('  <td class="td_label">comment</td>')
+            f.write(f'  <td class="td_text">{docstring}</td>')
+            f.write("</tr>")
         if state in self._list_exit_names:
             docstring = self.get_docstring("exit_" + state)
             if docstring:

@@ -91,6 +91,7 @@ class Quantity(EnumMixin, enum.Enum):
     GreenLED = "Green LED"
     Power = "power"
     Temperature = "temperature"
+    TemperatureAndWait = "temperature and wait"
     TemperatureBox = "Temperature Box"
     TemperatureToleranceBand = "temperature tolerance band"
     SettleTime = "settle time"

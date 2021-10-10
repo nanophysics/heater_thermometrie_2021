@@ -89,7 +89,7 @@ class MicropythonInterface:
                 print("Onewire of insert did not respond")
             self.onewire_insert.set_power(on=False)
 
-        self.temperature_insert.set_thermometrie(on=True)
+        self.temperature_insert.enable_thermometrie(enable=True)
         for carbon, label, current_factor in (
             (True, "carbon", Thermometrie.CURRENT_A_CARBON),
             (False, "PT1000", Thermometrie.CURRENT_A_PT1000),
@@ -97,7 +97,7 @@ class MicropythonInterface:
             temperature_V = self.temperature_insert.get_voltage(carbon=carbon)
             print(f"{label}: {temperature_V:f} V, {temperature_V / current_factor:f} Ohm")
 
-        self.temperature_insert.set_thermometrie(on=False)
+        self.temperature_insert.enable_thermometrie(enable=False)
 
         self.heater.set_power(power=2 ** 15 - 1)
         time.sleep(1.5)
