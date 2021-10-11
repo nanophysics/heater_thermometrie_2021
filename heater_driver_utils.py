@@ -28,7 +28,7 @@ class EnumHeating(EnumMixin, enum.Enum):
     OFF = "off"
     MANUAL = "manual"
     CONTROLLED = "controlled"
-    DEFROST = "defrost"
+    # DEFROST = "defrost"
 
 
 class EnumExpert(EnumMixin, enum.Enum):

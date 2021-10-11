@@ -39,8 +39,8 @@ class Statemachine:
         def log_sub(msg):
             print(f"  {msg}")
 
-        def log_state_change(handling_state, state_before, new_state):
-            print(f"  {handling_state}: {state_before} -> {new_state}")
+        def log_state_change(signal, handling_state, state_before, new_state):
+            print(f"  {repr(signal)}: {handling_state}: {state_before} -> {new_state}")
 
         self.func_log_main = log_main
         self.func_log_sub = log_sub
@@ -53,6 +53,12 @@ class Statemachine:
 
     def actual_meth(self):
         return getattr(self, "state_" + self._state_actual)
+
+    def expect_state(self, expected_meth):
+        assert callable(expected_meth)
+        actual_meth = self.actual_meth()
+        if expected_meth.__name__ != actual_meth.__name__:
+            raise Exception(f"Expected state '{expected_meth.__name__}' but got '{actual_meth.__name__}'!")
 
     def dispatch(self, signal):
         state_before = self._state_actual
@@ -84,6 +90,7 @@ class Statemachine:
             if self._state_actual != new_state:
                 if self.func_state_change is not None:
                     self.func_state_change(
+                        signal=signal,
                         handling_state=handling_state,
                         state_before=state_before,
                         new_state=new_state,

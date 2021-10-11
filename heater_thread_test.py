@@ -3,7 +3,8 @@ import logging
 
 import micropython_proxy
 import heater_thread
-from heater_driver_utils import Quantity, EnumThermometrie
+import heater_hsm
+from heater_driver_utils import EnumHeating, Quantity, EnumThermometrie
 
 logger = logging.getLogger("LabberDriver")
 
@@ -14,10 +15,34 @@ def doit():
     hwserial = micropython_proxy.HWSERIAL_SIMULATE
     hwserial = ""
     ht = heater_thread.HeaterThread(hwserial=hwserial)
-    time.sleep(2.0)
+    time.sleep(1.5)
+    ht.signal(heater_hsm.SignalDefrostSwitchChanged(on=False))
+    ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermon)
+
     ht.set_value(Quantity.Thermometrie, EnumThermometrie.ON)
-    time.sleep(2.0)
+    ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermon)
+
+    ht.set_value(Quantity.Heating, EnumHeating.MANUAL)
+    ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingmanual)
+
+    ht.set_value(Quantity.Heating, EnumHeating.CONTROLLED)
+    ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled)
+
     ht.set_value(Quantity.Thermometrie, EnumThermometrie.OFF)
+    ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermoff)
+
+    ht.signal(heater_hsm.SignalDefrostSwitchChanged(on=True))
+    ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_defrost)
+
+    ht.set_value(Quantity.Heating, EnumHeating.CONTROLLED)
+    ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_defrost)
+
+    ht.signal(heater_hsm.SignalInsertSerialChanged(serial=None))
+    ht.expect_state(heater_hsm.HeaterHsm.state_disconnected)
+
+    ht.set_value(Quantity.Heating, EnumHeating.CONTROLLED)
+    ht.expect_state(heater_hsm.HeaterHsm.state_disconnected)
+
     time.sleep(200.0)
     ht.stop()
 

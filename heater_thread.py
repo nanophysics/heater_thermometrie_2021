@@ -11,6 +11,15 @@ logger = logging.getLogger("LabberDriver")
 
 LOCK = threading.Lock()
 
+try:
+    if False:
+        import debugpy
+
+        debugpy.listen(5678)
+        debugpy.wait_for_client()
+        debugpy.breakpoint()
+except ModuleNotFoundError:
+    pass
 
 def synchronized(func):
     def wrapper(*args, **kwargs):
@@ -54,8 +63,16 @@ class HeaterThread(threading.Thread):
 
     @synchronized
     def set_value(self, name: str, value):
-        self.hw.set_value(name=name, value=value)
+        return self.hw.set_value(name=name, value=value)
 
     @synchronized
     def get_value(self, name: str):
         return self.hw.get_value(name=name)
+
+    @synchronized
+    def signal(self, signal):
+        self.hw.hsm_heater.dispatch(signal)
+
+    @synchronized
+    def expect_state(self, expected_meth):
+        self.hw.hsm_heater.expect_state(expected_meth=expected_meth)

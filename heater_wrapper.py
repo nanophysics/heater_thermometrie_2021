@@ -44,22 +44,23 @@ class HeaterWrapper:
 
         self.filename_values = DIRECTORY_OF_THIS_FILE / f"Values-{self.mpi.heater_thermometrie_2021_serial}.txt"
 
-        def init_hsm(hsm, name):
+        def init_hsm(hsm):
             def log_main(msg):
-                logger.debug(f"{name}: *** {msg}")
+                logger.debug(f"*** {msg}")
 
             def log_sub(msg):
-                logger.debug(f"{name}:      {msg}")
+                logger.debug(f"     {msg}")
 
-            def log_state_change(handling_state, state_before, new_state):
-                logger.info(f"{name}: {handling_state}: {state_before} -> {new_state}")
+            def log_state_change(signal, handling_state, state_before, new_state):
+                logger.info(f"{repr(signal)}")
+                logger.info(f"  {handling_state}: {state_before} -> {new_state}")
 
             hsm.func_log_main = log_main
             hsm.func_log_sub = log_sub
             hsm.func_state_change = log_state_change
             hsm.reset()
 
-        init_hsm(self.hsm_heater, "heater")
+        init_hsm(self.hsm_heater)
         # init_hsm(self.hsm_defrost, "defrost")
 
         self.mpi.init()
@@ -70,21 +71,26 @@ class HeaterWrapper:
             logger.warning(f"Expected onewire_id of heater '{id_box_expected}' but got '{id_box}")
 
         # Read all initial values from the pyboard
-        self.dict_values[Quantity.Heating] = EnumHeating.DEFROST
+        self.dict_values[Quantity.Heating] = EnumHeating.OFF
         self.tick()
 
     def close(self):
         self.mpi.close()
 
     def tick(self):
-        self.dict_values[Quantity.Temperature] = self.mpi.temperature_insert.get_voltage(carbon=True)
-        self.dict_values[Quantity.Temperature] = self.mpi.temperature_insert.get_voltage(carbon=False)
+        # self.dict_values[Quantity.Temperature] = self.mpi.temperature_insert.get_voltage(carbon=True)
+        # self.dict_values[Quantity.Temperature] = self.mpi.temperature_insert.get_voltage(carbon=False)
         self.dict_values[Quantity.Power] = 0.53
         self.dict_values[Quantity.Thermometrie] = True
 
+        def defrost_switch_changed(on: str) -> str:
+            self.hsm_heater.dispatch(heater_hsm.SignalDefrostSwitchChanged(on=on))
+            return on
+
         self._set_value(
             Quantity.DefrostSwitchOnBox,
-            self.mpi.defrost_switch.is_on()
+            self.mpi.defrost_switch.is_on(),
+            defrost_switch_changed
         )
 
         def insert_onewire_id_changed(onewire_id: str) -> str:
@@ -115,6 +121,11 @@ class HeaterWrapper:
             return self.hsm_heater.get_labber_thermometrie
         if quantity == Quantity.InsertConnected:
             return self.hsm_heater.get_labber_insert_connected
+
+        if quantity == Quantity.TemperatureAndWait:
+            # TemperatureAndWait is stored as Temperature
+            quantity = Quantity.Temperature
+
         try:
             return self.dict_values[quantity]
         except KeyError as e:
@@ -124,7 +135,7 @@ class HeaterWrapper:
         quantity = Quantity(name)
         if quantity == Quantity.Heating:
             value_new = EnumHeating(value)
-            self.dict_values[quantity] = value_new
+            self.hsm_heater.dispatch(heater_hsm.SignalHeating(value=value_new))
             return value
         if quantity == Quantity.Expert:
             value_new = EnumExpert(value)
@@ -137,15 +148,19 @@ class HeaterWrapper:
             return value
         if quantity == Quantity.Thermometrie:
             value_new = EnumThermometrie(value)
-            self.hsm_heater.dispatch(heater_hsm.SignalThermometrieOnOff(value=value_new))
+            self.hsm_heater.dispatch(heater_hsm.SignalThermometrie(value=value_new))
             return value
         if quantity == Quantity.GreenLED:
             value_new = bool(value)
             self.dict_values[quantity] = value_new
             return value
+        if quantity in (Quantity.Temperature, Quantity.TemperatureAndWait):
+            # This is the same temperature
+            self.dict_values[Quantity.Temperature] = value
+            return value
+
         if quantity in (
             Quantity.Power,
-            Quantity.Temperature,
             Quantity.TemperatureBox,
             Quantity.TemperatureToleranceBand,
             Quantity.SettleTime,

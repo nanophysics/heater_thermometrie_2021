@@ -20,16 +20,34 @@ class SignalTick:
 
 
 @dataclass
-class SignalThermometrieOnOff:
+class SignalDefrostSwitchChanged:
+    on: bool = None
+
+    def __init__(self, on:bool) -> None:
+        assert isinstance(on, bool)
+        self.on = on
+
+
+@dataclass
+class SignalThermometrie:
     value: EnumThermometrie = None
 
-    def __init__(self, value) -> None:
+    def __init__(self, value: EnumThermometrie) -> None:
         assert isinstance(value, EnumThermometrie)
         self.value = value
 
     @property
     def on(self):
         return self.value.on
+
+
+@dataclass
+class SignalHeating:
+    value: EnumHeating = None
+
+    def __init__(self, value: EnumHeating) -> None:
+        assert isinstance(value, EnumHeating)
+        self.value = value
 
 
 @dataclass
@@ -137,27 +155,44 @@ class HeaterHsm(hsm.Statemachine):
         if isinstance(signal, SignalInsertSerialChanged):
             if not signal.is_connected:
                 raise hsm.StateChangeException(self.state_disconnected)
-        if isinstance(signal, SignalThermometrieOnOff):
+        if isinstance(signal, SignalThermometrie):
             if signal.on:
                 raise hsm.StateChangeException(self.state_connected_thermon)
-        if isinstance(signal, SignalTick):
-            def get_requested_state():
-                if self._hw.get_quantity(Quantity.DefrostSwitchOnBox):
-                    return self.state_connected_thermon_defrost
-                heating = self._hw.get_quantity(Quantity.Heating)
-                if heating == EnumHeating.DEFROST:
-                    return self.state_connected_thermon_defrost
-                if heating == EnumHeating.OFF:
-                    return self.state_connected_thermon_heatingoff
-                if heating == EnumHeating.MANUAL:
-                    return self.state_connected_thermon_heatingmanual
-                if heating == EnumHeating.CONTROLLED:
-                    return self.state_connected_thermon_heatingoff
-                raise AttributeError(f"Case {heating.name} not handled.")
+        if isinstance(signal, SignalDefrostSwitchChanged):
+            if signal.on:
+                raise hsm.StateChangeException(self.state_connected_thermon_defrost)
+            raise hsm.DontChangeStateException()
+        if isinstance(signal, SignalHeating):
 
-            requested_state = get_requested_state()
-            if requested_state != self.actual_meth():
-                raise hsm.StateChangeException(requested_state)
+            def get_requested_state():
+                if signal.value == EnumHeating.OFF:
+                    return self.state_connected_thermon_heatingoff
+                if signal.value == EnumHeating.MANUAL:
+                    return self.state_connected_thermon_heatingmanual
+                if signal.value == EnumHeating.CONTROLLED:
+                    return self.state_connected_thermon_heatingcontrolled
+                raise AttributeError(f"Case {signal.value} not handled.")
+
+            raise hsm.StateChangeException(get_requested_state())
+
+        if isinstance(signal, SignalTick):
+            # def get_requested_state():
+            #     if self._hw.get_quantity(Quantity.DefrostSwitchOnBox):
+            #         return self.state_connected_thermon_defrost
+            #     heating = self._hw.get_quantity(Quantity.Heating)
+            #     if heating == EnumHeating.DEFROST:
+            #         return self.state_connected_thermon_defrost
+            #     if heating == EnumHeating.OFF:
+            #         return self.state_connected_thermon_heatingoff
+            #     if heating == EnumHeating.MANUAL:
+            #         return self.state_connected_thermon_heatingmanual
+            #     if heating == EnumHeating.CONTROLLED:
+            #         return self.state_connected_thermon_heatingoff
+            #     raise AttributeError(f"Case {heating.name} not handled.")
+
+            # requested_state = get_requested_state()
+            # if requested_state != self.actual_meth():
+            #     raise hsm.StateChangeException(requested_state)
             raise hsm.DontChangeStateException()
 
     def state_connected_thermoff(self, signal) -> None:
@@ -167,7 +202,6 @@ class HeaterHsm(hsm.Statemachine):
 
         A insert disconnect is NOT detected in this state.
         """
-        raise hsm.DontChangeStateException()
 
     def entry_connected_thermoff(self, signal) -> None:
         """
@@ -188,7 +222,7 @@ class HeaterHsm(hsm.Statemachine):
         - Read temperature_insert.get_voltage(carbon=False)
         - Calibration table -> temperature
         """
-        if isinstance(signal, SignalThermometrieOnOff):
+        if isinstance(signal, SignalThermometrie):
             if not signal.on:
                 raise hsm.StateChangeException(self.state_connected_thermoff)
 
@@ -242,7 +276,19 @@ class HeaterHsm(hsm.Statemachine):
         Heating controlled by the pyboard.
 
         We just display the state.
+
+        The only way to got out of this state is
+        - that the defrost switch is switched off.
+        - disconnect the tail
         """
+        if isinstance(signal, SignalDefrostSwitchChanged):
+            if not signal.on:
+                # Let a outer state take control
+                return
+        if isinstance(signal, SignalInsertSerialChanged):
+            if not signal.is_connected:
+                raise hsm.StateChangeException(self.state_disconnected)
+        raise hsm.DontChangeStateException()
 
     init_ = state_disconnected
 
