@@ -21,6 +21,7 @@ try:
 except ModuleNotFoundError:
     pass
 
+
 def synchronized(func):
     def wrapper(*args, **kwargs):
         with LOCK:
@@ -71,8 +72,8 @@ class HeaterThread(threading.Thread):
 
     @synchronized
     def signal(self, signal):
-        self.hw.hsm_heater.dispatch(signal)
+        self.hw.signal(signal)
 
     @synchronized
     def expect_state(self, expected_meth):
-        self.hw.hsm_heater.expect_state(expected_meth=expected_meth)
+        self.hw.expect_state(expected_meth=expected_meth)

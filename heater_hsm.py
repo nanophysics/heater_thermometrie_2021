@@ -6,7 +6,6 @@ from heater_driver_utils import (
     EnumHeating,
     EnumInsertConnected,
     EnumThermometrie,
-    Quantity,
 )
 import hsm
 
@@ -23,7 +22,7 @@ class SignalTick:
 class SignalDefrostSwitchChanged:
     on: bool = None
 
-    def __init__(self, on:bool) -> None:
+    def __init__(self, on: bool) -> None:
         assert isinstance(on, bool)
         self.on = on
 
@@ -310,13 +309,7 @@ def analyse():
     header.func_log_sub = func_log_sub
     header.reset()
 
-    defrost = DefrostHsm(hw)
-    defrost.func_log_main = func_log_main
-    defrost.func_log_sub = func_log_sub
-    defrost.reset()
-
     with pathlib.Path("thermometrie_hsm_out.html").open("w") as f:
-        f.write(defrost.doc())
         f.write(header.doc())
 
 

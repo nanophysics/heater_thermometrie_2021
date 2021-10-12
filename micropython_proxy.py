@@ -22,37 +22,6 @@ if mp.version.FULL < REQUIRED_MPFSHELL_VERSION:
 HWTYPE_HEATER_THERMOMETRIE_2021 = "heater_thermometrie_2021"
 
 
-class FeSimulator:
-    def exec(self, cmd: str) -> None:
-        pass
-
-    def eval(self, cmd: str):  # pylint: disable=too-many-return-statements
-        if cmd.startswith("proxy.display."):
-            return b"None"
-        if cmd == "proxy.onewire_box.scan()":
-            return b"28E3212E0D00002E"
-        if cmd == "proxy.onewire_box.read_temp('28E3212E0D00002E')":
-            return b"42.42"
-        if cmd.startswith("proxy.onewire_insert.set_power("):
-            return b"None"
-        if cmd == "proxy.onewire_insert.scan()":
-            return b"28E3212E0D00002F"
-        if cmd == "proxy.onewire_insert.read_temp('28E3212E0D00002F')":
-            return b"43.43"
-        if cmd == "proxy.get_defrost()":
-            return b"True"
-        if cmd.startswith("proxy.temperature_insert.enable_thermometrie(enable="):
-            return b"None"
-        if cmd.startswith("proxy.temperature_insert.get_voltage(carbon="):
-            return b"4.711"
-        if cmd.startswith("proxy.heater.set_power(power="):
-            return b"None"
-        raise NotImplementedError()
-
-    def close(self):
-        pass
-
-
 class DisplayProxy:
     def __init__(self, proxy):
         self.proxy = proxy
@@ -135,12 +104,14 @@ class Heater:
         assert 0 <= power < 2 ** 16
         return self._proxy.eval_as(str, f"proxy.heater.set_power(power={power})")
 
+
 class DefrostSwitch:
     def __init__(self, proxy):
         self._proxy = proxy
 
     def is_on(self) -> bool:
         return self._proxy.eval_as(bool, "proxy.get_defrost()")
+
 
 class MicropythonProxy:
     def __init__(self, fe):

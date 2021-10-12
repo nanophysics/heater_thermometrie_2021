@@ -6,6 +6,7 @@ import inspect
 REGEX_SPACES = re.compile(r"^(?P<spaces>.*?)(\S(.*)$)", re.M)
 NOT_INITIALIZED_YET = "NOT-INITIALIZED-YET"
 
+
 class StateChangeException(Exception):
     def __init__(self, meth_new_state):
         Exception.__init__(self, f"New state is: {meth_new_state.__name__}")
@@ -425,12 +426,12 @@ class Test_SimpleStatemachine(Statemachine):
     'a': was handled by 'state_TopA'
         calling state 'state_TopA(a)'
       'a': was handled by 'state_TopA'
-      TopA: TopA -> TopA_SubA
+      'a': TopA: TopA -> TopA_SubA
     >>> sm.dispatch('b')
     'b': was handled by 'state_TopA_SubA'
         calling state 'state_TopA_SubA(b)'
       'b': was handled by 'state_TopA_SubA'
-      TopA_SubA: TopA_SubA -> TopA_SubB
+      'b': TopA_SubA: TopA_SubA -> TopA_SubB
         Calling entry_TopA_SubB
     >>> sm.dispatch('b')
     'b': was handled by 'state_TopA_SubB'
@@ -440,7 +441,7 @@ class Test_SimpleStatemachine(Statemachine):
     'a': was handled by 'state_TopA_SubB'
         calling state 'state_TopA_SubB(a)'
       'a': was handled by 'state_TopA'
-      TopA: TopA_SubB -> TopA_SubA
+      'a': TopA: TopA_SubB -> TopA_SubA
         Calling exit_TopA_SubB
     """
 
@@ -473,14 +474,14 @@ class Test_StatemachineWithEntryExitActions(Statemachine):
     'r': was handled by 'state_TopA'
         calling state 'state_TopA(r)'
       'r': was handled by 'state_TopA'
-      TopA: TopA -> TopC
+      'r': TopA: TopA -> TopC
         Calling exit_TopA
         Calling entry_TopC
     >>> sm.dispatch('s')
     's': was handled by 'state_TopC'
         calling state 'state_TopC(s)'
       's': was handled by 'state_TopC'
-      TopC: TopC -> TopB_SubA_SubsubA
+      's': TopC: TopC -> TopB_SubA_SubsubA
         Calling exit_TopC
         Calling entry_TopB
         Calling entry_TopB_SubA
@@ -489,7 +490,7 @@ class Test_StatemachineWithEntryExitActions(Statemachine):
     't': was handled by 'state_TopB_SubA_SubsubA'
         calling state 'state_TopB_SubA_SubsubA(t)'
       't': was handled by 'state_TopB_SubA_SubsubA'
-      TopB_SubA_SubsubA: TopB_SubA_SubsubA -> TopC
+      't': TopB_SubA_SubsubA: TopB_SubA_SubsubA -> TopC
         Calling exit_TopB_SubA_SubsubA
         Calling exit_TopB_SubA
         Calling exit_TopB

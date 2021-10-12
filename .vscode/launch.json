@@ -14,6 +14,7 @@
         "--rcfile=${workspaceFolder}/.pylintrc",
         "--verbose",
         "src_micropython",
+        "tests",
         "*.py"
       ],
       "console": "integratedTerminal"
@@ -29,6 +30,17 @@
         "${workspaceFolder}/.blackconfig.yaml",
         "*.py",
         "src_micropython/*.py"
+      ],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Pytest",
+      "type": "python",
+      "request": "launch",
+      "module": "pytest",
+      "cwd": "${workspaceFolder}",
+      "args": [
+        "tests"
       ],
       "console": "integratedTerminal"
     },

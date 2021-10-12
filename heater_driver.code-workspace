@@ -1,8 +1,19 @@
 {
-	"folders": [
-		{
-			"path": "."
-		}
-	],
-	"settings": {}
+    "folders": [
+        {
+            "path": "."
+        }
+    ],
+    "settings": {
+        "python.formatting.provider": "black",
+        "python.testing.pytestArgs": [
+            "--import-mode=importlib",
+            "tests"
+        ],
+        "python.testing.unittestEnabled": false,
+        "python.testing.pytestEnabled": true,
+        "python.linting.pylintEnabled": true,
+        "python.testing.pytestPath": "C:\\Users\\maerki\\AppData\\Local\\Programs\\Python\\Python38\\Scripts\\pytest.exe",
+        "python.defaultInterpreterPath": "C:\\Users\\maerki\\AppData\\Local\\Programs\\Python\\Python38\\python.exe"
+    }
 }

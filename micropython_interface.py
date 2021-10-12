@@ -11,10 +11,10 @@ from micropython_proxy import (
     Heater,
     DefrostSwitch,
     mp,
-    FeSimulator,
     HWSERIAL_SIMULATE,
     HWTYPE_HEATER_THERMOMETRIE_2021,
 )
+from micropython_proxy_simulator import FeSimulator
 from src_micropython.micropython_portable import Thermometrie
 
 DIRECTORY_OF_THIS_FILE = pathlib.Path(__file__).absolute().parent
@@ -115,4 +115,3 @@ class MicropythonInterface:
 
         # print("voltage_carbon: %f V, voltage_pt1000: %f V" % (voltage_carbon, voltage_pt1000))
         # print("resistance_carbon: %f Ohm, resistance_pt1000: %f Ohm" % (voltage_carbon/electronics.CURRENT_A_CARBON, voltage_pt1000/electronics.CURRENT_A_PT1000))
-
