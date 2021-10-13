@@ -6,6 +6,7 @@ from heater_driver_utils import (
     EnumHeating,
     EnumInsertConnected,
     EnumThermometrie,
+    Quantity,
 )
 import hsm
 
@@ -65,54 +66,6 @@ class SignalHeaterSerialChanged(SignalInsertSerialChanged):
 SIGNAL_TICK = SignalTick()
 
 
-# class DefrostHsm(hsm.Statemachine):
-#     """
-#     This statemachine represents the defrost logic.
-#     This logic is implemented in micropython, so defrosting may be done without labber.
-#     """
-
-#     def __init__(self, hw: "HeaterWrapper"):
-#         super().__init__()
-#         assert hw.__class__.__name__ == "HeaterWrapper"
-#         self._hw = hw
-
-#     def state_off(self, signal) -> None:
-#         """
-#         Defrost switch set to OFF
-#         """
-#         if isinstance(signal, SignalDefrostOnOff):
-#             if signal.on:
-#                 raise hsm.StateChangeException(self.state_on)
-#         raise hsm.DontChangeStateException()
-
-#     def state_on(self, signal) -> None:
-#         """
-#         NONSTATE(entry=state_on_heating)
-#         Defrost switch set to ON.
-#         """
-#         assert False
-
-#     def _handle_state_on(self, signal) -> None:
-#         if isinstance(signal, SignalDefrostOnOff):
-#             if not signal.on:
-#                 raise hsm.StateChangeException(self.state_off)
-
-#     def state_on_heating(self, signal) -> None:
-#         """
-#         The insert is still cold: heating is on.
-#         """
-#         self._handle_state_on(signal)
-
-#         raise hsm.DontChangeStateException()
-
-#     def state_on_warm(self, signal) -> None:
-#         """
-#         The insert is meanwhile warm: heating is off.
-#         """
-
-#     init_ = state_off
-
-
 class HeaterHsm(hsm.Statemachine):
     """
     Statemachine Heater.
@@ -122,6 +75,10 @@ class HeaterHsm(hsm.Statemachine):
         super().__init__()
         assert hw.__class__.__name__ == "HeaterWrapper"
         self._hw = hw
+        self.time_start_s = None
+        self.settle_time_start_s = None
+        self.settled = None
+        self.timeout = None
 
     @property
     def get_labber_thermometrie(self):
@@ -207,8 +164,8 @@ class HeaterHsm(hsm.Statemachine):
         heater.set_power(0)
         temperature_insert.enable_thermometrie(False)
         """
-        self._hw.mpi.fe.proxy.heater.set_power(power=False)
-        self._hw.mpi.fe.proxy.temperature_insert.enable_thermometrie(enable=False)
+        self._hw.mpi.heater.set_power(power=False)
+        self._hw.mpi.temperature_insert.enable_thermometrie(enable=False)
 
     def state_connected_thermon(self, signal) -> None:
         """
@@ -233,7 +190,7 @@ class HeaterHsm(hsm.Statemachine):
         Load calibration tables for this insert.
         temperature_insert.enable_thermometrie(True)
         """
-        self._hw.mpi.fe.proxy.temperature_insert.enable_thermometrie(enable=False)
+        self._hw.mpi.temperature_insert.enable_thermometrie(enable=False)
 
     def state_connected_thermon_heatingoff(self, signal) -> None:
         """
@@ -266,12 +223,29 @@ class HeaterHsm(hsm.Statemachine):
           Quantity.ErrorCounter += 1
         - settled = time.now() > settle_time_start_s + Quantiy.SettleTime
         """
+        if self._hw.mpi.timebase.now_s > self.time_start_s + self._hw.get_quantity(Quantity.ControlWriteTimeoutTime):
+            logger.warning("TIMEOUT")
+            self.timeout = True
+            return
+        band_K = self._hw.get_quantity(Quantity.ControlWriteTemperatureToleranceBand)
+        temperature_should_K = self._hw.get_quantity(Quantity.ControlWriteTemperature)
+        temperature_K = self._hw.get_quantity(Quantity.TemperatureReadonlyTemperatureCalibrated)
+        in_range = temperature_should_K - band_K < temperature_K < temperature_should_K + band_K
+        if not in_range:
+            self.settle_time_start_s = self._hw.mpi.timebase.now_s
+            # TODO: Increment error counter
+            return
+        if self._hw.mpi.timebase.now_s > self.settle_time_start_s + self._hw.get_quantity(Quantity.ControlWriteSettleTime):
+            self.settled = True
 
     def entry_connected_thermon_heatingcontrolled(self, signal) -> None:
         """
         Initialize PI controller
         settle_time_start_s = time.now()
         """
+        self.time_start_s = self.settle_time_start_s = self._hw.mpi.timebase.now_s
+        self.settled = False
+        self.timeout = False
 
     def state_connected_thermon_defrost(self, signal) -> None:
         """

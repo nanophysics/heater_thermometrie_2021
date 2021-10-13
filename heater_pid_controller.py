@@ -68,7 +68,7 @@ class PidController:
         #       fKi
         if fKi > 0.0:
             self.fI = None
-            if self.fI == None:
+            if self.fI is None:
                 self.fI = (fOutputValue - self.fP * self.fKp) / self.fKi
         else:
             self.fI = 0.0
@@ -104,8 +104,7 @@ class PidController:
         assert time_delta_s > 0.0
         self.time_last_s = time_now_s
 
-        if time_delta_s > config_app_time_delta_max_s:
-            time_delta_s = config_app_time_delta_max_s
+        time_delta_s = min(time_delta_s, config_app_time_delta_max_s)
 
         # Compute change in fSetpoint over time_delta_s; we'll reduce the rate of change
         # derivative fD by the rate of change in fSetpoint, fDeltaSetpoint, because changing

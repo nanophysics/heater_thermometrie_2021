@@ -37,26 +37,15 @@ class HeaterWrapper:
         self.mpi = MicropythonInterface(hwserial)
         self.controller = None
 
-        self.insert_config = config_all.ConfigInsert.load_config(
-            config_all.ONEWIRE_ID_UNDEFINED
-        )
-        self.heater_2021_config = config_all.ConfigHeater2021.load_config(
-            serial=self.mpi.heater_thermometrie_2021_serial
-        )
-        logger.info(
-            f"{HWTYPE_HEATER_THERMOMETRIE_2021} connected: {self.heater_2021_config}"
-        )
-        self.dict_values[Quantity.StatusReadSerialNumberHeater] = repr(
-            self.heater_2021_config
-        )
+        self.insert_config = config_all.ConfigInsert.load_config(config_all.ONEWIRE_ID_UNDEFINED)
+        self.heater_2021_config = config_all.ConfigHeater2021.load_config(serial=self.mpi.heater_thermometrie_2021_serial)
+        logger.info(f"{HWTYPE_HEATER_THERMOMETRIE_2021} connected: {self.heater_2021_config}")
+        self.dict_values[Quantity.StatusReadSerialNumberHeater] = repr(self.heater_2021_config)
 
         self.hsm_heater = heater_hsm.HeaterHsm(self)
         # self.hsm_defrost = heater_hsm.DefrostHsm(self)
 
-        self.filename_values = (
-            DIRECTORY_OF_THIS_FILE
-            / f"Values-{self.mpi.heater_thermometrie_2021_serial}.txt"
-        )
+        self.filename_values = DIRECTORY_OF_THIS_FILE / f"Values-{self.mpi.heater_thermometrie_2021_serial}.txt"
 
         def init_hsm(hsm):
             def log_main(msg):
@@ -82,13 +71,14 @@ class HeaterWrapper:
         id_box = self.mpi.onewire_box.scan()
         id_box_expected = self.heater_2021_config.ONEWIRE_ID_HEATER
         if id_box != id_box_expected:
-            logger.warning(
-                f"Expected onewire_id of heater '{id_box_expected}' but got '{id_box}"
-            )
+            logger.warning(f"Expected onewire_id of heater '{id_box_expected}' but got '{id_box}")
 
         # Read all initial values from the pyboard
         self.dict_values[Quantity.ControlWriteHeating] = EnumHeating.OFF
         self.dict_values[Quantity.ControlWriteTemperature] = 0.0
+        self.dict_values[Quantity.ControlWriteTemperatureToleranceBand] = 1.0
+        self.dict_values[Quantity.ControlWriteSettleTime] = 10.0
+        self.dict_values[Quantity.ControlWriteTimeoutTime] = 20.0
         self.dict_values[Quantity.TemperatureReadonlyTemperatureCalibrated] = 0.0
         self.tick()
 
@@ -103,7 +93,7 @@ class HeaterWrapper:
         self.mpi.timebase.sleep(duration_s=duration_s)
 
     def tick(self) -> float:
-        self.mpi.fe.sim_update_time(time_now_s=self.time_now_s)
+        self.mpi.sim_update_time(time_now_s=self.time_now_s)
 
         self._tick_read_from_pyboard()
 
@@ -146,15 +136,9 @@ class HeaterWrapper:
 
     def _tick_read_onewire(self):
         def insert_onewire_id_changed(onewire_id: str) -> str:
-            self.hsm_heater.dispatch(
-                heater_hsm.SignalInsertSerialChanged(serial=onewire_id)
-            )
-            self.insert_config = config_all.ConfigInsert.load_config(
-                onewire_id=onewire_id
-            )
-            self.dict_values[Quantity.StatusReadSerialNumberInsert] = repr(
-                self.insert_config
-            )
+            self.hsm_heater.dispatch(heater_hsm.SignalInsertSerialChanged(serial=onewire_id))
+            self.insert_config = config_all.ConfigInsert.load_config(onewire_id=onewire_id)
+            self.dict_values[Quantity.StatusReadSerialNumberInsert] = repr(self.insert_config)
             return onewire_id
 
         self.mpi.onewire_insert.set_power(on=True)
@@ -167,9 +151,7 @@ class HeaterWrapper:
 
     def _tick_run_controller(self):
         if self.controller is not None:
-            temperature_calibrated_K = self.dict_values[
-                    Quantity.TemperatureReadonlyTemperatureCalibrated
-                ]
+            temperature_calibrated_K = self.dict_values[Quantity.TemperatureReadonlyTemperatureCalibrated]
             self.controller.process(
                 time_now_s=self.mpi.timebase.now_s,
                 fSetpoint=self.dict_values[Quantity.ControlWriteTemperature],
@@ -177,12 +159,11 @@ class HeaterWrapper:
                 fLimitOutLow=0.0,
                 fLimitOutHigh=100.0,
             )
-            power = int(self.controller.fOutputValueLimited)
-            power = max(0, min(100, power))
-            self.dict_values[
-                Quantity.ControlWritePower
-            ] = power
-            self.mpi.fe.proxy.heater.set_power(power)
+            power100 = self.controller.fOutputValueLimited
+            self.dict_values[Quantity.ControlWritePower100] = power100
+            power_dac = int(2 ** 16 * power100 / 100.0)
+            power_dac = max(0, min(2 ** 16 - 1, power_dac))
+            self.mpi.heater.set_power(power=power_dac)
 
             logger.info(f"  setpoint={self.controller.fSetpoint:0.2f} K => power={self.controller.fOutputValueLimited:0.2f} % => temperature_calibrated_K={temperature_calibrated_K:0.2f}")
 
@@ -240,18 +221,11 @@ class HeaterWrapper:
         ):
             # This is the same temperature
             self.dict_values[Quantity.ControlWriteTemperature] = value
-            self.controller = PidController(
-                "insert",
-                time_now_s=self.mpi.timebase.now_s,
-                fSetpoint=self.dict_values[Quantity.ControlWriteTemperature],
-                fKi=0.4,
-                fKp=1.0,
-                fKd=0.0
-            )
+            self.controller = PidController("insert", time_now_s=self.mpi.timebase.now_s, fSetpoint=value, fKi=0.04, fKp=0.1, fKd=0.0)
             return value
 
         if quantity in (
-            Quantity.ControlWritePower,
+            Quantity.ControlWritePower100,
             Quantity.ControlWriteTemperatureBox,
             Quantity.ControlWriteTemperatureToleranceBand,
             Quantity.ControlWriteSettleTime,

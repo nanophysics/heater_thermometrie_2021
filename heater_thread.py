@@ -48,9 +48,7 @@ class HeaterThread(threading.Thread):
             try:
                 self._tick()
             except serial.serialutil.SerialException as ex:
-                logger.fatal(
-                    f"Probably, the USB cable to the heater_thermometrie_2021 was disconnected: {repr(ex)}"
-                )
+                logger.fatal(f"Probably, the USB cable to the heater_thermometrie_2021 was disconnected: {repr(ex)}")
                 os._exit(42)
                 return
             except Exception as ex:  # pylint: disable=broad-except

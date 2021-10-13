@@ -25,36 +25,41 @@ class Display:
 
 class TemperatureInsert:
     def __init__(self):
-        self.voltage_carbon = {True: 0.0, False: 0.0}
+        self.voltage_carbon_V = {True: 0.0, False: 0.0}
         self.time_last_s = 0.0
+        self._voltage_mocked = False
 
     def enable_thermometrie(self, enable):
         return b"None"
 
     def get_voltage(self, carbon):
-        return f"{self.voltage_carbon[True]}".encode("ascii")
+        return f"{self.voltage_carbon_V[True]}".encode("ascii")
 
     def sim_set_voltage(self, carbon: bool, value: float):
-        self.voltage_carbon[carbon] = value
+        self._voltage_mocked = True
+        self.voltage_carbon_V[carbon] = value
 
     def sim_update_time(self, time_now_s: float, power: int):
         assert isinstance(time_now_s, float)
         assert isinstance(power, int)
+        if self._voltage_mocked:
+            # The voltage is mocked to a fix value
+            # and should not be simulated
+            return
         time_diff_s = time_now_s - self.time_last_s
         self.time_last_s = time_now_s
         reference_V = 3.3
         for carbon in (True, False):
             tau = 0.1 * time_diff_s
-            self.voltage_carbon[carbon] = (1.0 - tau) * self.voltage_carbon[
-                carbon
-            ] + tau * power * reference_V
+            tau = min(1.0, tau)
+            self.voltage_carbon_V[carbon] = (1.0 - tau) * self.voltage_carbon_V[carbon] + tau * 0.005 * power * reference_V
 
 
 class Heater:
     def __init__(self):
         self.power = 0.0
 
-    def set_power(self, power):
+    def set_power(self, power: int):
         assert isinstance(power, int)
         self.power = power
         return b"None"
@@ -94,7 +99,7 @@ class FeSimulator:
 
     def eval(self, cmd: str):
         try:
-            return eval(cmd, {"proxy": self.proxy})
+            return eval(cmd, {"proxy": self.proxy})  # pylint: disable=eval-used
         except Exception as e:
             logger.warning(f"{cmd}: {e}")
             raise
@@ -106,6 +111,4 @@ class FeSimulator:
         self.proxy.temperature_insert.sim_set_voltage(carbon, value)
 
     def sim_update_time(self, time_now_s):
-        self.proxy.temperature_insert.sim_update_time(
-            time_now_s, self.proxy.heater.power
-        )
+        self.proxy.temperature_insert.sim_update_time(time_now_s, self.proxy.heater.power)

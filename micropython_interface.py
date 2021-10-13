@@ -20,6 +20,8 @@ DIRECTORY_OF_THIS_FILE = pathlib.Path(__file__).absolute().parent
 
 logger = logging.getLogger("LabberDriver")
 
+TICK_INTERVAL_S = 1.0
+
 
 class Timebase:
     @property
@@ -28,8 +30,8 @@ class Timebase:
 
     def sleep(self, duration_s: float):
         assert isinstance(duration_s, float)
-        if duration_s <= 0.01:
-            return
+
+        duration_s = min(TICK_INTERVAL_S / 10.0, duration_s)
         time.sleep(duration_s)
 
 
@@ -56,10 +58,14 @@ class MicropythonInterface:
             self.heater_thermometrie_2021_serial = "v42"
             self.fe = FeSimulator()
             self.timebase = TimebaseSimulation()
+            self.sim_update_time = self.fe.sim_update_time
+            self.sim_set_voltage = self.fe.sim_set_voltage
         else:
             logger.warning(f"******************* {hwserial}")
             self._init_pyboard(hwserial=hwserial)
             self.timebase = Timebase()
+            self.sim_update_time = lambda time_now_s: None
+            self.sim_set_voltage = lambda carbon, value: None
 
     def close(self):
         self.fe.close()

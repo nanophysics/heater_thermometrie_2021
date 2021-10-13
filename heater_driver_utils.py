@@ -89,7 +89,7 @@ class Quantity(EnumMixin, enum.Enum):
     ControlWriteLogging = "Logging"
     ControlWriteThermometrie = "Thermometrie"
     ControlWriteGreenLED = "Green LED"
-    ControlWritePower = "power"
+    ControlWritePower100 = "power"
     ControlWriteTemperature = "temperature"
     ControlWriteTemperatureAndWait = "temperature and wait"
     ControlWriteTemperatureBox = "Temperature Box"

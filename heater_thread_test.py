@@ -8,6 +8,7 @@ from heater_driver_utils import EnumHeating, Quantity, EnumThermometrie
 
 logger = logging.getLogger("LabberDriver")
 
+
 def doit():
     logging.basicConfig()
     logger.setLevel(logging.INFO)
