@@ -9,6 +9,7 @@ logger = logging.getLogger("LabberDriver")
 
 
 def test_a():
+    logging.basicConfig()
     logger.setLevel(logging.INFO)
 
     hwserial = ""
@@ -20,4 +21,4 @@ def test_a():
 
     hw.mpi.fe.sim_set_voltage(carbon=True, value=1.6)
 
-    hw.get_value(Quantity.ControlWriteTemperature)
+    hw.get_quantity(Quantity.ControlWriteTemperature)

@@ -9,6 +9,7 @@ logger = logging.getLogger("LabberDriver")
 
 
 def test_a():
+    logging.basicConfig()
     logger.setLevel(logging.INFO)
 
     hwserial = micropython_proxy.HWSERIAL_SIMULATE

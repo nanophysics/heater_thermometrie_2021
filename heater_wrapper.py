@@ -72,6 +72,7 @@ class HeaterWrapper:
 
         # Read all initial values from the pyboard
         self.dict_values[Quantity.ControlWriteHeating] = EnumHeating.OFF
+        self.dict_values[Quantity.ControlWriteTemperature] = 0.0
         self.tick()
 
     def close(self):

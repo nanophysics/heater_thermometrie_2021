@@ -7,10 +7,11 @@ logger = logging.getLogger("LabberDriver")
 
 
 def doit():
+    logging.basicConfig()
     logger.setLevel(logging.INFO)
 
-    hwserial = micropython_proxy.HWSERIAL_SIMULATE
     hwserial = ""
+    hwserial = micropython_proxy.HWSERIAL_SIMULATE
     ht = heater_wrapper.HeaterWrapper(hwserial=hwserial)
     ht.close()
 
