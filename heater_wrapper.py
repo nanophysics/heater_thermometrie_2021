@@ -104,11 +104,18 @@ class HeaterWrapper:
 
     def tick(self) -> float:
         self.mpi.fe.sim_update_time(time_now_s=self.time_now_s)
-        # self.dict_values[Quantity.Temperature] = self.mpi.temperature_insert.get_voltage(carbon=True)
-        # self.dict_values[Quantity.Temperature] = self.mpi.temperature_insert.get_voltage(carbon=False)
-        self.dict_values[Quantity.ControlWritePower] = 0.53
-        self.dict_values[Quantity.ControlWriteThermometrie] = True
 
+        self._tick_read_from_pyboard()
+
+        self._tick_read_onewire()
+
+        self._tick_run_controller()
+
+        # Run statemachine
+        self.hsm_heater.dispatch(heater_hsm.SIGNAL_TICK)
+        return self.mpi.timebase.now_s
+
+    def _tick_read_from_pyboard(self):
         for carbon, label, current_factor in (
             (True, "carbon", Thermometrie.CURRENT_A_CARBON),
             (False, "PT1000", Thermometrie.CURRENT_A_PT1000),
@@ -137,6 +144,7 @@ class HeaterWrapper:
             defrost_switch_changed,
         )
 
+    def _tick_read_onewire(self):
         def insert_onewire_id_changed(onewire_id: str) -> str:
             self.hsm_heater.dispatch(
                 heater_hsm.SignalInsertSerialChanged(serial=onewire_id)
@@ -157,9 +165,7 @@ class HeaterWrapper:
         )
         self.mpi.onewire_insert.set_power(on=False)
 
-        # self.hsm_defrost.dispatch(heater_hsm.SIGNAL_TICK)
-        self.hsm_heater.dispatch(heater_hsm.SIGNAL_TICK)
-
+    def _tick_run_controller(self):
         if self.controller is not None:
             temperature_calibrated_K = self.dict_values[
                     Quantity.TemperatureReadonlyTemperatureCalibrated
@@ -179,8 +185,6 @@ class HeaterWrapper:
             self.mpi.fe.proxy.heater.set_power(power)
 
             logger.info(f"  setpoint={self.controller.fSetpoint:0.2f} K => power={self.controller.fOutputValueLimited:0.2f} % => temperature_calibrated_K={temperature_calibrated_K:0.2f}")
-
-        return self.mpi.timebase.now_s
 
     def get_quantity(self, quantity: Quantity):
         assert isinstance(quantity, Quantity)

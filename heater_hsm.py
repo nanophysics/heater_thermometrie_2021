@@ -207,6 +207,8 @@ class HeaterHsm(hsm.Statemachine):
         heater.set_power(0)
         temperature_insert.enable_thermometrie(False)
         """
+        self._hw.mpi.fe.proxy.heater.set_power(power=False)
+        self._hw.mpi.fe.proxy.temperature_insert.enable_thermometrie(enable=False)
 
     def state_connected_thermon(self, signal) -> None:
         """
@@ -231,6 +233,7 @@ class HeaterHsm(hsm.Statemachine):
         Load calibration tables for this insert.
         temperature_insert.enable_thermometrie(True)
         """
+        self._hw.mpi.fe.proxy.temperature_insert.enable_thermometrie(enable=False)
 
     def state_connected_thermon_heatingoff(self, signal) -> None:
         """

@@ -6,6 +6,7 @@ import threading
 import serial
 
 import heater_wrapper
+from heater_driver_utils import Quantity
 
 logger = logging.getLogger("LabberDriver")
 
@@ -47,7 +48,9 @@ class HeaterThread(threading.Thread):
             try:
                 self._tick()
             except serial.serialutil.SerialException as ex:
-                logger.fatal(f"Probably, the USB cable to the heater_thermometrie_2021 was disconnected: {repr(ex)}")
+                logger.fatal(
+                    f"Probably, the USB cable to the heater_thermometrie_2021 was disconnected: {repr(ex)}"
+                )
                 os._exit(42)
                 return
             except Exception as ex:  # pylint: disable=broad-except
@@ -65,6 +68,10 @@ class HeaterThread(threading.Thread):
     @synchronized
     def set_value(self, name: str, value):
         return self.hw.set_value(name=name, value=value)
+
+    @synchronized
+    def set_quantity(self, quantity: Quantity, value):
+        return self.hw.set_quantity(quantity=quantity, value=value)
 
     @synchronized
     def get_value(self, name: str):

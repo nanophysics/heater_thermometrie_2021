@@ -115,7 +115,6 @@ class MicropythonInterface:
             self.onewire_insert.set_power(on=False)
 
         self.temperature_insert.enable_thermometrie(enable=False)
-        self.temperature_insert.enable_thermometrie(enable=True)
         self.heater.set_power(power=2 ** 15 - 1)
         self.timebase.sleep(1.5)
         self.heater.set_power(power=2 ** 16 - 1)
