@@ -22,6 +22,27 @@ DIRECTORY_OF_THIS_FILE = pathlib.Path(__file__).absolute().parent
 logger = logging.getLogger("LabberDriver")
 
 
+class Timebase:
+    def sleep(self, time_s: float):
+        assert isinstance(time_s, float)
+        if time_s <= 0.01:
+            return
+        time.sleep(time_s)
+
+    @property
+    def now_s(self) -> float:
+        return time.time()
+
+
+class TimebaseSimulation:
+    def __init__(self):
+        self.now_s = 0.0
+
+    def sleep(self, time_s: float):
+        assert isinstance(time_s, float)
+        self.now_s += time_s
+
+
 class MicropythonInterface:
     def __init__(self, hwserial):
         self.proxy = None
@@ -35,9 +56,11 @@ class MicropythonInterface:
         if hwserial == HWSERIAL_SIMULATE:
             self.heater_thermometrie_2021_serial = "v42"
             self.fe = FeSimulator()
+            self.timebase = TimebaseSimulation()
         else:
             logger.warning(f"******************* {hwserial}")
             self._init_pyboard(hwserial=hwserial)
+            self.timebase = Timebase()
 
     def close(self):
         self.fe.close()
@@ -98,7 +121,9 @@ class MicropythonInterface:
             (False, "PT1000", Thermometrie.CURRENT_A_PT1000),
         ):
             temperature_V = self.temperature_insert.get_voltage(carbon=carbon)
-            print(f"{label}: {temperature_V:f} V, {temperature_V / current_factor:f} Ohm")
+            print(
+                f"{label}: {temperature_V:f} V, {temperature_V / current_factor:f} Ohm"
+            )
 
         self.temperature_insert.enable_thermometrie(enable=False)
 

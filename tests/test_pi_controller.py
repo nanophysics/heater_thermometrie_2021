@@ -7,8 +7,10 @@ from heater_driver_utils import EnumHeating, Quantity
 
 logger = logging.getLogger("LabberDriver")
 
+INTERVAL_S = 1.0
 
-def test_a():
+
+def test_controller_a():
     logging.basicConfig()
     logger.setLevel(logging.INFO)
 
@@ -16,9 +18,16 @@ def test_a():
     hwserial = micropython_proxy.HWSERIAL_SIMULATE
     hw = heater_wrapper.HeaterWrapper(hwserial=hwserial)
 
-    hw.set_value(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
+    hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
     hw.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled)
 
     hw.mpi.fe.sim_set_voltage(carbon=True, value=1.6)
 
     hw.get_quantity(Quantity.ControlWriteTemperature)
+    hw.set_quantity(Quantity.ControlWriteTemperature, 42.0)
+
+    next_tick_s = time_s = hw.now_s()
+    while True:
+        next_tick_s += INTERVAL_S
+        hw.sleep(next_tick_s - time_s)
+        time_s = hw.tick()

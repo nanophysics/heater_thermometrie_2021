@@ -106,4 +106,4 @@ class Quantity(EnumMixin, enum.Enum):
     TemperatureReadonlyResistancePT1000_K = "PT1000_K"
     TemperatureReadonlyTemperatureCarbon = "Carbon calibrated"
     TemperatureReadonlyTemperaturePT1000_K = "PT1000_K calibrated"
-    TemperatureReadonlyTemperatureCarbonCalibrated = "calibrated"
+    TemperatureReadonlyTemperatureCalibrated = "calibrated"
