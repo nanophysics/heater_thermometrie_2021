@@ -5,6 +5,7 @@ import logging
 import config_all
 
 import heater_hsm
+from src_micropython.micropython_portable import Thermometrie
 from micropython_proxy import HWTYPE_HEATER_THERMOMETRIE_2021
 from micropython_interface import MicropythonInterface
 from heater_driver_utils import (
@@ -94,17 +95,37 @@ class HeaterWrapper:
     def close(self):
         self.mpi.close()
 
-    def now_s(self) -> float:
+    @property
+    def time_now_s(self) -> float:
         return self.mpi.timebase.now_s
 
-    def sleep(self, time_s: float) -> None:
-        self.mpi.timebase.sleep(time_s)
+    def sleep(self, duration_s: float) -> None:
+        self.mpi.timebase.sleep(duration_s=duration_s)
 
     def tick(self) -> float:
+        self.mpi.fe.sim_update_time(time_now_s=self.time_now_s)
         # self.dict_values[Quantity.Temperature] = self.mpi.temperature_insert.get_voltage(carbon=True)
         # self.dict_values[Quantity.Temperature] = self.mpi.temperature_insert.get_voltage(carbon=False)
         self.dict_values[Quantity.ControlWritePower] = 0.53
         self.dict_values[Quantity.ControlWriteThermometrie] = True
+
+        for carbon, label, current_factor in (
+            (True, "carbon", Thermometrie.CURRENT_A_CARBON),
+            (False, "PT1000", Thermometrie.CURRENT_A_PT1000),
+        ):
+            temperature_V = self.mpi.temperature_insert.get_voltage(carbon=carbon)
+            temperature_R = temperature_V / current_factor
+            # print(
+            #     f"{label}: {temperature_V:0.3f} V, {temperature_R:0.3f} Ohm"
+            # )
+            # TODO: Calibration table
+            temperature_K = temperature_V
+            quantity = Quantity.TemperatureReadonlyResistanceCarbon if carbon else Quantity.TemperatureReadonlyResistancePT1000_K
+            self.dict_values[quantity] = temperature_R
+            quantity = Quantity.TemperatureReadonlyTemperatureCarbon if carbon else Quantity.TemperatureReadonlyTemperaturePT1000_K
+            self.dict_values[quantity] = temperature_K
+            if carbon:
+                self.dict_values[Quantity.TemperatureReadonlyTemperatureCalibrated] = temperature_K
 
         def defrost_switch_changed(on: str) -> str:
             self.hsm_heater.dispatch(heater_hsm.SignalDefrostSwitchChanged(on=on))
@@ -140,15 +161,24 @@ class HeaterWrapper:
         self.hsm_heater.dispatch(heater_hsm.SIGNAL_TICK)
 
         if self.controller is not None:
+            temperature_calibrated_K = self.dict_values[
+                    Quantity.TemperatureReadonlyTemperatureCalibrated
+                ]
             self.controller.process(
                 time_now_s=self.mpi.timebase.now_s,
                 fSetpoint=self.dict_values[Quantity.ControlWriteTemperature],
-                fSensorValue=self.dict_values[
-                    Quantity.TemperatureReadonlyTemperatureCalibrated
-                ],
-                fLimitOutLow=10.0,
-                fLimitOutHigh=10.0
+                fSensorValue=temperature_calibrated_K,
+                fLimitOutLow=0.0,
+                fLimitOutHigh=100.0,
             )
+            power = int(self.controller.fOutputValueLimited)
+            power = max(0, min(100, power))
+            self.dict_values[
+                Quantity.ControlWritePower
+            ] = power
+            self.mpi.fe.proxy.heater.set_power(power)
+
+            logger.info(f"  setpoint={self.controller.fSetpoint:0.2f} K => power={self.controller.fOutputValueLimited:0.2f} % => temperature_calibrated_K={temperature_calibrated_K:0.2f}")
 
         return self.mpi.timebase.now_s
 
@@ -210,6 +240,9 @@ class HeaterWrapper:
                 "insert",
                 time_now_s=self.mpi.timebase.now_s,
                 fSetpoint=self.dict_values[Quantity.ControlWriteTemperature],
+                fKi=0.4,
+                fKp=1.0,
+                fKd=0.0
             )
             return value
 

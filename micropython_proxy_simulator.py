@@ -5,6 +5,7 @@ logger = logging.getLogger("LabberDriver")
 
 class Display:
     ZEILEN = 5
+
     def __init__(self):
         self.zeilen = ["" for zeile in range(self.ZEILEN)]
 
@@ -21,9 +22,11 @@ class Display:
             print(f"   | {zeile:16} |")
         return b"None"
 
+
 class TemperatureInsert:
     def __init__(self):
         self.voltage_carbon = {True: 0.0, False: 0.0}
+        self.time_last_s = 0.0
 
     def enable_thermometrie(self, enable):
         return b"None"
@@ -34,9 +37,26 @@ class TemperatureInsert:
     def sim_set_voltage(self, carbon: bool, value: float):
         self.voltage_carbon[carbon] = value
 
+    def sim_update_time(self, time_now_s: float, power: int):
+        assert isinstance(time_now_s, float)
+        assert isinstance(power, int)
+        time_diff_s = time_now_s - self.time_last_s
+        self.time_last_s = time_now_s
+        reference_V = 3.3
+        for carbon in (True, False):
+            tau = 0.1 * time_diff_s
+            self.voltage_carbon[carbon] = (1.0 - tau) * self.voltage_carbon[
+                carbon
+            ] + tau * power * reference_V
+
 
 class Heater:
+    def __init__(self):
+        self.power = 0.0
+
     def set_power(self, power):
+        assert isinstance(power, int)
+        self.power = power
         return b"None"
 
 
@@ -72,37 +92,20 @@ class FeSimulator:
     def exec(self, cmd: str) -> None:
         pass
 
-    def eval(self, cmd: str):  # pylint: disable=too-many-return-statements
+    def eval(self, cmd: str):
         try:
             return eval(cmd, {"proxy": self.proxy})
         except Exception as e:
             logger.warning(f"{cmd}: {e}")
             raise
 
-        if cmd.startswith("proxy.display."):
-            return b"None"
-        if cmd == "proxy.onewire_box.scan()":
-            return b"28E3212E0D00002E"
-        if cmd == "proxy.onewire_box.read_temp('28E3212E0D00002E')":
-            return b"42.42"
-        if cmd.startswith("proxy.onewire_insert.set_power("):
-            return b"None"
-        if cmd == "proxy.onewire_insert.scan()":
-            return b"28d821950d00003e"
-        if cmd == "proxy.onewire_insert.read_temp('28d821950d00003e')":
-            return b"43.43"
-        if cmd == "proxy.get_defrost()":
-            return b"True"
-        if cmd.startswith("proxy.temperature_insert.enable_thermometrie(enable="):
-            return b"None"
-        if cmd.startswith("proxy.temperature_insert.get_voltage(carbon="):
-            return f"{self.voltage_carbon[True]}".encode("ascii")
-        if cmd.startswith("proxy.heater.set_power(power="):
-            return b"None"
-        raise NotImplementedError()
-
     def close(self):
         pass
 
     def sim_set_voltage(self, carbon: bool, value: float):
         self.proxy.temperature_insert.sim_set_voltage(carbon, value)
+
+    def sim_update_time(self, time_now_s):
+        self.proxy.temperature_insert.sim_update_time(
+            time_now_s, self.proxy.heater.power
+        )

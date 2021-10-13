@@ -15,7 +15,6 @@ from micropython_proxy import (
     HWTYPE_HEATER_THERMOMETRIE_2021,
 )
 from micropython_proxy_simulator import FeSimulator
-from src_micropython.micropython_portable import Thermometrie
 
 DIRECTORY_OF_THIS_FILE = pathlib.Path(__file__).absolute().parent
 
@@ -23,24 +22,24 @@ logger = logging.getLogger("LabberDriver")
 
 
 class Timebase:
-    def sleep(self, time_s: float):
-        assert isinstance(time_s, float)
-        if time_s <= 0.01:
-            return
-        time.sleep(time_s)
-
     @property
     def now_s(self) -> float:
         return time.time()
+
+    def sleep(self, duration_s: float):
+        assert isinstance(duration_s, float)
+        if duration_s <= 0.01:
+            return
+        time.sleep(duration_s)
 
 
 class TimebaseSimulation:
     def __init__(self):
         self.now_s = 0.0
 
-    def sleep(self, time_s: float):
-        assert isinstance(time_s, float)
-        self.now_s += time_s
+    def sleep(self, duration_s: float):
+        assert isinstance(duration_s, float)
+        self.now_s += duration_s
 
 
 class MicropythonInterface:
@@ -115,22 +114,12 @@ class MicropythonInterface:
                 print("Onewire of insert did not respond")
             self.onewire_insert.set_power(on=False)
 
-        self.temperature_insert.enable_thermometrie(enable=True)
-        for carbon, label, current_factor in (
-            (True, "carbon", Thermometrie.CURRENT_A_CARBON),
-            (False, "PT1000", Thermometrie.CURRENT_A_PT1000),
-        ):
-            temperature_V = self.temperature_insert.get_voltage(carbon=carbon)
-            print(
-                f"{label}: {temperature_V:f} V, {temperature_V / current_factor:f} Ohm"
-            )
-
         self.temperature_insert.enable_thermometrie(enable=False)
-
+        self.temperature_insert.enable_thermometrie(enable=True)
         self.heater.set_power(power=2 ** 15 - 1)
-        time.sleep(1.5)
+        self.timebase.sleep(1.5)
         self.heater.set_power(power=2 ** 16 - 1)
-        time.sleep(0.5)
+        self.timebase.sleep(0.5)
         self.heater.set_power(power=0)
 
         # temperature_V = self.temperature_insert.get_voltage(carbon=True)

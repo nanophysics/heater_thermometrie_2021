@@ -34,7 +34,6 @@ class PidController:
         fSensorValue=0.0,
         # and fOutputValue
         fOutputValue=0.0,
-        objPersist=None,
     ):
         """
         Given the initial PID loop portable_constants Kpid, and fSetpoint, fSensorValue and target fOutputValue values,
@@ -45,7 +44,6 @@ class PidController:
         """
         self.strName = strName
         self.PERSIST_PID_fI = PERSIST_PID_fI % strName
-        self.__objPersist = objPersist
         self.fKp, self.fKi, self.fKd = fKp, fKi, fKd
 
         self.fSetpoint = fSetpoint
@@ -70,10 +68,6 @@ class PidController:
         #       fKi
         if fKi > 0.0:
             self.fI = None
-            if self.__objPersist != None:
-                if self.__objPersist.loaded:
-                    print("Initialize from persist: " + self.PERSIST_PID_fI)
-                    self.fI = self.__objPersist.getValue(self.PERSIST_PID_fI, None)
             if self.fI == None:
                 self.fI = (fOutputValue - self.fP * self.fKp) / self.fKi
         else:
@@ -135,9 +129,6 @@ class PidController:
         self.fP = fP
         # (not necessary, but useful for monitoring)
         self.fD = fD
-
-        if self.__objPersist != None:
-            self.__objPersist.setValue(self.PERSIST_PID_fI, self.fI)
 
         # Compute tentative Output value, clamp Output to saturation limits, and perform
         # Integral anti-windup computation -- only remembering new Integral if fOutputValue value not

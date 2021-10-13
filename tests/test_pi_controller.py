@@ -26,8 +26,14 @@ def test_controller_a():
     hw.get_quantity(Quantity.ControlWriteTemperature)
     hw.set_quantity(Quantity.ControlWriteTemperature, 42.0)
 
-    next_tick_s = time_s = hw.now_s()
+    next_tick_s = time_s = hw.time_now_s
     while True:
         next_tick_s += INTERVAL_S
-        hw.sleep(next_tick_s - time_s)
+        hw.sleep(duration_s=next_tick_s - time_s)
         time_s = hw.tick()
+
+        if time_s > 20:
+            return
+
+if __name__ == "__main__":
+    test_controller_a()
