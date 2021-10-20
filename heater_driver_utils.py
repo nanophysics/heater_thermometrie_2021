@@ -102,6 +102,7 @@ class Quantity(EnumMixin, enum.Enum):
     StatusReadDefrostSwitchOnBox = "Defrost - Switch on box"
     StatusReadDefrostUserInteraction = "Defrost - User interaction"
     StatusReadInsertConnected = "Connected"
+    StatusReadErrorCounter = "Error counter"
     TemperatureReadonlyResistanceCarbon = "Carbon"
     TemperatureReadonlyResistancePT1000_K = "PT1000_K"
     TemperatureReadonlyTemperatureCarbon = "Carbon calibrated"

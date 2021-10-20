@@ -90,6 +90,10 @@ class HeaterHsm(hsm.Statemachine):
         connected = self._state_actual.startswith("connected")
         return EnumInsertConnected.get_labber(connected)
 
+    def temperature_settled(self) -> bool:
+        self.expect_state(expected_meth=HeaterHsm.state_connected_thermon_heatingcontrolled)
+        return self._hw.hsm_heater.settled or self._hw.hsm_heater.timeout
+
     def state_disconnected(self, signal) -> None:
         """
         The insert is not connected by the cable.
@@ -224,7 +228,7 @@ class HeaterHsm(hsm.Statemachine):
         - settled = time.now() > settle_time_start_s + Quantiy.SettleTime
         """
         if self._hw.mpi.timebase.now_s > self.time_start_s + self._hw.get_quantity(Quantity.ControlWriteTimeoutTime):
-            logger.warning("TIMEOUT")
+            self._hw.increment_error_counter()
             self.timeout = True
             return
         band_K = self._hw.get_quantity(Quantity.ControlWriteTemperatureToleranceBand)
@@ -233,7 +237,7 @@ class HeaterHsm(hsm.Statemachine):
         in_range = temperature_should_K - band_K < temperature_K < temperature_should_K + band_K
         if not in_range:
             self.settle_time_start_s = self._hw.mpi.timebase.now_s
-            # TODO: Increment error counter
+            self._hw.increment_error_counter()
             return
         if self._hw.mpi.timebase.now_s > self.settle_time_start_s + self._hw.get_quantity(Quantity.ControlWriteSettleTime):
             self.settled = True

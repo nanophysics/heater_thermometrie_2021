@@ -115,6 +115,19 @@
             }
         },
         {
+            "name": "Python: test_settletime.py",
+            "type": "python",
+            "request": "launch",
+            "justMyCode": true,
+            "program": "${workspaceFolder}/tests/test_settletime.py",
+            "cwd": "${workspaceFolder}",
+            "args": [],
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
             "name": "Python: Remote Attach",
             "type": "python",
             "request": "attach",

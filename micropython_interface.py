@@ -31,7 +31,7 @@ class Timebase:
     def sleep(self, duration_s: float):
         assert isinstance(duration_s, float)
 
-        duration_s = min(TICK_INTERVAL_S / 10.0, duration_s)
+        duration_s = max(TICK_INTERVAL_S / 10.0, duration_s)
         time.sleep(duration_s)
 
 

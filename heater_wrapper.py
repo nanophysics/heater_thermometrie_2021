@@ -7,7 +7,7 @@ import config_all
 import heater_hsm
 from src_micropython.micropython_portable import Thermometrie
 from micropython_proxy import HWTYPE_HEATER_THERMOMETRIE_2021
-from micropython_interface import MicropythonInterface
+from micropython_interface import MicropythonInterface, TICK_INTERVAL_S
 from heater_driver_utils import (
     Quantity,
     QuantityNotFoundException,
@@ -29,6 +29,22 @@ class NotInitialized:
 
 
 NOT_INITIALIZED = NotInitialized()
+
+
+class ErrorCounterAssertion:
+    def __init__(self, ht: "HeaterWrapper"):
+        assert isinstance(ht, HeaterWrapper)
+        self._ht = ht
+        self._error_counter = self._ht.dict_values[Quantity.StatusReadErrorCounter]
+
+    def assert_errors(self, msg: str):
+        error_counter = self._ht.dict_values[Quantity.StatusReadErrorCounter]
+        assert error_counter > self._error_counter
+        self._error_counter = error_counter
+
+    def assert_no_errors(self, msg: str):
+        error_counter = self._ht.dict_values[Quantity.StatusReadErrorCounter]
+        assert error_counter == self._error_counter
 
 
 class HeaterWrapper:
@@ -80,6 +96,7 @@ class HeaterWrapper:
         self.dict_values[Quantity.ControlWriteSettleTime] = 10.0
         self.dict_values[Quantity.ControlWriteTimeoutTime] = 20.0
         self.dict_values[Quantity.TemperatureReadonlyTemperatureCalibrated] = 0.0
+        self.dict_values[Quantity.StatusReadErrorCounter] = 0
         self.tick()
 
     def close(self):
@@ -91,6 +108,29 @@ class HeaterWrapper:
 
     def sleep(self, duration_s: float) -> None:
         self.mpi.timebase.sleep(duration_s=duration_s)
+
+    def let_time_fly(self, duration_s: float = None, till_s: float = None):
+        assert isinstance(duration_s, (type(None), float))
+        assert isinstance(till_s, (type(None), float))
+
+        if (duration_s is not None) and (till_s is not None):
+            raise AttributeError()
+
+        if duration_s is not None:
+            till_s = self.time_now_s + duration_s
+
+        next_tick_s = time_s = self.time_now_s
+        while True:
+            next_tick_s += TICK_INTERVAL_S
+            self.sleep(duration_s=next_tick_s - time_s)
+            time_s = self.tick()
+
+            if till_s is None:
+                # Loop forever
+                continue
+
+            if time_s > till_s:
+                return
 
     def tick(self) -> float:
         self.mpi.sim_update_time(time_now_s=self.time_now_s)
@@ -190,7 +230,7 @@ class HeaterWrapper:
 
     def set_value(self, name: str, value):
         assert isinstance(name, str)
-        self.set_quantity(quantity=Quantity(name), value=value)
+        return self.set_quantity(quantity=Quantity(name), value=value)
 
     def set_quantity(self, quantity: Quantity, value):
         assert isinstance(quantity, Quantity)
@@ -221,7 +261,15 @@ class HeaterWrapper:
         ):
             # This is the same temperature
             self.dict_values[Quantity.ControlWriteTemperature] = value
-            self.controller = PidController("insert", time_now_s=self.mpi.timebase.now_s, fSetpoint=value, fKi=0.04, fKp=0.1, fKd=0.0)
+            self.controller = PidController(
+                "insert",
+                time_now_s=self.mpi.timebase.now_s,
+                fSetpoint=value,
+                fKi=0.04,
+                fKp=0.1,
+                fKd=0.0,
+            )
+            self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
             return value
 
         if quantity in (
@@ -245,6 +293,14 @@ class HeaterWrapper:
         if value_changed and func is not None:
             func(value)
         return value_changed
+
+    def increment_error_counter(self):
+        error_counter = self.dict_values[Quantity.StatusReadErrorCounter]
+        self.dict_values[Quantity.StatusReadErrorCounter] = error_counter + 1
+
+    @property
+    def error_counter_assertion(self):
+        return ErrorCounterAssertion(ht=self)
 
     def signal(self, signal):
         self.hsm_heater.dispatch(signal)

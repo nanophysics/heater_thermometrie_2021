@@ -49,12 +49,11 @@ class Driver(InstrumentDriver.InstrumentWorker):
         """Perform the Set Value instrument operation. This function should
         return the actual value set by the instrument"""
         # keep track of multiple calls, to set multiple voltages efficiently
-        # logger.info(f"performSetValue({quant.name})")
         if quant.name in LABBER_INTERNAL_QUANTITIES:
             return value
         try:
             value_new = self.ht.set_value(name=quant.name, value=value)
-            logger.debug(f"performSetValue('{quant.name}', '{value}') -> '{value_new}")
+            logger.debug(f"performSetValue('{quant.name}', '{value}') -> '{value_new}'")
             return value_new
         except QuantityNotFoundException as e:
             logger.exception(e)
