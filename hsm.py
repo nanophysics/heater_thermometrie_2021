@@ -554,7 +554,7 @@ class Test_StatemachineWithEntryExitActions(Statemachine):
 def run_doctest():
     import doctest
 
-    rc = doctest.testmod(m=sys.modules.get(__name__))
+    rc = doctest.testmod(name="hsm")
     if rc.failed > 0:
         raise Exception(rc)
 

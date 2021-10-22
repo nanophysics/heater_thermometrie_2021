@@ -45,6 +45,8 @@ TODO: Bugfix
   INFO:LabberDriver:Waiting for 'ControlWriteTemperatureAndWait'. 0.5s: settled=True
     => Warum True?
 
+TODO: Console window should not become visible!
+
 TODO: Neu
   StatusReadSettled = "settled"
   StatusReadTimeout = "timeout"

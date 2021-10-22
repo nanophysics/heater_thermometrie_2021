@@ -92,7 +92,7 @@ class HeaterHsm(hsm.Statemachine):
 
     def temperature_settled(self) -> bool:
         self.expect_state(expected_meth=HeaterHsm.state_connected_thermon_heatingcontrolled)
-        return self._hw.hsm_heater.settled or self._hw.hsm_heater.timeout
+        return self.settled or self.timeout
 
     def state_disconnected(self, signal) -> None:
         """
@@ -227,26 +227,41 @@ class HeaterHsm(hsm.Statemachine):
           Quantity.ErrorCounter += 1
         - settled = time.now() > settle_time_start_s + Quantiy.SettleTime
         """
-        if self._hw.mpi.timebase.now_s > self.time_start_s + self._hw.get_quantity(Quantity.ControlWriteTimeoutTime):
-            self._hw.increment_error_counter()
-            self.timeout = True
-            return
         band_K = self._hw.get_quantity(Quantity.ControlWriteTemperatureToleranceBand)
         temperature_should_K = self._hw.get_quantity(Quantity.ControlWriteTemperature)
         temperature_K = self._hw.get_quantity(Quantity.TemperatureReadonlyTemperatureCalibrated)
         in_range = temperature_should_K - band_K < temperature_K < temperature_should_K + band_K
-        if not in_range:
-            self.settle_time_start_s = self._hw.mpi.timebase.now_s
+
+        if (not self.settled) and (not self.timeout):
+            # Settling
+            # During settling, the error counter will never be incremented!
+            now_s = self.now_s
+            if in_range:
+                if now_s > self.settle_time_start_s + self._hw.get_quantity(Quantity.ControlWriteSettleTime):
+                    # During the settle time, the error counter should not be incremented
+                    self.settled = True
+                return
+            self.settle_time_start_s = now_s
+            if now_s > self.time_start_s + self._hw.get_quantity(Quantity.ControlWriteTimeoutTime):
+                self._hw.increment_error_counter()
+                self.timeout = True
             return
-        if self._hw.mpi.timebase.now_s > self.settle_time_start_s + self._hw.get_quantity(Quantity.ControlWriteSettleTime):
-            self.settled = True
+
+        # SETTLED or TIMEOUT
+        assert self.settled or self.timeout
+        if not in_range:
+            self._hw.increment_error_counter()
+
+    @property
+    def now_s(self) -> float:
+        return self._hw.mpi.timebase.now_s
 
     def entry_connected_thermon_heatingcontrolled(self, signal) -> None:
         """
         Initialize PI controller
         settle_time_start_s = time.now()
         """
-        self.time_start_s = self.settle_time_start_s = self._hw.mpi.timebase.now_s
+        self.time_start_s = self.settle_time_start_s = self.now_s
         self.settled = False
         self.timeout = False
 

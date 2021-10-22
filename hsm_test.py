@@ -156,4 +156,4 @@ def analyse():
 
 if __name__ == "__main__":
     hsm.run_doctest()
-    analyse()
+    # analyse()

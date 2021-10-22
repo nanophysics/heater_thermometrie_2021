@@ -1,7 +1,6 @@
 import os
 import logging
 import threading
-import itertools
 
 import serial
 
