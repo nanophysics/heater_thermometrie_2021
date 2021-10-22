@@ -37,14 +37,17 @@ class ErrorCounterAssertion:
         self._ht = ht
         self._error_counter = self._ht.dict_values[Quantity.StatusReadErrorCounter]
 
-    def assert_errors(self, msg: str):
+    def assert_errors(self):
         error_counter = self._ht.dict_values[Quantity.StatusReadErrorCounter]
         assert error_counter > self._error_counter
         self._error_counter = error_counter
 
-    def assert_no_errors(self, msg: str):
+    def assert_no_errors(self):
         error_counter = self._ht.dict_values[Quantity.StatusReadErrorCounter]
         assert error_counter == self._error_counter
+
+    def reset(self):
+        self._error_counter = self._ht.dict_values[Quantity.StatusReadErrorCounter]
 
 
 class HeaterWrapper:
@@ -53,15 +56,26 @@ class HeaterWrapper:
         self.mpi = MicropythonInterface(hwserial)
         self.controller = None
 
-        self.insert_config = config_all.ConfigInsert.load_config(config_all.ONEWIRE_ID_UNDEFINED)
-        self.heater_2021_config = config_all.ConfigHeater2021.load_config(serial=self.mpi.heater_thermometrie_2021_serial)
-        logger.info(f"{HWTYPE_HEATER_THERMOMETRIE_2021} connected: {self.heater_2021_config}")
-        self.dict_values[Quantity.StatusReadSerialNumberHeater] = repr(self.heater_2021_config)
+        self.insert_config = config_all.ConfigInsert.load_config(
+            config_all.ONEWIRE_ID_UNDEFINED
+        )
+        self.heater_2021_config = config_all.ConfigHeater2021.load_config(
+            serial=self.mpi.heater_thermometrie_2021_serial
+        )
+        logger.info(
+            f"{HWTYPE_HEATER_THERMOMETRIE_2021} connected: {self.heater_2021_config}"
+        )
+        self.dict_values[Quantity.StatusReadSerialNumberHeater] = repr(
+            self.heater_2021_config
+        )
 
         self.hsm_heater = heater_hsm.HeaterHsm(self)
         # self.hsm_defrost = heater_hsm.DefrostHsm(self)
 
-        self.filename_values = DIRECTORY_OF_THIS_FILE / f"Values-{self.mpi.heater_thermometrie_2021_serial}.txt"
+        self.filename_values = (
+            DIRECTORY_OF_THIS_FILE
+            / f"Values-{self.mpi.heater_thermometrie_2021_serial}.txt"
+        )
 
         def init_hsm(hsm):
             def log_main(msg):
@@ -87,7 +101,9 @@ class HeaterWrapper:
         id_box = self.mpi.onewire_box.scan()
         id_box_expected = self.heater_2021_config.ONEWIRE_ID_HEATER
         if id_box != id_box_expected:
-            logger.warning(f"Expected onewire_id of heater '{id_box_expected}' but got '{id_box}")
+            logger.warning(
+                f"Expected onewire_id of heater '{id_box_expected}' but got '{id_box}"
+            )
 
         # Read all initial values from the pyboard
         self.dict_values[Quantity.ControlWriteHeating] = EnumHeating.OFF
@@ -157,12 +173,22 @@ class HeaterWrapper:
             # )
             # TODO: Calibration table
             temperature_K = temperature_V
-            quantity = Quantity.TemperatureReadonlyResistanceCarbon if carbon else Quantity.TemperatureReadonlyResistancePT1000_K
+            quantity = (
+                Quantity.TemperatureReadonlyResistanceCarbon
+                if carbon
+                else Quantity.TemperatureReadonlyResistancePT1000_K
+            )
             self.dict_values[quantity] = temperature_R
-            quantity = Quantity.TemperatureReadonlyTemperatureCarbon if carbon else Quantity.TemperatureReadonlyTemperaturePT1000_K
+            quantity = (
+                Quantity.TemperatureReadonlyTemperatureCarbon
+                if carbon
+                else Quantity.TemperatureReadonlyTemperaturePT1000_K
+            )
             self.dict_values[quantity] = temperature_K
             if carbon:
-                self.dict_values[Quantity.TemperatureReadonlyTemperatureCalibrated] = temperature_K
+                self.dict_values[
+                    Quantity.TemperatureReadonlyTemperatureCalibrated
+                ] = temperature_K
 
         def defrost_switch_changed(on: str) -> str:
             self.hsm_heater.dispatch(heater_hsm.SignalDefrostSwitchChanged(on=on))
@@ -176,9 +202,15 @@ class HeaterWrapper:
 
     def _tick_read_onewire(self):
         def insert_onewire_id_changed(onewire_id: str) -> str:
-            self.hsm_heater.dispatch(heater_hsm.SignalInsertSerialChanged(serial=onewire_id))
-            self.insert_config = config_all.ConfigInsert.load_config(onewire_id=onewire_id)
-            self.dict_values[Quantity.StatusReadSerialNumberInsert] = repr(self.insert_config)
+            self.hsm_heater.dispatch(
+                heater_hsm.SignalInsertSerialChanged(serial=onewire_id)
+            )
+            self.insert_config = config_all.ConfigInsert.load_config(
+                onewire_id=onewire_id
+            )
+            self.dict_values[Quantity.StatusReadSerialNumberInsert] = repr(
+                self.insert_config
+            )
             return onewire_id
 
         self.mpi.onewire_insert.set_power(on=True)
@@ -191,7 +223,9 @@ class HeaterWrapper:
 
     def _tick_run_controller(self):
         if self.controller is not None:
-            temperature_calibrated_K = self.dict_values[Quantity.TemperatureReadonlyTemperatureCalibrated]
+            temperature_calibrated_K = self.dict_values[
+                Quantity.TemperatureReadonlyTemperatureCalibrated
+            ]
             self.controller.process(
                 time_now_s=self.mpi.timebase.now_s,
                 fSetpoint=self.dict_values[Quantity.ControlWriteTemperature],
@@ -205,7 +239,9 @@ class HeaterWrapper:
             power_dac = max(0, min(2 ** 16 - 1, power_dac))
             self.mpi.heater.set_power(power=power_dac)
 
-            logger.info(f"  setpoint={self.controller.fSetpoint:0.2f} K => power={self.controller.fOutputValueLimited:0.2f} % => temperature_calibrated_K={temperature_calibrated_K:0.2f}")
+            logger.info(
+                f"  setpoint={self.controller.fSetpoint:0.2f} K => power={self.controller.fOutputValueLimited:0.2f} % => temperature_calibrated_K={temperature_calibrated_K:0.2f}"
+            )
 
     def get_quantity(self, quantity: Quantity):
         assert isinstance(quantity, Quantity)
@@ -218,6 +254,10 @@ class HeaterWrapper:
             return self.hsm_heater.get_labber_thermometrie
         if quantity == Quantity.StatusReadInsertConnected:
             return self.hsm_heater.get_labber_insert_connected
+        if quantity == Quantity.StatusReadSettled:
+            return self.hsm_heater.settled
+        if quantity == Quantity.StatusReadTimout:
+            return self.hsm_heater.timeout
 
         if quantity == Quantity.ControlWriteTemperatureAndWait:
             # TemperatureAndWait is stored as Temperature
@@ -259,11 +299,18 @@ class HeaterWrapper:
             Quantity.ControlWriteTemperature,
             Quantity.ControlWriteTemperatureAndWait,
         ):
-            if self.hsm_heater.is_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled):
+            if self.hsm_heater.is_state(
+                heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
+            ):
                 value_diff = self.dict_values[Quantity.ControlWriteTemperature] - value
-                if value_diff < 1e-9:
-                    logger.info(f"The same temperature {value:0.3f}K is requested. Settle time does not start again.")
+                if abs(value_diff) < 1e-9:
+                    logger.info(
+                        f"The same temperature {value:0.3f}K is requested. Settle time does not start again."
+                    )
                     return value
+
+                # The set temperature has changed. Force a reset of the settle time
+                self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.MANUAL)
 
             # This is the same temperature
             self.dict_values[Quantity.ControlWriteTemperature] = value

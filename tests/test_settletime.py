@@ -8,84 +8,207 @@ from heater_driver_utils import EnumHeating, Quantity
 
 logger = logging.getLogger("LabberDriver")
 
+TEMPERATURE_SET40_K = 40.0
+TEMPERATURE_SET42_K = 42.0
+TEMPERATURE_OUTSIDE_K = 35.0
+
+TIMEOUT_TIME_S = 100.0
+SETTLE_TIME_S = 10
+
+class Runner:
+    def __init__(self, hwserial):
+        self._hw = heater_wrapper.HeaterWrapper(hwserial=hwserial)
+        self._eca = self._hw.error_counter_assertion
+
+    def set_quantity(self, quantity, value):
+        self._hw.set_quantity(quantity, value)
+
+    def expect_state(self, meth):
+        return self._hw.expect_state(meth)
+
+    def let_time_fly(self, duration_s):
+        self._hw.let_time_fly(duration_s=duration_s)
+
+    def assert_no_errors(self):
+        self._eca.assert_no_errors()
+
+    def assert_errors(self):
+        self._eca.assert_errors()
+
+    def init_40K(self):
+        # Prepare Settle Test
+        self.set_quantity(Quantity.ControlWriteTemperature, TEMPERATURE_SET40_K)
+        self.set_quantity(Quantity.ControlWriteTemperatureToleranceBand, 2.0)
+        self.set_quantity(Quantity.ControlWriteTimeoutTime, TIMEOUT_TIME_S)
+        self.set_quantity(Quantity.ControlWriteSettleTime, SETTLE_TIME_S)
+
+    def start_40K_35K(self):
+        #
+        # Start controller - Settle Time Test
+        #
+        self._hw.mpi.sim_set_voltage(carbon=True, value=TEMPERATURE_OUTSIDE_K)
+        self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
+        self.expect_state(
+            heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
+        )
+
+        assert not self._hw.hsm_heater.settled
+        assert not self._hw.hsm_heater.timeout
+
+        # Wait with temperature outside range
+        self.let_time_fly(duration_s=20.0)
+        assert not self._hw.hsm_heater.settled
+        assert not self._hw.hsm_heater.timeout
+        self.assert_no_errors()
+
+    def continue_40K_40K_A(self):
+        # Temperature inside range: Settle time starts
+        self._hw.mpi.sim_set_voltage(carbon=True, value=TEMPERATURE_SET40_K)
+
+        self.let_time_fly(duration_s=9.5)
+        # Settle time is NOT over
+        assert not self._hw.hsm_heater.settled
+        assert not self._hw.hsm_heater.timeout
+        self.assert_no_errors()
+        self.let_time_fly(duration_s=1.0)
+        # Settle time is over
+        assert self._hw.hsm_heater.settled
+        assert not self._hw.hsm_heater.timeout
+        self.assert_no_errors()
+
+    def continue_40K_35K(self):
+        self._hw.mpi.sim_set_voltage(carbon=True, value=TEMPERATURE_OUTSIDE_K)
+
+        self.let_time_fly(duration_s=2.0)
+        assert self._hw.hsm_heater.settled
+        assert not self._hw.hsm_heater.timeout
+        self.assert_errors()
+
+    def continue_40K_40K_B(self):
+        self._hw.mpi.sim_set_voltage(carbon=True, value=TEMPERATURE_SET40_K)
+
+        self.let_time_fly(duration_s=10.0)
+        self.assert_no_errors()
+
+    def manual_then_controlled_40K_35K_timeout(self):
+        #
+        # Start controller - Timeouttime Test
+        #
+        self._hw.mpi.sim_set_voltage(carbon=True, value=TEMPERATURE_OUTSIDE_K)
+        self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.MANUAL)
+        self.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingmanual)
+        self.let_time_fly(duration_s=2.0)
+        self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
+        self.expect_state(
+            heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
+        )
+        self._eca.reset()
+        assert not self._hw.hsm_heater.settled
+        assert not self._hw.hsm_heater.timeout
+        self.let_time_fly(duration_s=95.0)
+        self._hw.get_quantity(Quantity.StatusReadErrorCounter)
+        self.assert_no_errors()
+        assert not self._hw.hsm_heater.settled
+        assert not self._hw.hsm_heater.timeout
+        self.let_time_fly(duration_s=10.0)
+        assert not self._hw.hsm_heater.settled
+        assert self._hw.hsm_heater.timeout
+        self.assert_errors()
+
+
+    def start_40K_40K(self):
+        self._hw.mpi.sim_set_voltage(carbon=True, value=40.0)
+        self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
+        self.expect_state(
+            heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
+        )
+
+        assert not self._hw.hsm_heater.settled
+        assert not self._hw.hsm_heater.timeout
+
+        # Wait with temperature outside range
+        self.let_time_fly(duration_s=SETTLE_TIME_S + 2.0)
+        assert self._hw.hsm_heater.settled
+        assert not self._hw.hsm_heater.timeout
+        self.assert_no_errors()
+
+    def write_and_wait_40K_40K_C(self):
+        # If the temperature is already set, there will be no settle time
+        self.set_quantity(Quantity.ControlWriteTemperatureAndWait, TEMPERATURE_SET40_K)
+        self.expect_state(
+            heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
+        )
+        self.let_time_fly(duration_s=2.0)
+        assert self._hw.hsm_heater.settled
+        assert not self._hw.hsm_heater.timeout
+
+    def change_42K_42K_C(self):
+        # If the temperature is already set, there will be no settle time
+        self._hw.mpi.sim_set_voltage(carbon=True, value=TEMPERATURE_SET42_K)
+        self.set_quantity(Quantity.ControlWriteTemperature, TEMPERATURE_SET42_K)
+        self.expect_state(
+            heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
+        )
+        self.let_time_fly(duration_s=SETTLE_TIME_S-1.0)
+        assert not self._hw.hsm_heater.settled
+        assert not self._hw.hsm_heater.timeout
+        self.let_time_fly(duration_s=2.0)
+        assert self._hw.hsm_heater.settled
+        assert not self._hw.hsm_heater.timeout
+
+    def change_40K_35K_C(self):
+        # If the temperature is already set, there will be no settle time
+        self._hw.mpi.sim_set_voltage(carbon=True, value=TEMPERATURE_OUTSIDE_K)
+        self.set_quantity(Quantity.ControlWriteTemperature, TEMPERATURE_SET40_K)
+        self.expect_state(
+            heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
+        )
+        self.let_time_fly(duration_s=TIMEOUT_TIME_S-1.0)
+        assert not self._hw.hsm_heater.timeout
+        self.let_time_fly(duration_s=2.0)
+        assert self._hw.hsm_heater.timeout
+
+
 
 @pytest.mark.parametrize("hwserial", ["", micropython_proxy.HWSERIAL_SIMULATE])
 def test_settletime(hwserial):
     logging.basicConfig()
     logger.setLevel(logging.INFO)
 
-    hw = heater_wrapper.HeaterWrapper(hwserial=hwserial)
+    r = Runner(hwserial=hwserial)
 
-    # Prepare Settle Test
-    hw.set_quantity(Quantity.ControlWriteTemperature, 42.0)
-    hw.set_quantity(Quantity.ControlWriteTemperatureToleranceBand, 2.0)
-    hw.set_quantity(Quantity.ControlWriteTimeoutTime, 100.0)
-    hw.set_quantity(Quantity.ControlWriteSettleTime, 10.0)
+    r.init_40K()
+    r.start_40K_35K()
+    r.continue_40K_40K_A()
+    r.continue_40K_35K()
+    r.manual_then_controlled_40K_35K_timeout()
+    r.continue_40K_40K_B()
 
-    #
-    # Start controller - Settle Time Test
-    #
-    hw.mpi.sim_set_voltage(carbon=True, value=1.6)
-    hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
-    hw.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled)
-    eca = hw.error_counter_assertion
-    assert not hw.hsm_heater.settled
-    assert not hw.hsm_heater.timeout
 
-    # Wait with temperature outside range
-    hw.let_time_fly(duration_s=20.0)
-    assert not hw.hsm_heater.settled
-    assert not hw.hsm_heater.timeout
-    eca.assert_no_errors("Temperature out of range but still settling")
+@pytest.mark.parametrize("hwserial", ["", micropython_proxy.HWSERIAL_SIMULATE])
+def test_settletime_repetitive(hwserial):
+    """
+    Verify behaviour of
+      ControlWriteTemperatureAndWait = "temperature and wait"
 
-    # Temperature inside range: Settle time starts
-    hw.mpi.sim_set_voltage(carbon=True, value=42.0)
-    eca = hw.error_counter_assertion
-    hw.let_time_fly(duration_s=9.5)
-    # Settle time is NOT over
-    assert not hw.hsm_heater.settled
-    assert not hw.hsm_heater.timeout
-    eca.assert_no_errors("Temperature is in range")
-    hw.let_time_fly(duration_s=1.0)
-    # Settle time is over
-    assert hw.hsm_heater.settled
-    assert not hw.hsm_heater.timeout
-    eca.assert_no_errors("Temperature is in range")
+    When calling the first time, the settle time should apply (the tail should settle is temperature).
+    When calling consecutive times, no settle time is required (as the controller hold the temperature constant)
+    A settle time applays again if:
+      - The "temperature and wait" changed.
+      - The heater mode was changed (eg. manual)
+    """
+    logging.basicConfig()
+    logger.setLevel(logging.INFO)
 
-    hw.mpi.sim_set_voltage(carbon=True, value=39.0)
+    r = Runner(hwserial=hwserial)
 
-    hw.let_time_fly(duration_s=2.0)
-    assert hw.hsm_heater.settled
-    assert not hw.hsm_heater.timeout
-    eca.assert_errors("Temperature out of range")
-
-    hw.mpi.sim_set_voltage(carbon=True, value=42.0)
-
-    hw.let_time_fly(duration_s=10.0)
-    eca.assert_no_errors("Temperature in range")
-
-    #
-    # Start controller - Timeouttime Test
-    #
-    hw.mpi.sim_set_voltage(carbon=True, value=39.0)
-    hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.MANUAL)
-    hw.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingmanual)
-    hw.let_time_fly(duration_s=2.0)
-    hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
-    hw.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled)
-    eca = hw.error_counter_assertion
-    assert not hw.hsm_heater.settled
-    assert not hw.hsm_heater.timeout
-    hw.let_time_fly(duration_s=95.0)
-    hw.get_quantity(Quantity.StatusReadErrorCounter)
-    eca.assert_no_errors("Temperature out of range, but still settling")
-    assert not hw.hsm_heater.settled
-    assert not hw.hsm_heater.timeout
-    hw.let_time_fly(duration_s=10.0)
-    assert not hw.hsm_heater.settled
-    assert hw.hsm_heater.timeout
-    eca.assert_errors("Temperature out of range")
+    r.init_40K()
+    r.start_40K_40K()
+    r.write_and_wait_40K_40K_C()
+    r.change_42K_42K_C()
+    r.change_40K_35K_C()
 
 
 if __name__ == "__main__":
     test_settletime(hwserial=micropython_proxy.HWSERIAL_SIMULATE)
+    test_settletime_repetitive(hwserial=micropython_proxy.HWSERIAL_SIMULATE)

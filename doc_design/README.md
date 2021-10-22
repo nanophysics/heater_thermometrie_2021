@@ -47,13 +47,12 @@ TODO: Bugfix
 
 TODO: Console window should not become visible!
 
-TODO: Neu
+DONE: Neu
   StatusReadSettled = "settled"
   StatusReadTimeout = "timeout"
 
-TODO: Bugfix
+DONE: Bugfix
   Experiment Fenster
    1. mal: Timeout
    2. mal: Antwort sofort
   Add unit test
-  TODO: Fix unit test
