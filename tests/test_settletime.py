@@ -28,17 +28,19 @@ def test_settletime(hwserial):
     hw.mpi.sim_set_voltage(carbon=True, value=1.6)
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
     hw.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled)
+    eca = hw.error_counter_assertion
     assert not hw.hsm_heater.settled
     assert not hw.hsm_heater.timeout
 
     # Wait with temperature outside range
-    hw.let_time_fly(duration_s=10.0)
+    hw.let_time_fly(duration_s=20.0)
     assert not hw.hsm_heater.settled
     assert not hw.hsm_heater.timeout
-    hw.mpi.sim_set_voltage(carbon=True, value=42.0)
-    eca = hw.error_counter_assertion
+    eca.assert_no_errors("Temperature out of range but still settling")
 
     # Temperature inside range: Settle time starts
+    hw.mpi.sim_set_voltage(carbon=True, value=42.0)
+    eca = hw.error_counter_assertion
     hw.let_time_fly(duration_s=9.5)
     # Settle time is NOT over
     assert not hw.hsm_heater.settled
@@ -75,8 +77,8 @@ def test_settletime(hwserial):
     assert not hw.hsm_heater.settled
     assert not hw.hsm_heater.timeout
     hw.let_time_fly(duration_s=95.0)
-    error_counter_new1 = hw.get_quantity(Quantity.StatusReadErrorCounter)
-    eca.assert_errors("Temperature out of range")
+    hw.get_quantity(Quantity.StatusReadErrorCounter)
+    eca.assert_no_errors("Temperature out of range, but still settling")
     assert not hw.hsm_heater.settled
     assert not hw.hsm_heater.timeout
     hw.let_time_fly(duration_s=10.0)

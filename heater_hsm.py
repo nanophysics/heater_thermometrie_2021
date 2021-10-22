@@ -237,7 +237,6 @@ class HeaterHsm(hsm.Statemachine):
         in_range = temperature_should_K - band_K < temperature_K < temperature_should_K + band_K
         if not in_range:
             self.settle_time_start_s = self._hw.mpi.timebase.now_s
-            self._hw.increment_error_counter()
             return
         if self._hw.mpi.timebase.now_s > self.settle_time_start_s + self._hw.get_quantity(Quantity.ControlWriteSettleTime):
             self.settled = True

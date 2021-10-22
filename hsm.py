@@ -55,6 +55,11 @@ class Statemachine:
     def actual_meth(self):
         return getattr(self, "state_" + self._state_actual)
 
+    def is_state(self, expected_meth):
+        assert callable(expected_meth)
+        actual_meth = self.actual_meth()
+        return expected_meth.__name__ == actual_meth.__name__
+
     def expect_state(self, expected_meth):
         assert callable(expected_meth)
         actual_meth = self.actual_meth()

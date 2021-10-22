@@ -259,6 +259,12 @@ class HeaterWrapper:
             Quantity.ControlWriteTemperature,
             Quantity.ControlWriteTemperatureAndWait,
         ):
+            if self.hsm_heater.is_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled):
+                value_diff = self.dict_values[Quantity.ControlWriteTemperature] - value
+                if value_diff < 1e-9:
+                    logger.info(f"The same temperature {value:0.3f}K is requested. Settle time does not start again.")
+                    return value
+
             # This is the same temperature
             self.dict_values[Quantity.ControlWriteTemperature] = value
             self.controller = PidController(
