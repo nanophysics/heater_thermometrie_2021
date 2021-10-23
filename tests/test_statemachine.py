@@ -1,5 +1,8 @@
 import logging
 
+import pytest
+
+from pytest_util  import TEST_HW_SIMULATE
 import micropython_proxy
 import heater_thread
 import heater_hsm
@@ -9,11 +12,11 @@ from micropython_interface import TICK_INTERVAL_S
 logger = logging.getLogger("LabberDriver")
 
 
-def test_statemachine_a():
+@pytest.mark.parametrize("hwserial", TEST_HW_SIMULATE)
+def test_statemachine_a(hwserial):
     logging.basicConfig()
     logger.setLevel(logging.INFO)
 
-    hwserial = micropython_proxy.HWSERIAL_SIMULATE
     ht = heater_thread.HeaterThread(hwserial=hwserial)
     ht.signal(heater_hsm.SignalDefrostSwitchChanged(on=False))
     ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermon)
@@ -43,4 +46,4 @@ class Runner:
 
 
 if __name__ == "__main__":
-    test_statemachine_a()
+    test_statemachine_a(hwserial=micropython_proxy.HWSERIAL_SIMULATE)

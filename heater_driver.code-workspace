@@ -8,6 +8,7 @@
         "python.formatting.provider": "black",
         "python.testing.pytestArgs": [
             "--import-mode=importlib",
+            "-m=simulate",  // https://github.com/microsoft/vscode-python/issues/10827
             "tests"
         ],
         "python.testing.unittestEnabled": false,

@@ -40,6 +40,7 @@
             "module": "pytest",
             "cwd": "${workspaceFolder}",
             "args": [
+                "-m=simulate",
                 "tests"
             ],
             "console": "integratedTerminal"
@@ -49,27 +50,8 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Python: heater_wrapper_test.py",
-            "type": "python",
-            "request": "launch",
-            "justMyCode": true,
-            "program": "${workspaceFolder}/heater_wrapper_test.py",
-            "cwd": "${workspaceFolder}",
-            "args": [],
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Python: heater_thread_test.py",
-            "type": "python",
-            "request": "launch",
-            "justMyCode": true,
-            "program": "${workspaceFolder}/heater_thread_test.py",
-            "cwd": "${workspaceFolder}",
-            "args": [],
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "justMyCode": false
         },
         {
             "name": "Python: heater_hsm.py",
@@ -100,6 +82,32 @@
             "cwd": "${workspaceFolder}",
             "args": [],
             "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: test_heater_wrapper.py",
+            "type": "python",
+            "request": "launch",
+            "justMyCode": true,
+            "program": "${workspaceFolder}/tests/test_heater_wrapper.py",
+            "cwd": "${workspaceFolder}",
+            "args": [],
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "Python: test_heater_thread.py",
+            "type": "python",
+            "request": "launch",
+            "justMyCode": true,
+            "program": "${workspaceFolder}/tests/test_heater_thread.py",
+            "cwd": "${workspaceFolder}",
+            "args": [],
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
         },
         {
             "name": "Python: test_pi_controller.py",

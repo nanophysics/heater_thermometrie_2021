@@ -59,10 +59,6 @@ class OnewireInsert(OnewireBox):
     def __init__(self, proxy):
         super().__init__(proxy=proxy, name="proxy.onewire_insert")
 
-    def set_power(self, on: bool) -> None:
-        isinstance(on, bool)
-        return self._proxy.eval_as_none(f"{self._name}.set_power(on={on})")
-
 
 class TemperatureInsert:
     def __init__(self, proxy):
@@ -72,9 +68,9 @@ class TemperatureInsert:
         assert isinstance(enable, bool)
         return self.proxy.eval_as_none(f"proxy.temperature_insert.enable_thermometrie(enable={enable})")
 
-    def get_voltage(self, carbon=True) -> float:
+    def read_resistance_OHM(self, carbon=True) -> float:
         assert isinstance(carbon, bool)
-        return self.proxy.eval_as(float, f"proxy.temperature_insert.get_voltage(carbon={carbon})")
+        return self.proxy.eval_as(float, f"proxy.temperature_insert.read_resistance_OHM(carbon={carbon})")
 
     # hw.adc.set_channel(ADS1219.CHANNEL_AIN2_AIN3) # carbon
     # voltage_carbon = hw.adc.read_data_signed() * electronics.ADC24_FACTOR_CARBON

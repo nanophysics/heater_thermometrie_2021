@@ -14,8 +14,9 @@ from sh1106 import SH1106_I2C
 from dac8571 import DAC8571
 
 from micropython_portable import Thermometrie
+from micropython_defrost import DefrostProcess
 
-VERSION = "v0.1"
+VERSION = "v0.9"
 
 # Pins according to schematics
 PIN_SDA_OLED = "Y10"
@@ -41,10 +42,10 @@ class OnewireBox:
     def __init__(self, pin=Pin(PIN_DS18_TEMP)):
         assert isinstance(pin, Pin)
         ow = OneWire(pin)
-        self.temp = DS18X20(ow)
+        self._dx18x20 = DS18X20(ow)
 
     def scan(self):
-        roms = self.temp.scan()
+        roms = self._dx18x20.scan()
         if len(roms) == 0:
             return None
         assert len(roms) <= 1, "Maximum one sensor expected"
@@ -52,26 +53,26 @@ class OnewireBox:
 
     def read_temp(self, ident):
         rom = ubinascii.unhexlify(ident)
-        self.temp.resolution(rom=rom, bits=12)
-        self.temp.convert_temp()
+        self._dx18x20.resolution(rom=rom, bits=12)
+        self._dx18x20.convert_temp()
         # conversion takes up to 750ms
         time.sleep(0.8)
-        return self.temp.read_temp(rom)
+        return self._dx18x20.read_temp(rom)
 
 
 class OnewireInsert(OnewireBox):
     """
     DS18 located in the insert and connected using the green Fischer cable.
-    The blue heater box may powered on/off this DS18.
+    The blue heater box may power on/off this DS18.
     """
 
     def __init__(self):
         super().__init__(pin=Pin(PIN_DS18_ID))
         self.DS18_PWR = Pin(PIN_DS18_PWD, Pin.OUT_PP)
         self.DS18_SHORT = Pin(PIN_DS18_SHORT, Pin.OUT_PP)
-        self.set_power(on=False)
+        self._set_power(on=False)
 
-    def set_power(self, on):
+    def _set_power(self, on):
         # TODO(peter): Ist power on/off korrekt?
         isinstance(on, bool)
         self.DS18_PWR.value(on)
@@ -82,6 +83,18 @@ class OnewireInsert(OnewireBox):
         #     return
         # pin_power = Pin('X3', Pin.OUT_PP)
         # pin_power.value(True)
+
+    def scan(self):
+        self._set_power(on=True)
+        rc = OnewireBox.scan(self)
+        self._set_power(on=False)
+        return rc
+
+    def read_temp(self, ident):
+        self._set_power(on=True)
+        rc = OnewireBox.read_temp(self, ident=ident)
+        self._set_power(on=False)
+        return rc
 
 
 class TemperatureInsert:
@@ -108,11 +121,10 @@ class TemperatureInsert:
         #         raise
         #     self.adc = None
 
-        if self.adc:
-            self.adc.set_conversion_mode(ADS1219.CM_SINGLE)
-            self.adc.set_vref(ADS1219.VREF_EXTERNAL)
-            self.adc.set_gain(ADS1219.GAIN_1X)  # GAIN_1X, GAIN_4X
-            self.adc.set_data_rate(ADS1219.DR_20_SPS)  # DR_20_SPS -> 50 ms
+        self.adc.set_conversion_mode(ADS1219.CM_SINGLE)
+        self.adc.set_vref(ADS1219.VREF_EXTERNAL)
+        self.adc.set_gain(ADS1219.GAIN_1X)  # GAIN_1X, GAIN_4X
+        self.adc.set_data_rate(ADS1219.DR_20_SPS)  # DR_20_SPS -> 50 ms
 
         self.enable_thermometrie(enable=False)
 
@@ -121,18 +133,11 @@ class TemperatureInsert:
         self.short_carb.value(not enable)
         self.short_pt1000.value(not enable)
 
-    def get_voltage(self, carbon):
+    def read_resistance_OHM(self, carbon):
         assert isinstance(carbon, bool)
-        channel = ADS1219.CHANNEL_AIN0_AIN1
-        factor = Thermometrie.ADC24_FACTOR_PT1000
-        if carbon:
-            channel = ADS1219.CHANNEL_AIN2_AIN3
-            factor = Thermometrie.ADC24_FACTOR_CARBON
-        if self.adc:
-            self.adc.set_channel(channel=channel)
-            voltage = self.adc.read_data_signed() * Thermometrie.ADC24_FACTOR_PT1000
-            return voltage
-        return 47.11
+        channel = ADS1219.CHANNEL_AIN2_AIN3 if carbon else ADS1219.CHANNEL_AIN0_AIN1
+        self.adc.set_channel(channel=channel)
+        return self.adc.read_data_signed() * Thermometrie.factor_adc_to_OHM(carbon=carbon)
 
     # hw.adc.set_channel(ADS1219.CHANNEL_AIN2_AIN3) # carbon
     # voltage_carbon = hw.adc.read_data_signed() * electronics.ADC24_FACTOR_CARBON
@@ -141,8 +146,16 @@ class TemperatureInsert:
     # print("voltage_carbon: %f V, voltage_pt1000: %f V" % (voltage_carbon, voltage_pt1000))
     # print("resistance_carbon: %f Ohm, resistance_pt1000: %f Ohm" % (voltage_carbon/electronics.CURRENT_A_CARBON, voltage_pt1000/electronics.CURRENT_A_PT1000))
 
+    @property
+    def read_temperature_C(self):
+        "read the temperature from the PTC1000"
+        resistance_OHM = self.read_resistance_OHM(carbon=False)
+        return resistance_OHM * Thermometrie.ptc1000_temperature_C(resistance_OHM)
+
 
 class Heater:
+    ADC_MAX = 2 ** 16 - 1
+
     def __init__(self, i2c):
         # DAC8571 16-BIT, LOW POWER, VOLTAGE OUTPUT, I2C INTERFACE DIGITAL-TO-ANALOG CONVERTER
         #
@@ -156,9 +169,15 @@ class Heater:
         #  Linux kernel driver in C
         self._dac = DAC8571(i2c)
 
+    def set_power_off(self):
+        self.set_power(0)
+
+    def set_power_max(self):
+        self.set_power(Heater.ADC_MAX)
+
     def set_power(self, power):
         assert isinstance(power, int)
-        assert 0 <= power < 2 ** 16
+        assert 0 <= power <= Heater.ADC_MAX
         self._dac.write_dac(dac=power)
 
         # dac = adafruit_mcp4725.MCP4725(i2c)
@@ -200,6 +219,7 @@ class Display:
         self._sh1106.fill(0)
 
     def zeile(self, i, text):
+        assert 0 <= i <= 4
         self._sh1106.text(text, 0, i * Display.ZEILENHOEHE, 1)
 
     def clear(self):
@@ -228,6 +248,7 @@ class Proxy:
         self.onewire_insert = OnewireInsert()
         self.temperature_insert = TemperatureInsert(i2c=i2c_AD_DA)
         self.heater = Heater(i2c=i2c_AD_DA)
+        self.defrost_process = DefrostProcess(self)
 
     def display_clear(self):
         self.display.clear()
@@ -236,3 +257,6 @@ class Proxy:
 
     def get_defrost(self):
         return not self.defrost()
+
+    def tick(self):
+        self.defrost_process.tick()

@@ -1,6 +1,7 @@
-import time
 import logging
+import pytest
 
+from pytest_util import TEST_HW_SIMULATE
 import micropython_proxy
 import heater_thread
 import heater_hsm
@@ -9,14 +10,13 @@ from heater_driver_utils import EnumHeating, Quantity, EnumThermometrie
 logger = logging.getLogger("LabberDriver")
 
 
-def doit():
+@pytest.mark.parametrize("hwserial", TEST_HW_SIMULATE)
+def test_doit(hwserial):
     logging.basicConfig()
     logger.setLevel(logging.INFO)
 
-    hwserial = ""
-    hwserial = micropython_proxy.HWSERIAL_SIMULATE
     ht = heater_thread.HeaterThread(hwserial=hwserial)
-    time.sleep(1.5)
+    ht._hw.sleep(1.5)
     ht.signal(heater_hsm.SignalDefrostSwitchChanged(on=False))
     ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermon)
 
@@ -45,9 +45,9 @@ def doit():
     ht.expect_state(heater_hsm.HeaterHsm.state_disconnected)
 
     logger.info("Now sleeping for 200.0s")
-    time.sleep(200.0)
+    ht._hw.sleep(200.0)
     ht.stop()
 
 
 if __name__ == "__main__":
-    doit()
+    test_doit(hwserial=micropython_proxy.HWSERIAL_SIMULATE)

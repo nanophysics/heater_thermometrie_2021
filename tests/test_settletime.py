@@ -1,6 +1,8 @@
 import logging
 
 import pytest
+
+from pytest_util  import TEST_HW_SIMULATE
 import micropython_proxy
 import heater_wrapper
 import heater_hsm
@@ -46,7 +48,7 @@ class Runner:
         #
         # Start controller - Settle Time Test
         #
-        self._hw.mpi.sim_set_voltage(carbon=True, value=TEMPERATURE_OUTSIDE_K)
+        self._hw.mpi.sim_set_resistance_OHM(carbon=True, value=TEMPERATURE_OUTSIDE_K)
         self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
         self.expect_state(
             heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
@@ -63,7 +65,7 @@ class Runner:
 
     def continue_40K_40K_A(self):
         # Temperature inside range: Settle time starts
-        self._hw.mpi.sim_set_voltage(carbon=True, value=TEMPERATURE_SET40_K)
+        self._hw.mpi.sim_set_resistance_OHM(carbon=True, value=TEMPERATURE_SET40_K)
 
         self.let_time_fly(duration_s=9.5)
         # Settle time is NOT over
@@ -77,7 +79,7 @@ class Runner:
         self.assert_no_errors()
 
     def continue_40K_35K(self):
-        self._hw.mpi.sim_set_voltage(carbon=True, value=TEMPERATURE_OUTSIDE_K)
+        self._hw.mpi.sim_set_resistance_OHM(carbon=True, value=TEMPERATURE_OUTSIDE_K)
 
         self.let_time_fly(duration_s=2.0)
         assert self._hw.hsm_heater.settled
@@ -85,7 +87,7 @@ class Runner:
         self.assert_errors()
 
     def continue_40K_40K_B(self):
-        self._hw.mpi.sim_set_voltage(carbon=True, value=TEMPERATURE_SET40_K)
+        self._hw.mpi.sim_set_resistance_OHM(carbon=True, value=TEMPERATURE_SET40_K)
 
         self.let_time_fly(duration_s=10.0)
         self.assert_no_errors()
@@ -94,7 +96,7 @@ class Runner:
         #
         # Start controller - Timeouttime Test
         #
-        self._hw.mpi.sim_set_voltage(carbon=True, value=TEMPERATURE_OUTSIDE_K)
+        self._hw.mpi.sim_set_resistance_OHM(carbon=True, value=TEMPERATURE_OUTSIDE_K)
         self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.MANUAL)
         self.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingmanual)
         self.let_time_fly(duration_s=2.0)
@@ -117,7 +119,7 @@ class Runner:
 
 
     def start_40K_40K(self):
-        self._hw.mpi.sim_set_voltage(carbon=True, value=40.0)
+        self._hw.mpi.sim_set_resistance_OHM(carbon=True, value=40.0)
         self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
         self.expect_state(
             heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
@@ -144,7 +146,7 @@ class Runner:
 
     def change_42K_42K_C(self):
         # If the temperature is already set, there will be no settle time
-        self._hw.mpi.sim_set_voltage(carbon=True, value=TEMPERATURE_SET42_K)
+        self._hw.mpi.sim_set_resistance_OHM(carbon=True, value=TEMPERATURE_SET42_K)
         self.set_quantity(Quantity.ControlWriteTemperature, TEMPERATURE_SET42_K)
         self.expect_state(
             heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
@@ -158,7 +160,7 @@ class Runner:
 
     def change_40K_35K_C(self):
         # If the temperature is already set, there will be no settle time
-        self._hw.mpi.sim_set_voltage(carbon=True, value=TEMPERATURE_OUTSIDE_K)
+        self._hw.mpi.sim_set_resistance_OHM(carbon=True, value=TEMPERATURE_OUTSIDE_K)
         self.set_quantity(Quantity.ControlWriteTemperature, TEMPERATURE_SET40_K)
         self.expect_state(
             heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
@@ -170,7 +172,7 @@ class Runner:
 
 
 
-@pytest.mark.parametrize("hwserial", ["", micropython_proxy.HWSERIAL_SIMULATE])
+@pytest.mark.parametrize("hwserial", TEST_HW_SIMULATE)
 def test_settletime(hwserial):
     logging.basicConfig()
     logger.setLevel(logging.INFO)
@@ -185,7 +187,7 @@ def test_settletime(hwserial):
     r.continue_40K_40K_B()
 
 
-@pytest.mark.parametrize("hwserial", ["", micropython_proxy.HWSERIAL_SIMULATE])
+@pytest.mark.parametrize("hwserial", TEST_HW_SIMULATE)
 def test_settletime_repetitive(hwserial):
     """
     Verify behaviour of

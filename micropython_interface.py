@@ -59,13 +59,13 @@ class MicropythonInterface:
             self.fe = FeSimulator()
             self.timebase = TimebaseSimulation()
             self.sim_update_time = self.fe.sim_update_time
-            self.sim_set_voltage = self.fe.sim_set_voltage
+            self.sim_set_resistance_OHM = self.fe.sim_set_resistance_OHM
         else:
             logger.warning(f"******************* {hwserial}")
             self._init_pyboard(hwserial=hwserial)
             self.timebase = Timebase()
             self.sim_update_time = lambda time_now_s: None
-            self.sim_set_voltage = lambda carbon, value: None
+            self.sim_set_resistance_OHM = lambda carbon, value: None
 
     def close(self):
         self.fe.close()

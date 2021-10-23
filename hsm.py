@@ -1,6 +1,5 @@
 import io
 import re
-import sys
 import inspect
 
 REGEX_SPACES = re.compile(r"^(?P<spaces>.*?)(\S(.*)$)", re.M)

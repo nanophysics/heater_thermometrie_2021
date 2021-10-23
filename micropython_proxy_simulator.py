@@ -25,24 +25,24 @@ class Display:
 
 class TemperatureInsert:
     def __init__(self):
-        self.voltage_carbon_V = {True: 0.0, False: 0.0}
+        self.resistance_carbon_OHM = {True: 0.0, False: 0.0}
         self.time_last_s = 0.0
-        self._voltage_mocked = False
+        self._resistance_mocked = False
 
     def enable_thermometrie(self, enable):
         return b"None"
 
-    def get_voltage(self, carbon):
-        return f"{self.voltage_carbon_V[True]}".encode("ascii")
+    def read_resistance_OHM(self, carbon):
+        return f"{self.resistance_carbon_OHM[True]}".encode("ascii")
 
-    def sim_set_voltage(self, carbon: bool, value: float):
-        self._voltage_mocked = True
-        self.voltage_carbon_V[carbon] = value
+    def sim_set_resistance_OHM(self, carbon: bool, value: float):
+        self._resistance_mocked = True
+        self.resistance_carbon_OHM[carbon] = value
 
     def sim_update_time(self, time_now_s: float, power: int):
         assert isinstance(time_now_s, float)
         assert isinstance(power, int)
-        if self._voltage_mocked:
+        if self._resistance_mocked:
             # The voltage is mocked to a fix value
             # and should not be simulated
             return
@@ -52,7 +52,7 @@ class TemperatureInsert:
         for carbon in (True, False):
             tau = 0.1 * time_diff_s
             tau = min(1.0, tau)
-            self.voltage_carbon_V[carbon] = (1.0 - tau) * self.voltage_carbon_V[carbon] + tau * 0.005 * power * reference_V
+            self.resistance_carbon_OHM[carbon] = (1.0 - tau) * self.resistance_carbon_OHM[carbon] + tau * 0.005 * power * reference_V
 
 
 class Heater:
@@ -74,8 +74,7 @@ class OnewireBox:
 
 
 class OnewireInsert(OnewireBox):
-    def set_power(self, on):
-        return b"None"
+    pass
 
 
 class Proxy:
@@ -107,8 +106,8 @@ class FeSimulator:
     def close(self):
         pass
 
-    def sim_set_voltage(self, carbon: bool, value: float):
-        self.proxy.temperature_insert.sim_set_voltage(carbon, value)
+    def sim_set_resistance_OHM(self, carbon: bool, value: float):
+        self.proxy.temperature_insert.sim_set_resistance_OHM(carbon, value)
 
     def sim_update_time(self, time_now_s):
         self.proxy.temperature_insert.sim_update_time(time_now_s, self.proxy.heater.power)
