@@ -5,7 +5,7 @@ import logging
 import config_all
 
 import heater_hsm
-from src_micropython.micropython_portable import Thermometrie
+from src_micropython.micropython_portable import ThermometrieCarbon, ThermometriePT1000
 from micropython_proxy import HWTYPE_HEATER_THERMOMETRIE_2021
 from micropython_interface import MicropythonInterface, TICK_INTERVAL_S
 from heater_driver_utils import (
@@ -48,6 +48,16 @@ class ErrorCounterAssertion:
 
     def reset(self):
         self._error_counter = self._ht.dict_values[Quantity.StatusReadErrorCounter]
+
+
+class AttributesCarbon(ThermometrieCarbon):
+    QUANTITY_RESISTANCE = Quantity.TemperatureReadonlyResistanceCarbon
+    QUANTITY_TEMPERATURE = Quantity.TemperatureReadonlyTemperatureCarbon
+
+
+class AttributesPT1000(ThermometriePT1000):
+    QUANTITY_RESISTANCE = Quantity.TemperatureReadonlyResistancePT1000_K
+    QUANTITY_TEMPERATURE = Quantity.TemperatureReadonlyTemperaturePT1000_K
 
 
 class HeaterWrapper:
@@ -149,22 +159,17 @@ class HeaterWrapper:
         return self.mpi.timebase.now_s
 
     def _tick_read_from_pyboard(self):
-        for carbon, label, current_factor in (
-            (True, "carbon", Thermometrie.CURRENT_A_CARBON),
-            (False, "PT1000", Thermometrie.CURRENT_A_PT1000),
-        ):
-            resistance_OHM = self.mpi.temperature_insert.read_resistance_OHM(carbon=carbon)
-            temperature_R = resistance_OHM / current_factor
+        for attributes in (AttributesCarbon, AttributesPT1000):
+            resistance_OHM = self.mpi.temperature_insert.read_resistance_OHM(carbon=attributes.IS_CARBON)
+            temperature_R = resistance_OHM / attributes.CURRENT_A
             # print(
             #     f"{label}: {temperature_V:0.3f} V, {temperature_R:0.3f} Ohm"
             # )
             # TODO: Calibration table
             temperature_K = resistance_OHM
-            quantity = Quantity.TemperatureReadonlyResistanceCarbon if carbon else Quantity.TemperatureReadonlyResistancePT1000_K
-            self.dict_values[quantity] = temperature_R
-            quantity = Quantity.TemperatureReadonlyTemperatureCarbon if carbon else Quantity.TemperatureReadonlyTemperaturePT1000_K
-            self.dict_values[quantity] = temperature_K
-            if carbon:
+            self.dict_values[attributes.QUANTITY_RESISTANCE] = temperature_R
+            self.dict_values[attributes.QUANTITY_TEMPERATURE] = temperature_K
+            if attributes.IS_CARBON:
                 self.dict_values[Quantity.TemperatureReadonlyTemperatureCalibrated] = temperature_K
 
         def defrost_switch_changed(on: str) -> str:

@@ -1,6 +1,9 @@
 # pylint: disable=import-error
 # pylint: disable=consider-using-f-string
 
+from micropython_portable import ThermometriePT1000
+
+
 class DefrostProcess:
     def __init__(self, proxy):
         self._proxy = proxy
@@ -31,6 +34,14 @@ class DefrostProcess:
         100% heizen solange PT1000 R < 1116 Ohm # "PT1000 30C"
         """
         self._proxy.heater.set_power_off()
+
+        resistance_OHM = self._temperature_insert.read_resistance_OHM(carbon=False)
+        temperature_C = resistance_OHM * ThermometriePT1000.temperature_C(resistance_OHM)
+        # self._zeile(0, " {:>11.1f}C {}".format(temperature_C, self._rotator_text))
+        # self._zeile(0, " {} {:>11.1f}C".format(self._rotator_text, temperature_C))
+        self._zeile(0, " {:>13.1f}C".format(temperature_C))
+        # self._zeile(4, " {:>14s}".format(self._rotator_text))
+        
         if not self._proxy.get_defrost():
             self._zeile(2, " waiting for")
             self._zeile(3, " labber")
@@ -38,9 +49,6 @@ class DefrostProcess:
             return
 
         self._temperature_insert.enable_thermometrie(enable=True)
-        temperature_C = self._temperature_insert.read_temperature_C
-        # self._zeile(0, " {:>11.1f}C {}".format(temperature_C, self._rotator_text))
-        self._zeile(0, " {} {:>11.1f}C".format(self._rotator_text, temperature_C))
         self._zeile(1, " DEFROST")
         if temperature_C < 30.0:
             self._proxy.heater.set_power_max()

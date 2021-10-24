@@ -13,8 +13,8 @@ from ads1219 import ADS1219
 from sh1106 import SH1106_I2C
 from dac8571 import DAC8571
 
-from micropython_portable import Thermometrie
 from micropython_defrost import DefrostProcess
+from micropython_portable import ThermometrieCarbon, ThermometriePT1000
 
 VERSION = "v0.9"
 
@@ -32,6 +32,21 @@ PIN_DS18_ID = "X4"
 PIN_DS18_TEMP = "Y4"
 PIN_ADS1219_RESET = "X11"
 PIN_ADS1219_DRDY = "X12"
+
+
+class AttrsCarbon(ThermometrieCarbon):
+    SPI_CHANNEL = ADS1219.CHANNEL_AIN2_AIN3
+
+
+class AttrsPT1000(ThermometriePT1000):
+    SPI_CHANNEL = ADS1219.CHANNEL_AIN0_AIN1
+
+
+def get_attrs(carbon):
+    assert isinstance(carbon, bool)
+    if carbon:
+        return AttrsCarbon
+    return AttrsPT1000
 
 
 class OnewireBox:
@@ -134,10 +149,9 @@ class TemperatureInsert:
         self.short_pt1000.value(not enable)
 
     def read_resistance_OHM(self, carbon):
-        assert isinstance(carbon, bool)
-        channel = ADS1219.CHANNEL_AIN2_AIN3 if carbon else ADS1219.CHANNEL_AIN0_AIN1
-        self.adc.set_channel(channel=channel)
-        return self.adc.read_data_signed() * Thermometrie.factor_adc_to_OHM(carbon=carbon)
+        attrs = get_attrs(carbon=carbon)
+        self.adc.set_channel(channel=attrs.SPI_CHANNEL)
+        return self.adc.read_data_signed() * attrs.factor_adc_to_OHM()
 
     # hw.adc.set_channel(ADS1219.CHANNEL_AIN2_AIN3) # carbon
     # voltage_carbon = hw.adc.read_data_signed() * electronics.ADC24_FACTOR_CARBON
@@ -145,12 +159,6 @@ class TemperatureInsert:
     # voltage_pt1000 = hw.adc.read_data_signed() * electronics.ADC24_FACTOR_PT1000
     # print("voltage_carbon: %f V, voltage_pt1000: %f V" % (voltage_carbon, voltage_pt1000))
     # print("resistance_carbon: %f Ohm, resistance_pt1000: %f Ohm" % (voltage_carbon/electronics.CURRENT_A_CARBON, voltage_pt1000/electronics.CURRENT_A_PT1000))
-
-    @property
-    def read_temperature_C(self):
-        "read the temperature from the PTC1000"
-        resistance_OHM = self.read_resistance_OHM(carbon=False)
-        return resistance_OHM * Thermometrie.ptc1000_temperature_C(resistance_OHM)
 
 
 class Heater:

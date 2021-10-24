@@ -36,7 +36,7 @@ Wie kalibrieren?
   * "Ready to open")
 
 ## Defrost in micropython
-  100% heizen solange PT1000 R < 1116 Ohm # "PT1000 30C"
+DONE:  100% heizen solange PT1000 R < 1116 Ohm # "PT1000 30C"
     "Defrosting - do not open"
     "Ready to remove vessel"
 
