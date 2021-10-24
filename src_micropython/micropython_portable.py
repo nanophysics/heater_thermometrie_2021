@@ -3,19 +3,9 @@
 """
 
 
-# @dataclass
-# class SensorAttributes:
-#     carbon: bool
-#     text: str
-#     current_a: float
-#     quantity_resistance: Quantity
-#     quantity_temperature: Quantity
-
-# attributes_carbon = SensorAttributes(carbon=True, text="carbon", current_a=Thermometrie.CURRENT_A_CARBON, quantity_resistance=Quantity.TemperatureReadonlyResistanceCarbon, quantity_temperature=Quantity.TemperatureReadonlyTemperatureCarbon)
 class Thermometrie:
     U3V = 3.33333333
-    PTC30K_OHM = 1116.73
-    "https://www.temperaturmesstechnik.de/fileadmin/user_upload/pdf/tmh_pt1000_tabelle.pdf"
+    ZEROCELSIUS_K = 273.15
     R31_44_OHM = "do be defined by derived class"
     CURRENT_A = "do be defined by derived class"
 
@@ -50,9 +40,15 @@ class ThermometriePT1000(Thermometrie):
     NAME = "ptc1000"
     CURRENT_A = 10e-6
     R31_44_OHM = 200.0  # R44
-    # IA_GAIN = 1.0 + 50000.0 / R31_44_OHM
-    # ADC24_FACTOR = U3V / (2.0 ** 23) / IA_GAIN
+
+    PTC30K_OHM = 1116.73
+    "https://www.temperaturmesstechnik.de/fileadmin/user_upload/pdf/tmh_pt1000_tabelle.pdf"
 
     @staticmethod
     def temperature_C(resistance_OHM):
-        return (resistance_OHM - 1000.0) * 30.0 / (Thermometrie.PTC30K_OHM - 1000.0)
+        return (resistance_OHM - 1000.0) * 30.0 / (ThermometriePT1000.PTC30K_OHM - 1000.0)
+
+    @staticmethod
+    def resistance_OHM(temperature_K):
+        temperature_C = temperature_K - Thermometrie.ZEROCELSIUS_K
+        return 1000.0 + temperature_C * (ThermometriePT1000.PTC30K_OHM - 1000.0) / 30.0

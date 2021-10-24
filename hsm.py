@@ -1,5 +1,6 @@
 import io
 import re
+import types
 import inspect
 
 REGEX_SPACES = re.compile(r"^(?P<spaces>.*?)(\S(.*)$)", re.M)
@@ -52,17 +53,18 @@ class Statemachine:
         return self._state_actual
 
     def actual_meth(self):
-        return getattr(self, "state_" + self._state_actual)
+        meth = getattr(self.__class__, "state_" + self._state_actual)
+        assert isinstance(meth, types.FunctionType)
+        return meth
 
     def is_state(self, expected_meth):
-        assert callable(expected_meth)
-        actual_meth = self.actual_meth()
-        return expected_meth.__name__ == actual_meth.__name__
+        assert isinstance(expected_meth, types.FunctionType)
+        return expected_meth == self.actual_meth()
 
     def expect_state(self, expected_meth):
-        assert callable(expected_meth)
+        assert isinstance(expected_meth, types.FunctionType)
         actual_meth = self.actual_meth()
-        if expected_meth.__name__ != actual_meth.__name__:
+        if expected_meth != actual_meth:
             raise Exception(f"Expected state '{expected_meth.__name__}' but got '{actual_meth.__name__}'!")
 
     def dispatch(self, signal):

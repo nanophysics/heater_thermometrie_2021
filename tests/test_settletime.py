@@ -10,7 +10,7 @@ from heater_driver_utils import EnumHeating, Quantity
 
 logger = logging.getLogger("LabberDriver")
 
-TEMPERATURE_SET40_K = 40.0
+TEMPERATURE_SET40_K =  40.0
 TEMPERATURE_SET42_K = 42.0
 TEMPERATURE_OUTSIDE_K = 35.0
 
@@ -41,14 +41,14 @@ class Runner:
         # Prepare Settle Test
         self.set_quantity(Quantity.ControlWriteTemperature, TEMPERATURE_SET40_K)
         self.set_quantity(Quantity.ControlWriteTemperatureToleranceBand, 2.0)
-        self.set_quantity(Quantity.ControlWriteTimeoutTime, TIMEOUT_TIME_S)
         self.set_quantity(Quantity.ControlWriteSettleTime, SETTLE_TIME_S)
+        self.set_quantity(Quantity.ControlWriteTimeoutTime, TIMEOUT_TIME_S)
 
     def start_40K_35K(self):
         #
         # Start controller - Settle Time Test
         #
-        self._hw.mpi.sim_set_resistance_OHM(carbon=True, value=TEMPERATURE_OUTSIDE_K)
+        self._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=TEMPERATURE_OUTSIDE_K)
         self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
         self.expect_state(
             heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
@@ -65,7 +65,7 @@ class Runner:
 
     def continue_40K_40K_A(self):
         # Temperature inside range: Settle time starts
-        self._hw.mpi.sim_set_resistance_OHM(carbon=True, value=TEMPERATURE_SET40_K)
+        self._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=TEMPERATURE_SET40_K)
 
         self.let_time_fly(duration_s=9.5)
         # Settle time is NOT over
@@ -79,7 +79,7 @@ class Runner:
         self.assert_no_errors()
 
     def continue_40K_35K(self):
-        self._hw.mpi.sim_set_resistance_OHM(carbon=True, value=TEMPERATURE_OUTSIDE_K)
+        self._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=TEMPERATURE_OUTSIDE_K)
 
         self.let_time_fly(duration_s=2.0)
         assert self._hw.hsm_heater.settled
@@ -87,7 +87,7 @@ class Runner:
         self.assert_errors()
 
     def continue_40K_40K_B(self):
-        self._hw.mpi.sim_set_resistance_OHM(carbon=True, value=TEMPERATURE_SET40_K)
+        self._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=TEMPERATURE_SET40_K)
 
         self.let_time_fly(duration_s=10.0)
         self.assert_no_errors()
@@ -96,7 +96,7 @@ class Runner:
         #
         # Start controller - Timeouttime Test
         #
-        self._hw.mpi.sim_set_resistance_OHM(carbon=True, value=TEMPERATURE_OUTSIDE_K)
+        self._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=TEMPERATURE_OUTSIDE_K)
         self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.MANUAL)
         self.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingmanual)
         self.let_time_fly(duration_s=2.0)
@@ -119,7 +119,7 @@ class Runner:
 
 
     def start_40K_40K(self):
-        self._hw.mpi.sim_set_resistance_OHM(carbon=True, value=40.0)
+        self._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=40.0)
         self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
         self.expect_state(
             heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
@@ -146,7 +146,7 @@ class Runner:
 
     def change_42K_42K_C(self):
         # If the temperature is already set, there will be no settle time
-        self._hw.mpi.sim_set_resistance_OHM(carbon=True, value=TEMPERATURE_SET42_K)
+        self._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=TEMPERATURE_SET42_K)
         self.set_quantity(Quantity.ControlWriteTemperature, TEMPERATURE_SET42_K)
         self.expect_state(
             heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
@@ -160,7 +160,7 @@ class Runner:
 
     def change_40K_35K_C(self):
         # If the temperature is already set, there will be no settle time
-        self._hw.mpi.sim_set_resistance_OHM(carbon=True, value=TEMPERATURE_OUTSIDE_K)
+        self._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=TEMPERATURE_OUTSIDE_K)
         self.set_quantity(Quantity.ControlWriteTemperature, TEMPERATURE_SET40_K)
         self.expect_state(
             heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled

@@ -1,5 +1,8 @@
 import logging
 
+import config_all
+from src_micropython.micropython_portable import ThermometriePT1000
+
 logger = logging.getLogger("LabberDriver")
 
 
@@ -25,7 +28,7 @@ class Display:
 
 class TemperatureInsert:
     def __init__(self):
-        self.resistance_carbon_OHM = {True: 0.0, False: 0.0}
+        self._resistance_OHM = {True: 0.0, False: 0.0}
         self.time_last_s = 0.0
         self._resistance_mocked = False
 
@@ -33,11 +36,11 @@ class TemperatureInsert:
         return b"None"
 
     def read_resistance_OHM(self, carbon):
-        return f"{self.resistance_carbon_OHM[True]}".encode("ascii")
+        return f"{self._resistance_OHM[True]}".encode("ascii")
 
-    def sim_set_resistance_OHM(self, carbon: bool, value: float):
+    def sim_set_resistance_OHM(self, carbon: bool, temperature_K: float):
         self._resistance_mocked = True
-        self.resistance_carbon_OHM[carbon] = value
+        self._resistance_OHM[carbon] = ThermometriePT1000.resistance_OHM(temperature_K=temperature_K)
 
     def sim_update_time(self, time_now_s: float, power: int):
         assert isinstance(time_now_s, float)
@@ -52,7 +55,7 @@ class TemperatureInsert:
         for carbon in (True, False):
             tau = 0.1 * time_diff_s
             tau = min(1.0, tau)
-            self.resistance_carbon_OHM[carbon] = (1.0 - tau) * self.resistance_carbon_OHM[carbon] + tau * 0.005 * power * reference_V
+            self._resistance_OHM[carbon] = (1.0 - tau) * self._resistance_OHM[carbon] + tau * 0.005 * power * reference_V
 
 
 class Heater:
@@ -66,15 +69,24 @@ class Heater:
 
 
 class OnewireBox:
+    ONEWIRE_ID = config_all.ONEWIRE_ID_INSERT_UNDEFINED
+
+    def __init__(self):
+        self._onwire_id = self.ONEWIRE_ID
+
     def scan(self):
-        return b"28d821950d00003e"
+        return self._onwire_id.encode("ascii")
 
     def read_temp(self, ident):
         return b"43.43"
 
 
 class OnewireInsert(OnewireBox):
-    pass
+    ONEWIRE_ID = config_all.ONEWIRE_ID_HEATER_UNDEFINED
+
+    def sim_set_onewire_id(self, onewire_id: str):
+        assert isinstance(onewire_id, str)
+        self._onwire_id = onewire_id
 
 
 class Proxy:
@@ -106,8 +118,8 @@ class FeSimulator:
     def close(self):
         pass
 
-    def sim_set_resistance_OHM(self, carbon: bool, value: float):
-        self.proxy.temperature_insert.sim_set_resistance_OHM(carbon, value)
+    def sim_set_resistance_OHM(self, carbon: bool, temperature_K: float):
+        self.proxy.temperature_insert.sim_set_resistance_OHM(carbon=carbon, temperature_K=temperature_K)
 
     def sim_update_time(self, time_now_s):
         self.proxy.temperature_insert.sim_update_time(time_now_s, self.proxy.heater.power)

@@ -101,6 +101,8 @@ class OnewireInsert(OnewireBox):
 
     def scan(self):
         self._set_power(on=True)
+        # Empirical value: 100us works, so 1ms might be safe
+        time.sleep(0.001)
         rc = OnewireBox.scan(self)
         self._set_power(on=False)
         return rc

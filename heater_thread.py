@@ -3,6 +3,7 @@ import logging
 import threading
 
 import serial
+from heater_hsm import HeaterHsm
 
 import heater_wrapper
 from heater_driver_utils import Quantity
@@ -79,6 +80,10 @@ class HeaterThread(threading.Thread):
             time_start_s = next_log_s = self._hw.time_now_s
             while True:
                 self._hw.sleep(0.5)
+                if not self._hw.hsm_heater.is_state(HeaterHsm.state_connected_thermon_heatingcontrolled):
+                    # Unexpected state change
+                    logger.info(f"Waiting for 'ControlWriteTemperatureAndWait'. Unexpected state change. Got '{self._hw.hsm_heater._state_actual}'!")
+                    return rc
                 settled = self._temperature_settled()
                 if self._hw.time_now_s > next_log_s:
                     logger.info(f"Waiting for 'ControlWriteTemperatureAndWait'. {self._hw.time_now_s-time_start_s:0.1f}s: settled={settled}")

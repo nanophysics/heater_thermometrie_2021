@@ -1,7 +1,6 @@
 import pathlib
 import hsm
 
-
 class test_hsm(hsm.Statemachine):
     """
     This is a sample Statemachine as in figure 6.2 on page 170
@@ -86,7 +85,7 @@ class test_hsm(hsm.Statemachine):
     init_0_1 = state_0_1_1
 
 
-def analyse():
+def test_hsm_analyse():
     def func_log_main(msg):
         print("Main: " + msg)
 
@@ -153,6 +152,9 @@ def analyse():
     # print(sm.doc())
     pathlib.Path("test_hsm_out.html").write_text(sm.doc())
 
+
+def test_doctest():
+    hsm.run_doctest()
 
 if __name__ == "__main__":
     hsm.run_doctest()

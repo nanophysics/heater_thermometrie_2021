@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import pathlib
 import logging
 
+from config_all import ONEWIRE_ID_INSERT_NOT_CONNECTED
 from heater_driver_utils import (
     EnumHeating,
     EnumInsertConnected,
@@ -52,11 +53,15 @@ class SignalHeating:
 
 @dataclass
 class SignalInsertSerialChanged:
-    serial: str = None
+    onewire_id: str = None
+
+    def __init__(self, onewire_id):
+        assert isinstance(onewire_id, str)
+        self.onewire_id = onewire_id
 
     @property
     def is_connected(self):
-        return self.serial is not None
+        return self.onewire_id != ONEWIRE_ID_INSERT_NOT_CONNECTED
 
 
 class SignalHeaterSerialChanged(SignalInsertSerialChanged):
@@ -81,6 +86,10 @@ class HeaterHsm(hsm.Statemachine):
         self.timeout = None
 
     @property
+    def now_s(self) -> float:
+        return self._hw.mpi.timebase.now_s
+
+    @property
     def get_labber_thermometrie(self):
         on = self._state_actual.startswith("connected_thermon")
         return EnumThermometrie.get_labber(on)
@@ -89,6 +98,22 @@ class HeaterHsm(hsm.Statemachine):
     def get_labber_insert_connected(self) -> str:
         connected = self._state_actual.startswith("connected")
         return EnumInsertConnected.get_labber(connected)
+
+    def is_in_range(self):
+        band_K = self._hw.get_quantity(Quantity.ControlWriteTemperatureToleranceBand)
+        temperature_K = self._hw.get_quantity(Quantity.TemperatureReadonlyTemperatureCalibrated_K)
+        temperature_should_K = self._hw.get_quantity(Quantity.ControlWriteTemperature)
+        return temperature_should_K - band_K < temperature_K < temperature_should_K + band_K
+
+    def get_heating_state(self, heating: EnumHeating):
+        assert isinstance(heating, EnumHeating)
+        if heating == EnumHeating.OFF:
+            return self.state_connected_thermon_heatingoff
+        if heating == EnumHeating.MANUAL:
+            return self.state_connected_thermon_heatingmanual
+        if heating == EnumHeating.CONTROLLED:
+            return self.state_connected_thermon_heatingcontrolled
+        raise AttributeError(f"Case {heating} not handled.")
 
     def temperature_settled(self) -> bool:
         self.expect_state(expected_meth=HeaterHsm.state_connected_thermon_heatingcontrolled)
@@ -101,7 +126,7 @@ class HeaterHsm(hsm.Statemachine):
         """
         if isinstance(signal, SignalInsertSerialChanged):
             if signal.is_connected:
-                raise hsm.StateChangeException(self.state_connected_thermon)
+                raise hsm.StateChangeException(self.get_heating_state(heating=self._hw.get_quantity(Quantity.ControlWriteHeating)))
         raise hsm.DontChangeStateException()
 
     def state_connected(self, signal) -> None:
@@ -115,6 +140,9 @@ class HeaterHsm(hsm.Statemachine):
         if isinstance(signal, SignalInsertSerialChanged):
             if not signal.is_connected:
                 raise hsm.StateChangeException(self.state_disconnected)
+            if signal.serial == ONEWIRE_ID_INSERT_NOT_CONNECTED:
+                raise hsm.StateChangeException(self.state_disconnected)
+
         if isinstance(signal, SignalThermometrie):
             if signal.on:
                 raise hsm.StateChangeException(self.state_connected_thermon)
@@ -123,36 +151,9 @@ class HeaterHsm(hsm.Statemachine):
                 raise hsm.StateChangeException(self.state_connected_thermon_defrost)
             raise hsm.DontChangeStateException()
         if isinstance(signal, SignalHeating):
-
-            def get_requested_state():
-                if signal.value == EnumHeating.OFF:
-                    return self.state_connected_thermon_heatingoff
-                if signal.value == EnumHeating.MANUAL:
-                    return self.state_connected_thermon_heatingmanual
-                if signal.value == EnumHeating.CONTROLLED:
-                    return self.state_connected_thermon_heatingcontrolled
-                raise AttributeError(f"Case {signal.value} not handled.")
-
-            raise hsm.StateChangeException(get_requested_state())
+            raise hsm.StateChangeException(self.get_heating_state(signal.value))
 
         if isinstance(signal, SignalTick):
-            # def get_requested_state():
-            #     if self._hw.get_quantity(Quantity.DefrostSwitchOnBox):
-            #         return self.state_connected_thermon_defrost
-            #     heating = self._hw.get_quantity(Quantity.Heating)
-            #     if heating == EnumHeating.DEFROST:
-            #         return self.state_connected_thermon_defrost
-            #     if heating == EnumHeating.OFF:
-            #         return self.state_connected_thermon_heatingoff
-            #     if heating == EnumHeating.MANUAL:
-            #         return self.state_connected_thermon_heatingmanual
-            #     if heating == EnumHeating.CONTROLLED:
-            #         return self.state_connected_thermon_heatingoff
-            #     raise AttributeError(f"Case {heating.name} not handled.")
-
-            # requested_state = get_requested_state()
-            # if requested_state != self.actual_meth():
-            #     raise hsm.StateChangeException(requested_state)
             raise hsm.DontChangeStateException()
 
     def state_connected_thermoff(self, signal) -> None:
@@ -227,11 +228,7 @@ class HeaterHsm(hsm.Statemachine):
           Quantity.ErrorCounter += 1
         - settled = time.now() > settle_time_start_s + Quantiy.SettleTime
         """
-        band_K = self._hw.get_quantity(Quantity.ControlWriteTemperatureToleranceBand)
-        temperature_should_K = self._hw.get_quantity(Quantity.ControlWriteTemperature)
-        temperature_K = self._hw.get_quantity(Quantity.TemperatureReadonlyTemperatureCalibrated)
-        in_range = temperature_should_K - band_K < temperature_K < temperature_should_K + band_K
-
+        in_range = self.is_in_range()
         if (not self.settled) and (not self.timeout):
             # Settling
             # During settling, the error counter will never be incremented!
@@ -251,10 +248,6 @@ class HeaterHsm(hsm.Statemachine):
         assert self.settled or self.timeout
         if not in_range:
             self._hw.increment_error_counter()
-
-    @property
-    def now_s(self) -> float:
-        return self._hw.mpi.timebase.now_s
 
     def entry_connected_thermon_heatingcontrolled(self, signal) -> None:
         """

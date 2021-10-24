@@ -14,6 +14,7 @@
                 "--rcfile=${workspaceFolder}/.pylintrc",
                 "--verbose",
                 "src_micropython",
+                "calibration",
                 "tests",
                 "*.py"
             ],
@@ -29,6 +30,7 @@
                 "--config",
                 "${workspaceFolder}/.blackconfig.yaml",
                 "*.py",
+                "calibration/*.py",
                 "src_micropython/*.py"
             ],
             "console": "integratedTerminal"
@@ -54,21 +56,20 @@
             "justMyCode": false
         },
         {
+            "name": "Python: start_download_sw_and_restart.py",
+            "type": "python",
+            "request": "launch",
+            "justMyCode": true,
+            "program": "${workspaceFolder}/start_download_sw_and_restart.py",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Python: heater_hsm.py",
             "type": "python",
             "request": "launch",
             "justMyCode": true,
             "program": "${workspaceFolder}/heater_hsm.py",
-            "cwd": "${workspaceFolder}",
-            "args": [],
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Python: hsm_test.py",
-            "type": "python",
-            "request": "launch",
-            "justMyCode": true,
-            "program": "${workspaceFolder}/hsm_test.py",
             "cwd": "${workspaceFolder}",
             "args": [],
             "console": "integratedTerminal"

@@ -1,6 +1,7 @@
 import pathlib
 import logging
 
+from config_all import ONEWIRE_ID_INSERT_NOT_CONNECTED
 
 logger = logging.getLogger("LabberDriver")
 
@@ -47,7 +48,10 @@ class OnewireBox:
 
     def scan(self) -> str:
         # '28E3212E0D00002E'
-        return self._proxy.eval_as(str, f"{self._name}.scan()", accept_none=True)
+        rc = self._proxy.eval_as(str, f"{self._name}.scan()", accept_none=True)
+        if rc is None:
+            return ONEWIRE_ID_INSERT_NOT_CONNECTED
+        return rc
 
     def read_temp(self, ident: str) -> float:
         assert isinstance(ident, str)

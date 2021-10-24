@@ -8,7 +8,9 @@ import logging
 logger = logging.getLogger("LabberDriver")
 
 SERIAL_UNDEFINED = "UNDEFINED"
-ONEWIRE_ID_UNDEFINED = "UNDEFINED"
+ONEWIRE_ID_HEATER_UNDEFINED = "UNDEFINED"
+ONEWIRE_ID_INSERT_UNDEFINED = "UNDEFINED"
+ONEWIRE_ID_INSERT_NOT_CONNECTED = "NOT_CONNECTED"
 dict_heater2021 = {}
 dict_insert = {}
 
@@ -46,6 +48,11 @@ class ConfigInsert:
     def __repr__(self):
         return f"{self.HWSERIAL}, onewireid {self.ONEWIRE_ID}, {self.COMMENT}"
 
+    @property
+    def __name__(self):
+        "pytest test name"
+        return self.HWSERIAL
+
     @staticmethod
     def load_config(onewire_id: str) -> dict:
         try:
@@ -53,16 +60,16 @@ class ConfigInsert:
         except KeyError:
             logger.warning(f'The connected "insert" has a onewire serial "{onewire_id}". However, this serial in unknown!')
             ids_defined = sorted(dict_insert.keys())
-            ids_defined.remove(ONEWIRE_ID_UNDEFINED)
+            ids_defined.remove(ONEWIRE_ID_INSERT_UNDEFINED)
             logger.warning(f'"config_all.py" lists these ids for inserts: {",".join(ids_defined)}')
-            return dict_insert[ONEWIRE_ID_UNDEFINED]
+            return dict_insert[ONEWIRE_ID_INSERT_UNDEFINED]
 
 
 ConfigHeater2021(
     SERIAL_UNDEFINED,
     HARDWARE_VERSION="2021",
     COMMENT="Serial not defined, hardware unknown! Assuming a bare micropython board.",
-    ONEWIRE_ID_HEATER="?",
+    ONEWIRE_ID_HEATER=ONEWIRE_ID_HEATER_UNDEFINED,
 )
 
 ConfigHeater2021(
@@ -73,7 +80,13 @@ ConfigHeater2021(
 )
 
 ConfigInsert(
-    ONEWIRE_ID=ONEWIRE_ID_UNDEFINED,
+    ONEWIRE_ID=ONEWIRE_ID_INSERT_NOT_CONNECTED,
+    HWSERIAL="unknown",
+    COMMENT="Onewire ID could not be read: Insert not connected!",
+)
+
+ConfigInsert(
+    ONEWIRE_ID=ONEWIRE_ID_INSERT_UNDEFINED,
     HWSERIAL="unknown",
     COMMENT="Onewire ID not defined, insert unknown!",
 )

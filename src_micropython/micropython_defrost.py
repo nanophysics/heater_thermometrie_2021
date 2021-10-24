@@ -41,7 +41,7 @@ class DefrostProcess:
         # self._zeile(0, " {} {:>11.1f}C".format(self._rotator_text, temperature_C))
         self._zeile(0, " {:>13.1f}C".format(temperature_C))
         # self._zeile(4, " {:>14s}".format(self._rotator_text))
-        
+
         if not self._proxy.get_defrost():
             self._zeile(2, " waiting for")
             self._zeile(3, " labber")

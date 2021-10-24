@@ -4,7 +4,7 @@ import pytest
 
 from pytest_util  import TEST_HW_SIMULATE
 import micropython_proxy
-import heater_thread
+import heater_wrapper
 import heater_hsm
 from heater_driver_utils import EnumHeating, Quantity, EnumThermometrie
 from micropython_interface import TICK_INTERVAL_S
@@ -13,19 +13,22 @@ logger = logging.getLogger("LabberDriver")
 
 
 @pytest.mark.parametrize("hwserial", TEST_HW_SIMULATE)
-def test_statemachine_a(hwserial):
+def test_statemachine(hwserial):
     logging.basicConfig()
     logger.setLevel(logging.INFO)
 
-    ht = heater_thread.HeaterThread(hwserial=hwserial)
-    ht.signal(heater_hsm.SignalDefrostSwitchChanged(on=False))
-    ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermon)
+    hw = heater_wrapper.HeaterWrapper(hwserial=hwserial)
+    hw.signal(heater_hsm.SignalDefrostSwitchChanged(on=False))
+    hw.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingoff)
 
-    ht.set_quantity(Quantity.ControlWriteThermometrie, EnumThermometrie.ON)
-    ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermon)
+    hw.set_quantity(Quantity.ControlWriteThermometrie, EnumThermometrie.ON)
+    hw.expect_state(heater_hsm.HeaterHsm.state_connected_thermon)
 
-    ht.set_quantity(Quantity.ControlWriteHeating, EnumHeating.MANUAL)
-    ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingmanual)
+    hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.MANUAL)
+    hw.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingmanual)
+
+    hw.set_quantity(Quantity.ControlWriteThermometrie, EnumThermometrie.OFF)
+    hw.expect_state(heater_hsm.HeaterHsm.state_connected_thermoff)
 
 
 class Runner:
@@ -46,4 +49,4 @@ class Runner:
 
 
 if __name__ == "__main__":
-    test_statemachine_a(hwserial=micropython_proxy.HWSERIAL_SIMULATE)
+    test_statemachine(hwserial=micropython_proxy.HWSERIAL_SIMULATE)

@@ -60,12 +60,15 @@ class MicropythonInterface:
             self.timebase = TimebaseSimulation()
             self.sim_update_time = self.fe.sim_update_time
             self.sim_set_resistance_OHM = self.fe.sim_set_resistance_OHM
+            self.sim_set_resistance_OHM = self.fe.sim_set_resistance_OHM
+            self.sim_set_insert_onewire_id = self.fe.proxy.onewire_insert.sim_set_onewire_id
         else:
             logger.warning(f"******************* {hwserial}")
             self._init_pyboard(hwserial=hwserial)
             self.timebase = Timebase()
             self.sim_update_time = lambda time_now_s: None
             self.sim_set_resistance_OHM = lambda carbon, value: None
+            self.sim_set_insert_onewire_id = lambda onewire_id: None
 
     def close(self):
         self.fe.close()
