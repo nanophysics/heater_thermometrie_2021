@@ -105,12 +105,7 @@ class MicropythonInterface:
         self.defrost_switch = DefrostSwitch(self.proxy)
 
         self.display.clear()
-        self.display.zeile(0, "heater")
-        self.display.zeile(1, " _thermometrie")
-        self.display.zeile(2, " _2021")
-        self.display.zeile(3, "ETH Zuerich")
-        self.display.zeile(4, "Peter Maerki")
-
+        self.display.zeile(2, "      ...")
         self.display.show()
 
         if False:

@@ -12,8 +12,7 @@ def test_calibration(insert):
     hw = heater_wrapper.HeaterWrapper(hwserial=micropython_proxy.HWSERIAL_SIMULATE)
     hw.insert_connected(onewire_id=insert.ONEWIRE_ID)
 
-    Calibration = hw.insert_calibration.Calibration
-    calibration = Calibration(carbon_OHM=10.0, pt1000_OHM=1000.0)
+    calibration = hw.insert_calibration.Calibration(carbon_OHM=10.0, pt1000_OHM=1000.0)
     assert isinstance(calibration.carbon_K, float)
     assert isinstance(calibration.pt1000_K, float)
     assert isinstance(calibration.calibrated_K, float)

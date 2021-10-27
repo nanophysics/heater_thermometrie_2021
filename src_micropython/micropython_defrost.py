@@ -14,6 +14,7 @@ class DefrostProcess:
         self._temperature_insert = self._proxy.temperature_insert
 
     def pc_command(self):
+        "Will be called at every communication with the pc (eg. labber driver)"
         self._pc_communication_counter = -5
 
     @property
@@ -36,10 +37,18 @@ class DefrostProcess:
         self._proxy.heater.set_power_off()
 
         resistance_OHM = self._temperature_insert.read_resistance_OHM(carbon=False)
-        temperature_C = resistance_OHM * ThermometriePT1000.temperature_C(resistance_OHM)
+        temperature_C = ThermometriePT1000.temperature_C(resistance_OHM)
         # self._zeile(0, " {:>11.1f}C {}".format(temperature_C, self._rotator_text))
         # self._zeile(0, " {} {:>11.1f}C".format(self._rotator_text, temperature_C))
-        self._zeile(0, " {:>13.1f}C".format(temperature_C))
+        if 1 == 0:
+            if self._pc_communication_counter % 15 < 10:
+                temperature_C = -100.0
+            if self._pc_communication_counter % 15 < 5:
+                temperature_C = 40.0
+        if temperature_C < -40.0:
+            self._zeile(0, "          <-40C")
+        else:
+            self._zeile(0, "{:>14.0f}C".format(temperature_C))
         # self._zeile(4, " {:>14s}".format(self._rotator_text))
 
         if not self._proxy.get_defrost():

@@ -14,6 +14,7 @@ def proxy():
     _proxy.defrost_process.pc_command()
     return _proxy
 
+
 def blink(__dummy__):
     _proxy.tick()
 

@@ -1,5 +1,21 @@
 # HeaterThermometrie2021
 
+## Code Review
+
+* Unit tests (pytest)
+* Tail calibration
+* Defrost standalone
+* HEATING controlled
+* Remove insert tail
+
+TODO: PTC1000 -> PT1000
+TODO: PTC30K_OHM -> PT1000_30C_OHM
+TODO: Unit tests: Save screens
+TODO: Console window should not become visible!
+TODO: Python 3.9
+TODO: Where to save logfile ?
+TODO: Labber instrument server: Change combobox MANUAL/CONTROLLED
+
 ## PID Controller
 
 =temperature_calibrated=> (setpoint)controller(output)
@@ -44,8 +60,6 @@ DONE:  100% heizen solange PT1000 R < 1116 Ohm # "PT1000 30C"
 TODO: Bugfix
   INFO:LabberDriver:Waiting for 'ControlWriteTemperatureAndWait'. 0.5s: settled=True
     => Warum True?
-
-TODO: Console window should not become visible!
 
 DONE: Neu
   StatusReadSettled = "settled"

@@ -6,8 +6,8 @@
 class Thermometrie:
     U3V = 3.33333333
     ZEROCELSIUS_K = 273.15
+    CURRENT_A = 10e-6
     R31_44_OHM = "do be defined by derived class"
-    CURRENT_A = "do be defined by derived class"
 
     @classmethod
     def ia_gain(cls):
@@ -31,14 +31,12 @@ class Thermometrie:
 class ThermometrieCarbon(Thermometrie):
     IS_CARBON = True
     NAME = "carbon"
-    CURRENT_A = 10e-6
     R31_44_OHM = 100.0  # R31
 
 
 class ThermometriePT1000(Thermometrie):
     IS_CARBON = False
     NAME = "ptc1000"
-    CURRENT_A = 10e-6
     R31_44_OHM = 200.0  # R44
 
     PTC30K_OHM = 1116.73

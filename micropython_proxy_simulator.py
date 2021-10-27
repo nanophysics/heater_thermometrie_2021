@@ -110,7 +110,7 @@ class FeSimulator:
 
     def eval(self, cmd: str):
         try:
-            return eval(cmd, {"proxy": lambda : self.proxy})  # pylint: disable=eval-used
+            return eval(cmd, {"proxy": lambda: self.proxy})  # pylint: disable=eval-used
         except Exception as e:
             logger.warning(f"{cmd}: {e}")
             raise
