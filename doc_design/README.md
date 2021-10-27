@@ -8,8 +8,6 @@
 * HEATING controlled
 * Remove insert tail
 
-TODO: PTC1000 -> PT1000
-TODO: PTC30K_OHM -> PT1000_30C_OHM
 TODO: Unit tests: Save screens
 TODO: Console window should not become visible!
 TODO: Python 3.9

@@ -170,7 +170,7 @@ class HeaterWrapper:
 
     def _tick_read_from_pyboard(self):
         #
-        # Read carbon and ptc1000 and calculate calibrated temperature
+        # Read carbon and pt1000 and calculate calibrated temperature
         #
         def read(carbon, quantity):
             resistance_OHM = self.mpi.temperature_insert.read_resistance_OHM(carbon=carbon)

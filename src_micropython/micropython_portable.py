@@ -36,17 +36,17 @@ class ThermometrieCarbon(Thermometrie):
 
 class ThermometriePT1000(Thermometrie):
     IS_CARBON = False
-    NAME = "ptc1000"
+    NAME = "pt1000"
     R31_44_OHM = 200.0  # R44
 
-    PTC30K_OHM = 1116.73
+    PT1000_30C_OHM = 1116.73
     "https://www.temperaturmesstechnik.de/fileadmin/user_upload/pdf/tmh_pt1000_tabelle.pdf"
 
     @staticmethod
     def temperature_C(resistance_OHM):
-        return (resistance_OHM - 1000.0) * 30.0 / (ThermometriePT1000.PTC30K_OHM - 1000.0)
+        return (resistance_OHM - 1000.0) * 30.0 / (ThermometriePT1000.PT1000_30C_OHM - 1000.0)
 
     @staticmethod
     def resistance_OHM(temperature_K):
         temperature_C = temperature_K - Thermometrie.ZEROCELSIUS_K
-        return 1000.0 + temperature_C * (ThermometriePT1000.PTC30K_OHM - 1000.0) / 30.0
+        return 1000.0 + temperature_C * (ThermometriePT1000.PT1000_30C_OHM - 1000.0) / 30.0

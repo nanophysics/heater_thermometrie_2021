@@ -124,11 +124,3 @@ class MicropythonInterface:
         self.heater.set_power(power=2 ** 16 - 1)
         self.timebase.sleep(0.5)
         self.heater.set_power(power=0)
-
-        # temperature_V = self.temperature_insert.get_voltage(carbon=True)
-        # print("voltage_carbon: %f V," % temperature_V)
-        # temperature_V = self.temperature_insert.get_voltage(carbon=False)
-        # print("voltage_ptc1000: %f V," % temperature_V)
-
-        # print("voltage_carbon: %f V, voltage_pt1000: %f V" % (voltage_carbon, voltage_pt1000))
-        # print("resistance_carbon: %f Ohm, resistance_pt1000: %f Ohm" % (voltage_carbon/electronics.CURRENT_A_CARBON, voltage_pt1000/electronics.CURRENT_A_PT1000))
