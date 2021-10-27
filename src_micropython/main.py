@@ -7,11 +7,15 @@ import micropython
 
 import micropython_logic
 
-proxy = micropython_logic.Proxy()
+_proxy = micropython_logic.Proxy()
 
+
+def proxy():
+    _proxy.defrost_process.pc_command()
+    return _proxy
 
 def blink(__dummy__):
-    proxy.tick()
+    _proxy.tick()
 
 
 timer = pyb.Timer(1, freq=1)

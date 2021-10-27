@@ -253,17 +253,11 @@ class Proxy:
         # 98=0x62: MCP4725, DAC12
         i2c_OLED = I2C(2, freq=40000)
         self.display = Display(i2c=i2c_OLED)
-        self.display_clear()
         self.onewire_box = OnewireBox()
         self.onewire_insert = OnewireInsert()
         self.temperature_insert = TemperatureInsert(i2c=i2c_AD_DA)
         self.heater = Heater(i2c=i2c_AD_DA)
         self.defrost_process = DefrostProcess(self)
-
-    def display_clear(self):
-        self.display.clear()
-        self.display.zeile(0, "2020 %s" % VERSION)
-        self.display.zeile(1, "%1.2fC" % 55.6)
 
     def get_defrost(self):
         return not self.defrost()
