@@ -218,7 +218,8 @@ class Heater:
 
 
 class Display:
-    ZEILENHOEHE = 8 + 4
+    LINES = 5
+    LINEHIGHT = 8 + 4
 
     def __init__(self, i2c):
         self._sh1106 = SH1106_I2C(width=128, height=64, i2c=i2c, res=None, addr=0x3C)
@@ -228,15 +229,21 @@ class Display:
         self._sh1106.contrast(255)
         self._sh1106.fill(0)
 
-    def zeile(self, i, text):
-        assert 0 <= i <= 4
-        self._sh1106.text(text, 0, i * Display.ZEILENHOEHE, 1)
+    def line(self, i, text):
+        assert 0 <= i < Display.LINES
+        self._sh1106.text(text, 0, i * Display.LINEHIGHT, 1)
 
     def clear(self):
         self._sh1106.fill(0)
 
     def show(self):
         self._sh1106.show()
+
+    def show_lines(self, lines):
+        self.clear()
+        for i, line in enumerate(lines):
+            self.line(i, line)
+        self.show()
 
 
 class Proxy:

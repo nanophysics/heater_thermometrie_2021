@@ -105,8 +105,8 @@ class MicropythonInterface:
         self.defrost_switch = DefrostSwitch(self.proxy)
 
         self.display.clear()
-        self.display.zeile(2, "      ...")
-        self.display.show()
+        self.display.line(2, "      ...")
+        self.display.show_lines()
 
         if False:
             self.onewire_insert.set_power(on=True)

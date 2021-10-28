@@ -6,6 +6,7 @@ import importlib
 import config_all
 
 import heater_hsm
+from pytest_util import AssertDisplay
 from micropython_proxy import HWTYPE_HEATER_THERMOMETRIE_2021
 from micropython_interface import MicropythonInterface, TICK_INTERVAL_S
 from heater_driver_utils import (
@@ -232,7 +233,7 @@ class HeaterWrapper:
         display = self.mpi.display
         display.clear()
         temperature_K = self.get_quantity(Quantity.TemperatureReadonlyTemperatureCalibrated_K)
-        display.zeile(0, f" {temperature_K:>13.1f}K")
+        display.line(0, f" {temperature_K:>13.1f}K")
         status = {
             heater_hsm.HeaterHsm.state_disconnected: " DISCONNECTED",
             heater_hsm.HeaterHsm.state_connected_thermoff: " THERMOFF",
@@ -242,18 +243,18 @@ class HeaterWrapper:
             heater_hsm.HeaterHsm.state_connected_thermon_defrost: " DEFROST",
         }.get(self.hsm_heater.actual_meth(), "?")
         status1, _, status2 = status.partition("\n")
-        display.zeile(1, status1)
-        display.zeile(2, status2)
+        display.line(1, status1)
+        display.line(2, status2)
 
         is_in_range = self.hsm_heater.is_in_range()
         error_counter = self.get_quantity(Quantity.StatusReadErrorCounter)
         # settled = self.get_quantity(Quantity.StatusReadSettled)
         # timeout = self.get_quantity(Quantity.StatusReadTimout)
 
-        display.zeile(3, " in range" if is_in_range else " out of range")
-        display.zeile(4, f" {error_counter} error count")
+        display.line(3, " in range" if is_in_range else " out of range")
+        display.line(4, f" {error_counter} error count")
 
-        display.show()
+        display.show_lines()
 
     def get_quantity(self, quantity: Quantity):
         assert isinstance(quantity, Quantity)
@@ -367,3 +368,7 @@ class HeaterWrapper:
 
     def expect_state(self, expected_meth):
         self.hsm_heater.expect_state(expected_meth=expected_meth)
+
+    def expect_display(self, readable_expected):
+        lines = self.mpi.display.sim_get
+        AssertDisplay.assert_equal(lines=lines, readable_expected=readable_expected)

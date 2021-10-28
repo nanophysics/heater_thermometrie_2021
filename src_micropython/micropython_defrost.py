@@ -10,7 +10,7 @@ class DefrostProcess:
         self._pc_communication_counter = 0
         self._clear = self._proxy.display.clear
         self._show = self._proxy.display.show
-        self._zeile = self._proxy.display.zeile
+        self._line = self._proxy.display.line
         self._temperature_insert = self._proxy.temperature_insert
 
     def pc_command(self):
@@ -38,32 +38,32 @@ class DefrostProcess:
 
         resistance_OHM = self._temperature_insert.read_resistance_OHM(carbon=False)
         temperature_C = ThermometriePT1000.temperature_C(resistance_OHM)
-        # self._zeile(0, " {:>11.1f}C {}".format(temperature_C, self._rotator_text))
-        # self._zeile(0, " {} {:>11.1f}C".format(self._rotator_text, temperature_C))
+        # self._line(0, " {:>11.1f}C {}".format(temperature_C, self._rotator_text))
+        # self._line(0, " {} {:>11.1f}C".format(self._rotator_text, temperature_C))
         if 1 == 0:
             if self._pc_communication_counter % 15 < 10:
                 temperature_C = -100.0
             if self._pc_communication_counter % 15 < 5:
                 temperature_C = 40.0
         if temperature_C < -40.0:
-            self._zeile(0, "          <-40C")
+            self._line(0, "          <-40C")
         else:
-            self._zeile(0, "{:>14.0f}C".format(temperature_C))
-        # self._zeile(4, " {:>14s}".format(self._rotator_text))
+            self._line(0, "{:>14.0f}C".format(temperature_C))
+        # self._line(4, " {:>14s}".format(self._rotator_text))
 
         if not self._proxy.get_defrost():
-            self._zeile(2, " waiting for")
-            self._zeile(3, " labber")
-            self._zeile(4, " driver...")
+            self._line(2, " waiting for")
+            self._line(3, " labber")
+            self._line(4, " driver...")
             return
 
         self._temperature_insert.enable_thermometrie(enable=True)
-        self._zeile(1, " DEFROST")
+        self._line(1, " DEFROST")
         if temperature_C < 30.0:
             self._proxy.heater.set_power_max()
-            self._zeile(3, " Defrosting")
-            self._zeile(4, " do not open!")
+            self._line(3, " Defrosting")
+            self._line(4, " do not open!")
             return
 
-        self._zeile(3, " Ready to remove")
-        self._zeile(4, " vessel")
+        self._line(3, " Ready to remove")
+        self._line(4, " vessel")

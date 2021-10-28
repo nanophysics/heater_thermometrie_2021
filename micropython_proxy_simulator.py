@@ -7,22 +7,9 @@ logger = logging.getLogger("LabberDriver")
 
 
 class Display:
-    ZEILEN = 5
-
-    def __init__(self):
-        self.zeilen = ["" for zeile in range(self.ZEILEN)]
-
-    def zeile(self, i, text):
-        self.zeilen[i] = text
-        return b"None"
-
-    def clear(self):
-        self.zeilen = ["" for zeile in range(self.ZEILEN)]
-        return b"None"
-
-    def show(self):
-        for zeile in self.zeilen:
-            print(f"   | {zeile:16} |")
+    def show_lines(self, lines):
+        for line in lines:
+            print(f"   | {line:16} |")
         return b"None"
 
 

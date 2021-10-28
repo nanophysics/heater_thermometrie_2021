@@ -24,21 +24,27 @@ HWTYPE_HEATER_THERMOMETRIE_2021 = "heater_thermometrie_2021"
 
 
 class DisplayProxy:
+    LINES = 5
+
     def __init__(self, proxy):
         self.proxy = proxy
+        self.lines = [f"{'??':<16s}" for line in range(self.LINES)]
 
     def clear(self):
-        self.proxy.eval_as_none("proxy().display.clear()")
+        self.lines = ["" for line in range(self.LINES)]
 
-    def show(self):
-        self.proxy.eval_as_none("proxy().display.show()")
+    def show_lines(self):
+        self.proxy.eval_as_none(f"proxy().display.show_lines({self.lines})")
 
-    def zeile(self, line: int, text: str):
+    def line(self, line: int, text: str):
         assert isinstance(line, int)
-        assert 0 <= line <= 4
+        assert 0 <= line < DisplayProxy.LINES
         assert isinstance(text, str)
-        cmd = f'proxy.display.zeile({line}, "{text}")'
-        self.proxy.eval_as_none(f"proxy().display.zeile({line}, '{text}')")
+        self.lines[line] = f"{text:<16s}"
+
+    @property
+    def sim_get(self):
+        return self.lines
 
 
 class OnewireBox:
