@@ -7,10 +7,8 @@ from micropython_portable import ThermometriePT1000
 class DefrostProcess:
     def __init__(self, proxy):
         self._proxy = proxy
+        self._display = proxy.display
         self._pc_communication_counter = 0
-        self._clear = self._proxy.display.clear
-        self._show = self._proxy.display.show
-        self._line = self._proxy.display.line
         self._temperature_insert = self._proxy.temperature_insert
 
     def pc_command(self):
@@ -26,9 +24,8 @@ class DefrostProcess:
         if self._pc_communication_counter < 0:
             # The pc controls us and the standalone defrost logic should be off.
             return
-        self._clear()
-        self._control_defrost()
-        self._show()
+        lines = self._control_defrost()
+        self._display.show_lines(lines=lines)
 
     def _control_defrost(self):
         """
@@ -40,30 +37,32 @@ class DefrostProcess:
         temperature_C = ThermometriePT1000.temperature_C(resistance_OHM)
         # self._line(0, " {:>11.1f}C {}".format(temperature_C, self._rotator_text))
         # self._line(0, " {} {:>11.1f}C".format(self._rotator_text, temperature_C))
+        lines = self._display.lines_factory()
         if 1 == 0:
             if self._pc_communication_counter % 15 < 10:
                 temperature_C = -100.0
             if self._pc_communication_counter % 15 < 5:
                 temperature_C = 40.0
         if temperature_C < -40.0:
-            self._line(0, "          <-40C")
+            lines[0] = "          <-40C"
         else:
-            self._line(0, "{:>14.0f}C".format(temperature_C))
-        # self._line(4, " {:>14s}".format(self._rotator_text))
+            lines[0] = "{:>14.0f}C".format(temperature_C)
+            # lines[4] = " {:>14s}".format(self._rotator_text))
 
         if not self._proxy.get_defrost():
-            self._line(2, " waiting for")
-            self._line(3, " labber")
-            self._line(4, " driver...")
-            return
+            lines[2] = " waiting for"
+            lines[3] = " labber"
+            lines[4] = " driver..."
+            return lines
 
         self._temperature_insert.enable_thermometrie(enable=True)
-        self._line(1, " DEFROST")
+        lines[1] = " DEFROST"
         if temperature_C < 30.0:
             self._proxy.heater.set_power_max()
-            self._line(3, " Defrosting")
-            self._line(4, " do not open!")
-            return
+            lines[3] = " Defrosting"
+            lines[4] = " do not open!"
+            return lines
 
-        self._line(3, " Ready to remove")
-        self._line(4, " vessel")
+        lines[3] = " Ready to remove"
+        lines[4] = " vessel"
+        return lines

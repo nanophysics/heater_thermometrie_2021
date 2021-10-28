@@ -229,21 +229,27 @@ class Display:
         self._sh1106.contrast(255)
         self._sh1106.fill(0)
 
-    def line(self, i, text):
+    def _line(self, i, text):
         assert 0 <= i < Display.LINES
         self._sh1106.text(text, 0, i * Display.LINEHIGHT, 1)
 
-    def clear(self):
+    def _clear(self):
         self._sh1106.fill(0)
 
-    def show(self):
+    def _show(self):
         self._sh1106.show()
 
     def show_lines(self, lines):
-        self.clear()
+        self._clear()
         for i, line in enumerate(lines):
-            self.line(i, line)
-        self.show()
+            self._line(i, line)
+        self._show()
+
+    @staticmethod
+    def lines_factory():
+        return [
+            "",
+        ] * Display.LINES
 
 
 class Proxy:

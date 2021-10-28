@@ -11,7 +11,7 @@ TEST_HW_SIMULATE = [
 
 
 class AssertDisplay:
-    RE_LINE = re.compile(f"^\s*?\| (?P<line>.*?) \|\s*$")
+    RE_LINE = re.compile(r"^\s*?\| (?P<line>.*?) \|\s*$")
 
     @staticmethod
     def lines_to_readable(lines: List[str]) -> str:
