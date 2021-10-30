@@ -26,6 +26,7 @@ DIRECTORY_OF_THIS_FILE = pathlib.Path(__file__).absolute().parent
 
 TEMPERATURE_SETTLE_K = -1
 
+
 @dataclass
 class NotInitialized:
     pass
@@ -236,8 +237,8 @@ class HeaterWrapper:
     def _tick_update_display(self):
         display = self.mpi.display
         display.clear()
-        temperature_K = self.get_quantity(Quantity.TemperatureReadonlyTemperatureCalibrated_K)
-        display.line(0, f" {temperature_K:>13.1f}K")
+        temperature_calibrated_K = self.get_quantity(Quantity.TemperatureReadonlyTemperatureCalibrated_K)
+        display.line(0, f" {temperature_calibrated_K:>13.1f}K")
         status = {
             heater_hsm.HeaterHsm.state_disconnected: " DISCONNECTED",
             heater_hsm.HeaterHsm.state_connected_thermoff: " THERMOFF",
@@ -259,7 +260,7 @@ class HeaterWrapper:
         if settled_duration_s is None:
             text = " out of range"
         else:
-            text = " in range {:0.0f}s".format(settled_duration_s)
+            text = f" in range {settled_duration_s:0.0f}s"
         display.line(3, text)
         display.line(4, f" errors {error_counter}")
 
@@ -332,7 +333,7 @@ class HeaterWrapper:
             return value
         if quantity == Quantity.ControlWriteTemperatureAndSettle:
             value_current = self.dict_values[Quantity.ControlWriteTemperature]
-            if abs(value-value_current) < 1e-9:
+            if abs(value - value_current) < 1e-9:
                 logger.info(f"The same temperature {value:0.3f}K is requested. Settle time does not start again.")
                 return
             # The value changed. Restart the settle time!

@@ -19,6 +19,9 @@ SETTLE_TIME_S = 10.0
 
 class Runner:
     def __init__(self, hwserial):
+        logging.basicConfig()
+        logger.setLevel(logging.DEBUG)
+
         self._hw = heater_wrapper.HeaterWrapper(hwserial=hwserial)
         self._eca = self._hw.error_counter_assertion
 
@@ -40,7 +43,7 @@ class Runner:
     def init_40K(self):
         # Prepare Settle Test
         self.set_quantity(Quantity.ControlWriteTemperature, TEMPERATURE_SET40_K)
-        self.set_quantity(Quantity.ControlWriteTemperatureToleranceBand, 2.0)
+        self.set_quantity(Quantity.ControlWriteTemperatureToleranceBand, 1.0)
         self.set_quantity(Quantity.ControlWriteSettleTime, SETTLE_TIME_S)
         self.set_quantity(Quantity.ControlWriteTimeoutTime, TIMEOUT_TIME_S)
 
@@ -181,7 +184,6 @@ class Runner:
             heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
         )
         self.let_time_fly(duration_s=TIMEOUT_TIME_S-1.0)
-        self.let_time_fly(duration_s=2.0)
         self._hw.expect_display("""
         |           35.0K  |
         |  HEATING         |
@@ -193,9 +195,6 @@ class Runner:
 
 @pytest.mark.parametrize("hwserial", TEST_HW_SIMULATE)
 def test_settletime(hwserial):
-    logging.basicConfig()
-    logger.setLevel(logging.DEBUG)
-
     r = Runner(hwserial=hwserial)
 
     r.init_40K()
@@ -218,9 +217,6 @@ def test_settletime_repetitive(hwserial):
       - The "temperature and wait" changed.
       - The heater mode was changed (eg. manual)
     """
-    logging.basicConfig()
-    logger.setLevel(logging.INFO)
-
     r = Runner(hwserial=hwserial)
 
     r.init_40K()
@@ -230,6 +226,118 @@ def test_settletime_repetitive(hwserial):
     r.change_40K_35K_C()
 
 
+# New test
+# set by combobox controlled
+#   controlled
+#   off
+# set by temp_settle
+# set by change temp_settle
+
+
+# combine tests
+#   set_combobox_controlled
+#   set_temp_settle_same
+#   set_temp_settle_diff
+
+@pytest.mark.parametrize("hwserial", TEST_HW_SIMULATE)
+def test_settletime_not_reset_by_manual(hwserial):
+    """
+    If heating is manual, we still measure the temperature.
+    Therefore the settle time is still calculated.
+    """
+    r = Runner(hwserial=hwserial)
+    hw=r._hw
+
+    r.init_40K()
+    hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=40.5)
+    hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
+    hw.let_time_fly(duration_s=TIMEOUT_TIME_S+2.0)
+    hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.MANUAL)
+    hw.let_time_fly(duration_s=2.0)
+    hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
+    hw.let_time_fly(duration_s=2.0)
+    hw.expect_display("""
+        |           40.5K  |
+        |  HEATING         |
+        |  CONTROLLED      |
+        |  in range 206s   |
+        |  errors 0        |
+    """)
+
+
+@pytest.mark.parametrize("hwserial", TEST_HW_SIMULATE)
+def test_settletime_reset_by_off(hwserial):
+    """
+    If heating is off, we do not measure the temperature.
+    Therefore the settle time has to be reset.
+    """
+    r = Runner(hwserial=hwserial)
+    hw=r._hw
+
+    r.init_40K()
+    hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=40.5)
+    hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
+    hw.let_time_fly(duration_s=TIMEOUT_TIME_S+2.0)
+    hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.OFF)
+    hw.let_time_fly(duration_s=2.0)
+    hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
+    hw.let_time_fly(duration_s=2.0)
+    hw.expect_display("""
+        |           40.5K  |
+        |  HEATING         |
+        |  CONTROLLED      |
+        |  in range 2s     |
+        |  errors 0        |
+    """)
+
+@pytest.mark.parametrize("hwserial", TEST_HW_SIMULATE)
+def test_controlled_off_controlled(hwserial):
+    """
+    Combobox heating controlled -> off -> controlled
+    Verify that timeout time starts from 0
+    """
+    r = Runner(hwserial=hwserial)
+    hw=r._hw
+
+    r.init_40K()
+    hw.expect_display("""
+        |           16.1K  |
+        |  HEATING         |
+        |  OFF             |
+        |  out of range    |
+        |  errors 0        |
+    """)
+    hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
+    hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=40.5)
+    hw.let_time_fly(duration_s=TIMEOUT_TIME_S+2.0)
+    hw.expect_display("""
+        |           40.5K  |
+        |  HEATING         |
+        |  CONTROLLED      |
+        |  in range 102s   |
+        |  errors 0        |
+    """)
+    hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.OFF)
+    hw.let_time_fly(duration_s=TIMEOUT_TIME_S+2.0)
+    hw.expect_display("""
+        |           40.5K  |
+        |  HEATING         |
+        |  OFF             |
+        |  in range 102s   |
+        |  errors 0        |
+    """)
+    hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
+    hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=TEMPERATURE_SET42_K)
+    hw.let_time_fly(duration_s=TIMEOUT_TIME_S+2.0)
+    hw.expect_display("""
+        |           42.0K  |
+        |  HEATING         |
+        |  CONTROLLED      |
+        |  out of range    |
+        |  errors 2        |
+    """)
+
 if __name__ == "__main__":
-    test_settletime(hwserial=micropython_proxy.HWSERIAL_SIMULATE)
-    test_settletime_repetitive(hwserial=micropython_proxy.HWSERIAL_SIMULATE)
+    # test_settletime(hwserial=micropython_proxy.HWSERIAL_SIMULATE)
+    # test_settletime_repetitive(hwserial=micropython_proxy.HWSERIAL_SIMULATE)
+    test_controlled_off_controlled(hwserial=micropython_proxy.HWSERIAL_SIMULATE)
