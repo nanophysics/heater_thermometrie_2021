@@ -72,10 +72,10 @@ class Statemachine:
 
         try:
             self.func_log_main(f"{repr(signal)}: was handled by 'state_{self._state_actual}'")
-            self.func_log_sub(f"  calling state 'state_{state_before}({signal})'")
             handling_state = self._state_actual
             while True:
                 meth = getattr(self, "state_" + handling_state)
+                self.func_log_sub(f"  calling '{meth.__name__}({signal})'")
                 meth(signal)
                 i = handling_state.rfind("_")
                 if i < 0:
@@ -409,7 +409,8 @@ class Test_SimpleStatemachineTopStateHandlesSignal(Statemachine):
     >>> sm.reset()
     >>> sm.dispatch('a')
     'a': was handled by 'state_TopA_SubA'
-        calling state 'state_TopA_SubA(a)'
+        calling 'state_TopA_SubA(a)'
+        calling 'state_TopA(a)'
         No state change!
     """
 
@@ -430,22 +431,24 @@ class Test_SimpleStatemachine(Statemachine):
     >>> sm.reset()
     >>> sm.dispatch('a')
     'a': was handled by 'state_TopA'
-        calling state 'state_TopA(a)'
+        calling 'state_TopA(a)'
       'a': was handled by 'state_TopA'
       'a': TopA: TopA -> TopA_SubA
     >>> sm.dispatch('b')
     'b': was handled by 'state_TopA_SubA'
-        calling state 'state_TopA_SubA(b)'
+        calling 'state_TopA_SubA(b)'
       'b': was handled by 'state_TopA_SubA'
       'b': TopA_SubA: TopA_SubA -> TopA_SubB
         Calling entry_TopA_SubB
     >>> sm.dispatch('b')
     'b': was handled by 'state_TopA_SubB'
-        calling state 'state_TopA_SubB(b)'
+        calling 'state_TopA_SubB(b)'
+        calling 'state_TopA(b)'
         Empty Transition!
     >>> sm.dispatch('a')
     'a': was handled by 'state_TopA_SubB'
-        calling state 'state_TopA_SubB(a)'
+        calling 'state_TopA_SubB(a)'
+        calling 'state_TopA(a)'
       'a': was handled by 'state_TopA'
       'a': TopA: TopA_SubB -> TopA_SubA
         Calling exit_TopA_SubB
@@ -478,14 +481,14 @@ class Test_StatemachineWithEntryExitActions(Statemachine):
     >>> sm.reset()
     >>> sm.dispatch('r')
     'r': was handled by 'state_TopA'
-        calling state 'state_TopA(r)'
+        calling 'state_TopA(r)'
       'r': was handled by 'state_TopA'
       'r': TopA: TopA -> TopC
         Calling exit_TopA
         Calling entry_TopC
     >>> sm.dispatch('s')
     's': was handled by 'state_TopC'
-        calling state 'state_TopC(s)'
+        calling 'state_TopC(s)'
       's': was handled by 'state_TopC'
       's': TopC: TopC -> TopB_SubA_SubsubA
         Calling exit_TopC
@@ -494,7 +497,7 @@ class Test_StatemachineWithEntryExitActions(Statemachine):
         Calling entry_TopB_SubA_SubsubA
     >>> sm.dispatch('t')
     't': was handled by 'state_TopB_SubA_SubsubA'
-        calling state 'state_TopB_SubA_SubsubA(t)'
+        calling 'state_TopB_SubA_SubsubA(t)'
       't': was handled by 'state_TopB_SubA_SubsubA'
       't': TopB_SubA_SubsubA: TopB_SubA_SubsubA -> TopC
         Calling exit_TopB_SubA_SubsubA
