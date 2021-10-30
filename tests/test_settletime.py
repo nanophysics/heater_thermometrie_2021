@@ -242,7 +242,7 @@ def test_settletime_repetitive(hwserial):
 @pytest.mark.parametrize("hwserial", TEST_HW_SIMULATE)
 def test_settletime_not_reset_by_manual(hwserial):
     """
-    If heating is manual, we still measure the temperature.
+    If heating is manual or off, we still measure the temperature.
     Therefore the settle time is still calculated.
     """
     r = Runner(hwserial=hwserial)
@@ -254,13 +254,36 @@ def test_settletime_not_reset_by_manual(hwserial):
     hw.let_time_fly(duration_s=TIMEOUT_TIME_S+2.0)
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.MANUAL)
     hw.let_time_fly(duration_s=2.0)
+    hw.expect_display("""
+        |           40.5K  |
+        |  HEATING         |
+        |  MANUAL          |
+        |  in range 104s   |
+        |  errors 0        |
+    """)
+    hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.OFF)
+    hw.let_time_fly(duration_s=2.0)
+    hw.expect_display("""
+        |           40.5K  |
+        |  HEATING         |
+        |  OFF             |
+        |  in range 106s   |
+        |  errors 0        |
+    """)
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
+    hw.expect_display("""
+        |           40.5K  |
+        |  HEATING         |
+        |  CONTROLLED      |
+        |  in range 106s   |
+        |  errors 0        |
+    """)
     hw.let_time_fly(duration_s=2.0)
     hw.expect_display("""
         |           40.5K  |
         |  HEATING         |
         |  CONTROLLED      |
-        |  in range 206s   |
+        |  in range 6s     |
         |  errors 0        |
     """)
 
@@ -340,4 +363,5 @@ def test_controlled_off_controlled(hwserial):
 if __name__ == "__main__":
     # test_settletime(hwserial=micropython_proxy.HWSERIAL_SIMULATE)
     # test_settletime_repetitive(hwserial=micropython_proxy.HWSERIAL_SIMULATE)
-    test_controlled_off_controlled(hwserial=micropython_proxy.HWSERIAL_SIMULATE)
+    # test_controlled_off_controlled(hwserial=micropython_proxy.HWSERIAL_SIMULATE)
+    test_settletime_not_reset_by_manual(hwserial=micropython_proxy.HWSERIAL_SIMULATE)

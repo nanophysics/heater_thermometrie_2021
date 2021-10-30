@@ -83,7 +83,9 @@ class HeaterHsm(hsm.Statemachine):
         self.time_start_s = None
         self.settle_time_start_s = None
         self.settled_duration_s = None
+        # TODO: Remove
         self.timeout = None
+        # TODO: Remove
         self.settled = None
 
     @property
@@ -106,7 +108,7 @@ class HeaterHsm(hsm.Statemachine):
         connected = self._state_actual.startswith("connected")
         return EnumInsertConnected.get_labber(connected)
 
-    def is_in_range(self):
+    def _is_in_range(self):
         band_K = self._hw.get_quantity(Quantity.ControlWriteTemperatureToleranceBand)
         temperature_K = self._hw.get_quantity(Quantity.TemperatureReadonlyTemperatureCalibrated_K)
         temperature_should_K = self._hw.get_quantity(Quantity.ControlWriteTemperature)
@@ -115,6 +117,10 @@ class HeaterHsm(hsm.Statemachine):
         if in_range:
             print("Hallo")
         return in_range
+
+    def _reset_settle_time(self):
+        self.settle_time_start_s = self.now_s
+        self.settled_duration_s = None
 
     def get_heating_state(self, heating: EnumHeating):
         assert isinstance(heating, EnumHeating)
@@ -201,6 +207,32 @@ class HeaterHsm(hsm.Statemachine):
             if not signal.on:
                 raise hsm.StateChangeException(self.state_connected_thermoff)
 
+        in_range = self._is_in_range()
+        now_s = self.now_s
+        if in_range:
+            self.settled_duration_s = now_s - self.settle_time_start_s
+        else:
+            self._reset_settle_time()
+
+        # SETTLED or TIMEOUT
+        if self.settled or self.timeout:
+            if not in_range:
+                self._hw.increment_error_counter()
+            return
+
+        # Settling
+        # During settling, the error counter will never be incremented!
+        assert (not self.settled) and (not self.timeout)
+        if in_range:
+            assert isinstance(self.settled_duration_s, float)
+            if self.settled_duration_s > self._hw.get_quantity(Quantity.ControlWriteSettleTime):
+                # During the settle time, the error counter should not be incremented
+                self.settled = True
+            return
+        # if now_s > self.time_start_s + self._hw.get_quantity(Quantity.ControlWriteTimeoutTime):
+        #     self._hw.increment_error_counter()
+        #     self.timeout = True
+
     def entry_connected_thermon(self, signal) -> None:
         """
         Read onewire id from insert.
@@ -240,38 +272,15 @@ class HeaterHsm(hsm.Statemachine):
           Quantity.ErrorCounter += 1
         - settled = time.now() > settle_time_start_s + Quantiy.SettleTime
         """
-        in_range = self.is_in_range()
-        now_s = self.now_s
-        if in_range:
-            self.settled_duration_s = now_s - self.settle_time_start_s
-        else:
-            self.settle_time_start_s = now_s
-            self.settled_duration_s = None
-
-        # SETTLED or TIMEOUT
-        if self.settled or self.timeout:
-            if not in_range:
-                self._hw.increment_error_counter()
-            return
-
-        # Settling
-        # During settling, the error counter will never be incremented!
-        assert (not self.settled) and (not self.timeout)
-        if in_range:
-            assert isinstance(self.settled_duration_s, float)
-            if self.settled_duration_s > self._hw.get_quantity(Quantity.ControlWriteSettleTime):
-                # During the settle time, the error counter should not be incremented
-                self.settled = True
-            return
-        if now_s > self.time_start_s + self._hw.get_quantity(Quantity.ControlWriteTimeoutTime):
-            self._hw.increment_error_counter()
-            self.timeout = True
+        pass
 
     def entry_connected_thermon_heatingcontrolled(self, signal) -> None:
         """
         Initialize PI controller
         settle_time_start_s = time.now()
         """
+        pass
+        # TODO(Move out: timeout)
         self.time_start_s = self.settle_time_start_s = self.now_s
         self.settled = False
         self.timeout = False
