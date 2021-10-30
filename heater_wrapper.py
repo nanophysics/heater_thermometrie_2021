@@ -39,19 +39,19 @@ class ErrorCounterAssertion:
     def __init__(self, ht: "HeaterWrapper"):
         assert isinstance(ht, HeaterWrapper)
         self._ht = ht
-        self._error_counter = self._ht.dict_values[Quantity.StatusReadErrorCounter]
+        self._error_counter = self._ht.hsm_heater.error_counter
 
     def assert_errors(self):
-        error_counter = self._ht.dict_values[Quantity.StatusReadErrorCounter]
+        error_counter = self._ht.hsm_heater.error_counter
         assert error_counter > self._error_counter
         self._error_counter = error_counter
 
     def assert_no_errors(self):
-        error_counter = self._ht.dict_values[Quantity.StatusReadErrorCounter]
+        error_counter = self._ht.hsm_heater.error_counter
         assert error_counter == self._error_counter
 
     def reset(self):
-        self._error_counter = self._ht.dict_values[Quantity.StatusReadErrorCounter]
+        self._error_counter = self._ht.hsm_heater.error_counter
 
 
 class HeaterWrapper:
@@ -252,15 +252,15 @@ class HeaterWrapper:
         display.line(2, status2)
 
         # is_in_range = self.hsm_heater.is_in_range()
-        settled_duration_s = self.hsm_heater.settled_duration_s
+        # settled_duration_s = self.hsm_heater.settled_duration_s
         error_counter = self.get_quantity(Quantity.StatusReadErrorCounter)
         # settled = self.get_quantity(Quantity.StatusReadSettled)
         # timeout = self.get_quantity(Quantity.StatusReadTimout)
 
-        if settled_duration_s is None:
+        if self.hsm_heater.is_outofrange():
             text = " out of range"
         else:
-            text = f" in range {settled_duration_s:0.0f}s"
+            text = f" in range {self.hsm_heater.duration_inrange_s():0.0f}s"
         display.line(3, text)
         display.line(4, f" errors {error_counter}")
 
@@ -276,6 +276,8 @@ class HeaterWrapper:
             return self.hsm_heater.settled
         if quantity == Quantity.StatusReadTimout:
             return self.hsm_heater.timeout
+        if quantity == Quantity.StatusReadErrorCounter:
+            return self.hsm_heater.error_counter
 
         if quantity == Quantity.ControlWriteTemperatureAndSettle:
             # TemperatureAndWait is stored as Temperature
@@ -390,9 +392,9 @@ class HeaterWrapper:
             func(value)
         return value_changed
 
-    def increment_error_counter(self):
-        error_counter = self.dict_values[Quantity.StatusReadErrorCounter]
-        self.dict_values[Quantity.StatusReadErrorCounter] = error_counter + 1
+    # def increment_error_counter(self):
+    #     error_counter = self.dict_values[Quantity.StatusReadErrorCounter]
+    #     self.dict_values[Quantity.StatusReadErrorCounter] = error_counter + 1
 
     @property
     def error_counter_assertion(self):

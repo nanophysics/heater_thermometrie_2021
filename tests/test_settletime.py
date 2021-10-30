@@ -283,7 +283,7 @@ def test_settletime_not_reset_by_manual(hwserial):
         |           40.5K  |
         |  HEATING         |
         |  CONTROLLED      |
-        |  in range 6s     |
+        |  in range 108s   |
         |  errors 0        |
     """)
 
@@ -328,7 +328,7 @@ def test_controlled_off_controlled(hwserial):
         |  HEATING         |
         |  OFF             |
         |  out of range    |
-        |  errors 0        |
+        |  errors 1        |
     """)
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
     hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=40.5)
@@ -346,7 +346,7 @@ def test_controlled_off_controlled(hwserial):
         |           40.5K  |
         |  HEATING         |
         |  OFF             |
-        |  in range 102s   |
+        |  in range 204s   |
         |  errors 0        |
     """)
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
@@ -357,11 +357,11 @@ def test_controlled_off_controlled(hwserial):
         |  HEATING         |
         |  CONTROLLED      |
         |  out of range    |
-        |  errors 2        |
+        |  errors 102      |
     """)
 
 if __name__ == "__main__":
     # test_settletime(hwserial=micropython_proxy.HWSERIAL_SIMULATE)
     # test_settletime_repetitive(hwserial=micropython_proxy.HWSERIAL_SIMULATE)
-    # test_controlled_off_controlled(hwserial=micropython_proxy.HWSERIAL_SIMULATE)
+    test_controlled_off_controlled(hwserial=micropython_proxy.HWSERIAL_SIMULATE)
     test_settletime_not_reset_by_manual(hwserial=micropython_proxy.HWSERIAL_SIMULATE)
