@@ -23,31 +23,36 @@ def test_remove_insert(hwserial):
     hw.expect_display("""
         |           16.1K  |
         |  HEATING         |
-        |  OFF             |
+        |  CONTROLLED      |
         |  out of range    |
-        |  0 error count   |
-""")
+        |  errors 0        |
+"""
+    )
     hw.let_time_fly(duration_s=2.0)
     hw.mpi.sim_set_insert_onewire_id(onewire_id=ONEWIRE_ID_INSERT_NOT_CONNECTED)
     hw.let_time_fly(duration_s=2.0)
     hw.expect_state(heater_hsm.HeaterHsm.state_disconnected)
-    hw.expect_display("""
+    hw.expect_display(
+        """
         |           16.1K  |
         |  DISCONNECTED    |
         |                  |
         |  out of range    |
-        |  0 error count   |
-""")
+        |  errors 0        |
+"""
+    )
     hw.mpi.sim_set_insert_onewire_id(onewire_id=ONEWIRE_ID_INSERT_UNDEFINED)
     hw.let_time_fly(duration_s=2.0)
     hw.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingoff)
-    hw.expect_display("""
-    |           16.1K  |
-    |  HEATING OFF     |
-    |  OFF             |
-    |  out of range    |
-    |  0 error count   |
-""")
+    hw.expect_display(
+        """
+        |           16.1K  |
+        |  HEATING         |
+        |  OFF             |
+        |  out of range    |
+        |  errors 0        |
+"""
+    )
 
     hw.close()
 

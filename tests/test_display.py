@@ -2,17 +2,18 @@ from pytest_util import AssertDisplay
 
 def test_display_to_readable():
     readable = AssertDisplay.lines_to_readable(
-        ["          16.1K", " HEATING", " OFF", " out of range", " 0 error count"]
+        ["          16.1K", " HEATING", " OFF", " out of range", " errors 5   "]
     )
-    expected = """
-    |           16.1K |
-    |  HEATING |
-    |  OFF |
-    |  out of range |
-    |  0 error count |
+    expected = '''"""
+        |           16.1K |
+        |  HEATING |
+        |  OFF |
+        |  out of range |
+        |  errors 5    |
 """
+'''
     if readable != expected:
-        raise Exception(readable)
+        raise Exception(f"{readable}")
 
 
 def test_display_from_readable():
@@ -22,13 +23,13 @@ def test_display_from_readable():
     |  HEATING |
     |  OFF |
     |  out of range |
-    |  0 error count |
+    |  errors 5    |
 """,
         """    |           16.1K |
   |  HEATING |
         |  OFF |
     |  out of range |
-    |  0 error count |""",
+    |  errors 5    |""",
     ):
         lines = AssertDisplay.readable_to_lines(readable)
         lines_expected = [
@@ -36,6 +37,6 @@ def test_display_from_readable():
             " HEATING",
             " OFF",
             " out of range",
-            " 0 error count",
+            " errors 5   ",
         ]
         assert lines == lines_expected

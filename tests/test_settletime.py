@@ -15,7 +15,7 @@ TEMPERATURE_SET42_K = 42.0
 TEMPERATURE_OUTSIDE_K = 35.0
 
 TIMEOUT_TIME_S = 100.0
-SETTLE_TIME_S = 10
+SETTLE_TIME_S = 10.0
 
 class Runner:
     def __init__(self, hwserial):
@@ -50,10 +50,13 @@ class Runner:
         #
         self._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=TEMPERATURE_OUTSIDE_K)
         self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
-        self.expect_state(
-            heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
-        )
-
+        self._hw.expect_display("""
+        |           16.1K  |
+        |  HEATING         |
+        |  CONTROLLED      |
+        |  out of range    |
+        |  errors 0        |
+""")
         assert not self._hw.hsm_heater.settled
         assert not self._hw.hsm_heater.timeout
 
@@ -67,7 +70,7 @@ class Runner:
         # Temperature inside range: Settle time starts
         self._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=TEMPERATURE_SET40_K)
 
-        self.let_time_fly(duration_s=9.5)
+        self.let_time_fly(duration_s=SETTLE_TIME_S-0.5)
         # Settle time is NOT over
         assert not self._hw.hsm_heater.settled
         assert not self._hw.hsm_heater.timeout
@@ -76,7 +79,13 @@ class Runner:
         # Settle time is over
         assert self._hw.hsm_heater.settled
         assert not self._hw.hsm_heater.timeout
-        self.assert_no_errors()
+        self._hw.expect_display("""
+        |           40.0K  |
+        |  HEATING         |
+        |  CONTROLLED      |
+        |  in range 11s    |
+        |  errors 0        |
+        """)
 
     def continue_40K_35K(self):
         self._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=TEMPERATURE_OUTSIDE_K)
@@ -136,7 +145,7 @@ class Runner:
 
     def write_and_wait_40K_40K_C(self):
         # If the temperature is already set, there will be no settle time
-        self.set_quantity(Quantity.ControlWriteTemperatureAndWait, TEMPERATURE_SET40_K)
+        self.set_quantity(Quantity.ControlWriteTemperatureAndSettle, TEMPERATURE_SET40_K)
         self.expect_state(
             heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
         )
@@ -151,10 +160,16 @@ class Runner:
         self.expect_state(
             heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
         )
-        self.let_time_fly(duration_s=SETTLE_TIME_S-1.0)
-        assert not self._hw.hsm_heater.settled
+        assert self._hw.hsm_heater.settled
         assert not self._hw.hsm_heater.timeout
         self.let_time_fly(duration_s=2.0)
+        self._hw.expect_display("""
+        |           42.0K  |
+        |  HEATING         |
+        |  CONTROLLED      |
+        |  in range 16s    |
+        |  errors 0        |
+        """)
         assert self._hw.hsm_heater.settled
         assert not self._hw.hsm_heater.timeout
 
@@ -166,16 +181,20 @@ class Runner:
             heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
         )
         self.let_time_fly(duration_s=TIMEOUT_TIME_S-1.0)
-        assert not self._hw.hsm_heater.timeout
         self.let_time_fly(duration_s=2.0)
-        assert self._hw.hsm_heater.timeout
-
+        self._hw.expect_display("""
+        |           35.0K  |
+        |  HEATING         |
+        |  CONTROLLED      |
+        |  out of range    |
+        |  errors 101      |
+        """)
 
 
 @pytest.mark.parametrize("hwserial", TEST_HW_SIMULATE)
 def test_settletime(hwserial):
     logging.basicConfig()
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
 
     r = Runner(hwserial=hwserial)
 
@@ -191,7 +210,7 @@ def test_settletime(hwserial):
 def test_settletime_repetitive(hwserial):
     """
     Verify behaviour of
-      ControlWriteTemperatureAndWait = "temperature and wait"
+      ControlWriteTemperatureAndSettle = "temperature and wait"
 
     When calling the first time, the settle time should apply (the tail should settle is temperature).
     When calling consecutive times, no settle time is required (as the controller hold the temperature constant)

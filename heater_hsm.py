@@ -82,12 +82,23 @@ class HeaterHsm(hsm.Statemachine):
         self._hw = hw
         self.time_start_s = None
         self.settle_time_start_s = None
-        self.settled = None
+        self.settled_duration_s = None
         self.timeout = None
+        self.settled = None
 
     @property
     def now_s(self) -> float:
         return self._hw.mpi.timebase.now_s
+
+    def assert_valid_state(self) -> None:
+        actual_meth = self.actual_meth()
+        list_non_states = (
+            HeaterHsm.state_connected,
+            HeaterHsm.state_connected_thermon
+        )
+        if actual_meth in list_non_states:
+            raise Exception(f"Entering non state '{actual_meth.__name__}'!")
+
 
     @property
     def get_labber_thermometrie(self):
@@ -103,7 +114,8 @@ class HeaterHsm(hsm.Statemachine):
         band_K = self._hw.get_quantity(Quantity.ControlWriteTemperatureToleranceBand)
         temperature_K = self._hw.get_quantity(Quantity.TemperatureReadonlyTemperatureCalibrated_K)
         temperature_should_K = self._hw.get_quantity(Quantity.ControlWriteTemperature)
-        return temperature_should_K - band_K < temperature_K < temperature_should_K + band_K
+        temperature_diff_K = temperature_K-temperature_should_K
+        return abs(temperature_diff_K)<= band_K
 
     def get_heating_state(self, heating: EnumHeating):
         assert isinstance(heating, EnumHeating)
@@ -116,6 +128,7 @@ class HeaterHsm(hsm.Statemachine):
         raise AttributeError(f"Case {heating} not handled.")
 
     def temperature_settled(self) -> bool:
+        # TODO: Remove method
         self.expect_state(expected_meth=HeaterHsm.state_connected_thermon_heatingcontrolled)
         return self.settled or self.timeout
 
@@ -229,25 +242,30 @@ class HeaterHsm(hsm.Statemachine):
         - settled = time.now() > settle_time_start_s + Quantiy.SettleTime
         """
         in_range = self.is_in_range()
-        if (not self.settled) and (not self.timeout):
-            # Settling
-            # During settling, the error counter will never be incremented!
-            now_s = self.now_s
-            if in_range:
-                if now_s > self.settle_time_start_s + self._hw.get_quantity(Quantity.ControlWriteSettleTime):
-                    # During the settle time, the error counter should not be incremented
-                    self.settled = True
-                return
+        now_s = self.now_s
+        if in_range:
+            self.settled_duration_s = now_s - self.settle_time_start_s
+        else:
             self.settle_time_start_s = now_s
-            if now_s > self.time_start_s + self._hw.get_quantity(Quantity.ControlWriteTimeoutTime):
-                self._hw.increment_error_counter()
-                self.timeout = True
-            return
+            self.settled_duration_s = None
 
         # SETTLED or TIMEOUT
-        assert self.settled or self.timeout
-        if not in_range:
+        if self.settled or self.timeout:
+            if not in_range:
+                self._hw.increment_error_counter()
+            return
+
+        # Settling
+        # During settling, the error counter will never be incremented!
+        assert (not self.settled) and (not self.timeout)
+        if in_range:
+            if self.settled_duration_s > self._hw.get_quantity(Quantity.ControlWriteSettleTime):
+                # During the settle time, the error counter should not be incremented
+                self.settled = True
+            return
+        if now_s > self.time_start_s + self._hw.get_quantity(Quantity.ControlWriteTimeoutTime):
             self._hw.increment_error_counter()
+            self.timeout = True
 
     def entry_connected_thermon_heatingcontrolled(self, signal) -> None:
         """
@@ -278,7 +296,8 @@ class HeaterHsm(hsm.Statemachine):
         raise hsm.DontChangeStateException()
 
     init_ = state_disconnected
-
+    init_state_connected = entry_connected_thermoff
+    init_state_connected_thermon = state_connected_thermon_heatingoff
 
 def analyse():
     def func_log_main(msg):

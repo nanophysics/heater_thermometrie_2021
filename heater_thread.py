@@ -76,17 +76,17 @@ class HeaterThread(threading.Thread):
         quantity = Quantity(name)
         rc = self.set_quantity_sync(quantity=quantity, value=value)
 
-        if quantity == Quantity.ControlWriteTemperatureAndWait:
+        if quantity == Quantity.ControlWriteTemperatureAndSettle:
             time_start_s = next_log_s = self._hw.time_now_s
             while True:
                 self._hw.sleep(0.5)
                 if not self._hw.hsm_heater.is_state(HeaterHsm.state_connected_thermon_heatingcontrolled):
                     # Unexpected state change
-                    logger.info(f"Waiting for 'ControlWriteTemperatureAndWait'. Unexpected state change. Got '{self._hw.hsm_heater._state_actual}'!")
+                    logger.info(f"Waiting for 'ControlWriteTemperatureAndSettle'. Unexpected state change. Got '{self._hw.hsm_heater._state_actual}'!")
                     return rc
                 settled = self._temperature_settled()
                 if self._hw.time_now_s > next_log_s:
-                    logger.info(f"Waiting for 'ControlWriteTemperatureAndWait'. {self._hw.time_now_s-time_start_s:0.1f}s: settled={settled}")
+                    logger.info(f"Waiting for 'ControlWriteTemperatureAndSettle'. {self._hw.time_now_s-time_start_s:0.1f}s: settled={settled}")
                     next_log_s += 5
                 if settled:
                     return rc
