@@ -9,6 +9,7 @@ from heater_driver_utils import (
     EnumThermometrie,
     Quantity,
 )
+from micropython_interface import TICK_INTERVAL_S
 import hsm
 
 
@@ -97,6 +98,13 @@ class HeaterHsm(hsm.Statemachine):
         # self.settled_duration_s = None
         # TODO: Remove
         # self.settled = None
+
+    def wait_temperature_and_settle_start(self):
+        self.during_wait_temperature_and_settle = True
+
+    def wait_temperature_and_settle_over(self):
+        self.error_counter = 0
+        self.during_wait_temperature_and_settle = False
 
     @property
     def now_s(self) -> float:
@@ -284,7 +292,6 @@ class HeaterHsm(hsm.Statemachine):
           Quantity.ErrorCounter += 1
         - settled = time.now() > settle_time_start_s + Quantiy.SettleTime
         """
-        pass
 
     def entry_connected_thermon_heatingcontrolled(self, signal) -> None:
         """
@@ -292,7 +299,7 @@ class HeaterHsm(hsm.Statemachine):
         settle_time_start_s = time.now()
         """
         self.error_counter = 0
-        pass
+        return
         # TODO(Move out: timeout)
         self.time_start_s = self.out_of_range_s = self.now_s
         self.settled = False

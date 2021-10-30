@@ -14,8 +14,8 @@ TEMPERATURE_SET40_K =  40.0
 TEMPERATURE_SET42_K = 42.0
 TEMPERATURE_OUTSIDE_K = 35.0
 
-TIMEOUT_TIME_S = 100.0
-SETTLE_TIME_S = 10.0
+TIMEOUT_TIME_S = 15.0
+SETTLE_TIME_S = 6.0
 
 class Runner:
     def __init__(self, hwserial):
@@ -46,6 +46,7 @@ class Runner:
         self.set_quantity(Quantity.ControlWriteTemperatureToleranceBand, 1.0)
         self.set_quantity(Quantity.ControlWriteSettleTime, SETTLE_TIME_S)
         self.set_quantity(Quantity.ControlWriteTimeoutTime, TIMEOUT_TIME_S)
+        self._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=40.5)
 
     def start_40K_35K(self):
         #
@@ -249,7 +250,6 @@ def test_settletime_not_reset_by_manual(hwserial):
     hw=r._hw
 
     r.init_40K()
-    hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=40.5)
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
     hw.let_time_fly(duration_s=TIMEOUT_TIME_S+2.0)
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.MANUAL)
@@ -258,7 +258,7 @@ def test_settletime_not_reset_by_manual(hwserial):
         |           40.5K  |
         |  HEATING         |
         |  MANUAL          |
-        |  in range 104s   |
+        |  in range 19s    |
         |  errors 0        |
     """)
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.OFF)
@@ -267,7 +267,7 @@ def test_settletime_not_reset_by_manual(hwserial):
         |           40.5K  |
         |  HEATING         |
         |  OFF             |
-        |  in range 106s   |
+        |  in range 21s    |
         |  errors 0        |
     """)
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
@@ -275,7 +275,7 @@ def test_settletime_not_reset_by_manual(hwserial):
         |           40.5K  |
         |  HEATING         |
         |  CONTROLLED      |
-        |  in range 106s   |
+        |  in range 21s    |
         |  errors 0        |
     """)
     hw.let_time_fly(duration_s=2.0)
@@ -283,7 +283,7 @@ def test_settletime_not_reset_by_manual(hwserial):
         |           40.5K  |
         |  HEATING         |
         |  CONTROLLED      |
-        |  in range 108s   |
+        |  in range 23s    |
         |  errors 0        |
     """)
 
@@ -298,7 +298,6 @@ def test_settletime_reset_by_off(hwserial):
     hw=r._hw
 
     r.init_40K()
-    hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=40.5)
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
     hw.let_time_fly(duration_s=TIMEOUT_TIME_S+2.0)
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.OFF)
@@ -313,6 +312,7 @@ def test_settletime_reset_by_off(hwserial):
         |  errors 0        |
     """)
 
+
 @pytest.mark.parametrize("hwserial", TEST_HW_SIMULATE)
 def test_controlled_off_controlled(hwserial):
     """
@@ -323,21 +323,14 @@ def test_controlled_off_controlled(hwserial):
     hw=r._hw
 
     r.init_40K()
-    hw.expect_display("""
-        |           16.1K  |
-        |  HEATING         |
-        |  OFF             |
-        |  out of range    |
-        |  errors 1        |
-    """)
-    hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
     hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=40.5)
+    hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
     hw.let_time_fly(duration_s=TIMEOUT_TIME_S+2.0)
     hw.expect_display("""
         |           40.5K  |
         |  HEATING         |
         |  CONTROLLED      |
-        |  in range 102s   |
+        |  in range 17s    |
         |  errors 0        |
     """)
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.OFF)
@@ -346,7 +339,7 @@ def test_controlled_off_controlled(hwserial):
         |           40.5K  |
         |  HEATING         |
         |  OFF             |
-        |  in range 204s   |
+        |  in range 34s    |
         |  errors 0        |
     """)
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
@@ -357,7 +350,7 @@ def test_controlled_off_controlled(hwserial):
         |  HEATING         |
         |  CONTROLLED      |
         |  out of range    |
-        |  errors 102      |
+        |  errors 17       |
     """)
 
 if __name__ == "__main__":

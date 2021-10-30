@@ -77,26 +77,18 @@ DONE: Bugfix
 
 The labber combobox will signal the statemachine the change state.
 
-Whe switching to HEATING CONTROLLED, the values
-   * ControlWriteTemperature
-   * ControlWriteTemperatureToleranceBand
-   * ControlWriteSettleTime
-   * ControlWriteTimeoutTime
+In state HEATING CONTROLLED these values will be used:
+  * ControlWriteTemperature
+  * ControlWriteTemperatureToleranceBand
+  * ControlWriteSettleTime
+  * ControlWriteTimeoutTime
 
-ill be used.
-
-The settle/timeout time starts now and the error counter is set to 0.
-
-When settle/timeout time is over, the error counter starts to increment.
+The settle time starts when switching from term_off to term_on(defrost/off/manual/controlled).
 
 
 ## Change of ControlWriteTemperatureAndSettle
 
-If ControlWriteTemperatureAndSettle changes to another value, then this is implemented as switching to HEATING OFF back to HEATING CONTROLLED.
-
-This implies, that the settle time starts again etc.
-
 ControlWriteTemperatureAndSettle is always set by the labber driver to -1K.
-However setting ControlWriteTemperatureAndSettle, will set ControlWriteTemperature.
-
-When setting ControlWriteTemperatureAndSettle a temperature equal to ControlWriteTemperature the command will be ignored and no new settling time started.
+Setting ControlWriteTemperatureAndSettle will set ControlWriteTemperature.
+Setting ControlWriteTemperatureAndSettle will reset error counter to 0.
+Settrig ControlWriteTemperatureAndSettle will prevent counting errors till the command returns.

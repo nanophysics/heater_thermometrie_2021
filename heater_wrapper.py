@@ -55,10 +55,11 @@ class ErrorCounterAssertion:
 
 
 class HeaterWrapper:
-    def __init__(self, hwserial):
+    def __init__(self, hwserial, force_use_realtime:bool=False):
         self.dict_values = {}
-        self.mpi = MicropythonInterface(hwserial)
+        self.mpi = MicropythonInterface(hwserial,force_use_realtime=force_use_realtime)
         self.controller = None
+        self.tick_count = 0
 
         self.heater_2021_config = config_all.ConfigHeater2021.load_config(serial=self.mpi.heater_thermometrie_2021_serial)
         logger.info(f"{HWTYPE_HEATER_THERMOMETRIE_2021} connected: {self.heater_2021_config}")
@@ -172,6 +173,7 @@ class HeaterWrapper:
 
         # Update display
         self._tick_update_display()
+        self.tick_count += 1
         return self.mpi.timebase.now_s
 
     def _tick_read_from_pyboard(self):
@@ -280,8 +282,7 @@ class HeaterWrapper:
             return self.hsm_heater.error_counter
 
         if quantity == Quantity.ControlWriteTemperatureAndSettle:
-            # TemperatureAndWait is stored as Temperature
-            quantity = Quantity.ControlWriteTemperature
+            return TEMPERATURE_SETTLE_K
 
         try:
             return self.dict_values[quantity]
@@ -334,15 +335,16 @@ class HeaterWrapper:
             self.dict_values[quantity] = value_new
             return value
         if quantity == Quantity.ControlWriteTemperatureAndSettle:
-            value_current = self.dict_values[Quantity.ControlWriteTemperature]
-            if abs(value - value_current) < 1e-9:
-                logger.info(f"The same temperature {value:0.3f}K is requested. Settle time does not start again.")
-                return
-            # The value changed. Restart the settle time!
+            # value_current = self.dict_values[Quantity.ControlWriteTemperature]
+            # if abs(value - value_current) < 1e-9:
+            #     logger.info(f"The same temperature {value:0.3f}K is requested. Settle time does not start again.")
+            #     return TEMPERATURE_SETTLE_K
+            # # The value changed. Restart the settle time!
             self.set_quantity(Quantity.ControlWriteTemperature, value)
-            self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.MANUAL)
-            self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
+            # self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.MANUAL)
+            # self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
             return TEMPERATURE_SETTLE_K
+
         # if quantity in (
         #     Quantity.ControlWriteTemperature,
         #     Quantity.ControlWriteTemperatureAndSettle,
@@ -380,6 +382,7 @@ class HeaterWrapper:
             self.dict_values[quantity] = value
             return value
         raise QuantityNotFoundException(quantity.name)
+
 
     def _set_value(self, quantity: Quantity, value, func=None) -> bool:
         """

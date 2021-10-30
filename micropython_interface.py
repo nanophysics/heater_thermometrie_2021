@@ -45,7 +45,7 @@ class TimebaseSimulation:
 
 
 class MicropythonInterface:
-    def __init__(self, hwserial):
+    def __init__(self, hwserial, force_use_realtime=False):
         self.proxy = None
         self.display = None
         self.onewire_box = None
@@ -54,10 +54,13 @@ class MicropythonInterface:
         self.heater = None
         self.defrost_switch = None
 
+        if force_use_realtime or (hwserial != HWSERIAL_SIMULATE):
+            self.timebase = Timebase()
+        else:
+            self.timebase = TimebaseSimulation()
         if hwserial == HWSERIAL_SIMULATE:
             self.heater_thermometrie_2021_serial = "v42"
             self.fe = FeSimulator()
-            self.timebase = TimebaseSimulation()
             self.sim_update_time = self.fe.sim_update_time
             self.sim_set_resistance_OHM = self.fe.sim_set_resistance_OHM
             self.sim_set_resistance_OHM = self.fe.sim_set_resistance_OHM
@@ -65,7 +68,6 @@ class MicropythonInterface:
         else:
             logger.warning(f"******************* {hwserial}")
             self._init_pyboard(hwserial=hwserial)
-            self.timebase = Timebase()
             self.sim_update_time = lambda time_now_s: None
             self.sim_set_resistance_OHM = lambda carbon, value: None
             self.sim_set_insert_onewire_id = lambda onewire_id: None
