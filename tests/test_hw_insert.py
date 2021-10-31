@@ -20,7 +20,8 @@ def test_remove_insert(hwserial):
     hw = heater_wrapper.HeaterWrapper(hwserial=hwserial)
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
     hw.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled)
-    hw.expect_display("""
+    hw.expect_display(
+        """
         |           16.1K  |
         |  HEATING         |
         |  CONTROLLED      |
@@ -38,7 +39,7 @@ def test_remove_insert(hwserial):
         |  DISCONNECTED    |
         |                  |
         |  out of range    |
-        |  errors 0        |
+        |  errors 3        |
 """
     )
     hw.mpi.sim_set_insert_onewire_id(onewire_id=ONEWIRE_ID_INSERT_UNDEFINED)
@@ -50,7 +51,7 @@ def test_remove_insert(hwserial):
         |  HEATING         |
         |  OFF             |
         |  out of range    |
-        |  errors 0        |
+        |  errors 5        |
 """
     )
 

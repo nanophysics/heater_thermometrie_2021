@@ -1,7 +1,6 @@
 import logging
 import pytest
 
-import test_settletime
 from micropython_interface import TICK_INTERVAL_S
 
 from pytest_util import TEST_HW_SIMULATE
@@ -10,8 +9,11 @@ import heater_thread
 import heater_hsm
 from heater_driver_utils import EnumHeating, Quantity, EnumThermometrie
 from config_all import ONEWIRE_ID_INSERT_NOT_CONNECTED
+from test_constants import *
 
 logger = logging.getLogger("LabberDriver")
+
+pytestmark = [pytest.mark.thread_slow]
 
 
 @pytest.mark.parametrize("hwserial", TEST_HW_SIMULATE)
@@ -19,7 +21,7 @@ def test_heater_thread_run_200s(hwserial):
     logging.basicConfig()
     logger.setLevel(logging.INFO)
 
-    ht = heater_thread.HeaterThread(hwserial=hwserial, force_use_realtime=True)
+    ht = heater_thread.HeaterThread(hwserial=hwserial, force_use_realtime_factor=10.0)
     ht.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
     logger.info("Now sleeping for 200.0s")
     ht._hw.sleep(200.0)
@@ -27,7 +29,7 @@ def test_heater_thread_run_200s(hwserial):
 
 
 @pytest.mark.parametrize("hwserial", TEST_HW_SIMULATE)
-def test_heater_thread(hwserial, force_use_realtime=True):
+def test_heater_thread(hwserial, force_use_realtime_factor=10.0):
     logging.basicConfig()
     logger.setLevel(logging.INFO)
 
@@ -54,9 +56,7 @@ def test_heater_thread(hwserial, force_use_realtime=True):
     ht.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
     ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_defrost)
 
-    ht.signal(
-        heater_hsm.SignalInsertSerialChanged(onewire_id=ONEWIRE_ID_INSERT_NOT_CONNECTED)
-    )
+    ht.signal(heater_hsm.SignalInsertSerialChanged(onewire_id=ONEWIRE_ID_INSERT_NOT_CONNECTED))
     ht.expect_state(heater_hsm.HeaterHsm.state_disconnected)
 
     ht.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
@@ -77,13 +77,11 @@ def test_control_and_settle(hwserial):
     logging.basicConfig()
     logger.setLevel(logging.DEBUG)
 
-    ht = heater_thread.HeaterThread(hwserial=hwserial, force_use_realtime=True)
-    ht.set_quantity(
-        Quantity.ControlWriteTemperature, test_settletime.TEMPERATURE_SET40_K
-    )
+    ht = heater_thread.HeaterThread(hwserial=hwserial, force_use_realtime_factor=10.0)
+    ht.set_quantity(Quantity.ControlWriteTemperature, TEMPERATURE_SET40_K)
     ht.set_quantity(Quantity.ControlWriteTemperatureToleranceBand, 1.0)
-    ht.set_quantity(Quantity.ControlWriteSettleTime, test_settletime.SETTLE_TIME_S)
-    ht.set_quantity(Quantity.ControlWriteTimeoutTime, test_settletime.TIMEOUT_TIME_S)
+    ht.set_quantity(Quantity.ControlWriteSettleTime, SETTLE_TIME_S)
+    ht.set_quantity(Quantity.ControlWriteTimeoutTime, TIMEOUT_TIME_S)
     ht._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=40.5)
 
     ht.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
@@ -92,14 +90,10 @@ def test_control_and_settle(hwserial):
     before_s = ht._hw.time_now_s
     ht.set_value(
         Quantity.ControlWriteTemperatureAndSettle.value,
-        test_settletime.TEMPERATURE_SET40_K,
+        TEMPERATURE_SET40_K,
     )
     duration_s = ht._hw.time_now_s - before_s
-    assert (
-        test_settletime.SETTLE_TIME_S - 1.0 - 2.0
-        < duration_s
-        < test_settletime.SETTLE_TIME_S - 1.0 + 2.0
-    )
+    assert SETTLE_TIME_S - 1.0 - 2.0 < duration_s < SETTLE_TIME_S - 1.0 + 2.0
     assert ht._hw.hsm_heater.error_counter == 0
     assert ht._hw.hsm_heater.is_settled()
     assert ht._hw.hsm_heater.is_inrange()
@@ -110,36 +104,37 @@ def test_control_and_settle(hwserial):
     before_s = ht._hw.time_now_s
     ht.set_value(
         Quantity.ControlWriteTemperatureAndSettle.value,
-        test_settletime.TEMPERATURE_SET42_K,
+        TEMPERATURE_SET42_K,
     )
     duration_s = ht._hw.time_now_s - before_s
-    assert (
-        test_settletime.TIMEOUT_TIME_S - 5.0
-        < duration_s
-        < test_settletime.TIMEOUT_TIME_S + 5.0
-    )
+    assert TIMEOUT_TIME_S - 5.0 < duration_s < TIMEOUT_TIME_S + 5.0
     assert not ht._hw.hsm_heater.is_inrange()
     assert not ht._hw.hsm_heater.is_settled()
     assert 0 <= ht._hw.hsm_heater.error_counter <= 2
 
-    ht._hw.expect_display("""
+    ht._hw.expect_display(
+        """
         |           40.5K  |
         |  HEATING         |
         |  CONTROLLED      |
         |  out of range    |
-        |  errors 0        |
-""")
+        | ? |
+"""
+    )
 
     tick_count_before = ht._hw.tick_count
     while ht._hw.tick_count < tick_count_before + 2:
         ht._hw.sleep(TICK_INTERVAL_S / 5.0)
-    ht._hw.expect_display("""
+    ht._hw.expect_display(
+        """
         |           40.5K  |
         |  HEATING         |
         |  CONTROLLED      |
         |  out of range    |
-        |  errors 2        |
-""")
+        | ? |
+"""
+    )
+    assert 0 <= ht._hw.hsm_heater.error_counter <= 2
 
 
 if __name__ == "__main__":

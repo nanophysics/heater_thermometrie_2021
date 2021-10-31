@@ -30,8 +30,21 @@
                 "--config",
                 "${workspaceFolder}/.blackconfig.yaml",
                 "*.py",
-                "calibration/*.py",
-                "src_micropython/*.py"
+                "tests",
+                "calibration",
+                "src_micropython"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Pytest without thread-slow",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "-m=(simulate and not thread_slow)",
+                "tests"
             ],
             "console": "integratedTerminal"
         },
@@ -85,11 +98,11 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Python: test_heater_wrapper.py",
+            "name": "Python: test_hw_therm_controlled.py",
             "type": "python",
             "request": "launch",
             "justMyCode": true,
-            "program": "${workspaceFolder}/tests/test_heater_wrapper.py",
+            "program": "${workspaceFolder}/tests/test_hw_therm_controlled.py",
             "cwd": "${workspaceFolder}",
             "args": [],
             "console": "integratedTerminal",
@@ -98,11 +111,11 @@
             }
         },
         {
-            "name": "Python: test_heater_thread.py",
+            "name": "Python: test_hw_pi_controller.py",
             "type": "python",
             "request": "launch",
             "justMyCode": true,
-            "program": "${workspaceFolder}/tests/test_heater_thread.py",
+            "program": "${workspaceFolder}/tests/test_hw_pi_controller.py",
             "cwd": "${workspaceFolder}",
             "args": [],
             "console": "integratedTerminal",
@@ -111,24 +124,11 @@
             }
         },
         {
-            "name": "Python: test_pi_controller.py",
+            "name": "Python: test_hw_insert.py",
             "type": "python",
             "request": "launch",
             "justMyCode": true,
-            "program": "${workspaceFolder}/tests/test_pi_controller.py",
-            "cwd": "${workspaceFolder}",
-            "args": [],
-            "console": "integratedTerminal",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            }
-        },
-        {
-            "name": "Python: test_settletime.py",
-            "type": "python",
-            "request": "launch",
-            "justMyCode": true,
-            "program": "${workspaceFolder}/tests/test_settletime.py",
+            "program": "${workspaceFolder}/tests/test_hw_insert.py",
             "cwd": "${workspaceFolder}",
             "args": [],
             "console": "integratedTerminal",

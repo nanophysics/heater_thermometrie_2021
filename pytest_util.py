@@ -37,7 +37,19 @@ class AssertDisplay:
         return lines
 
     @staticmethod
+    def _lines_equal(lines: List[str], lines_expected: List[str]):
+        assert isinstance(lines, (list, tuple))
+        assert isinstance(lines_expected, (list, tuple))
+        for line, line_expected in zip(lines, lines_expected):
+            if line_expected == "?":
+                continue
+            if line != line_expected:
+                return False
+        return True
+
+    @staticmethod
     def assert_equal(lines: List[str], readable_expected: str):
+        assert isinstance(lines, (list, tuple))
         lines_expected = AssertDisplay.readable_to_lines(readable_expected)
-        if lines != lines_expected:
+        if not AssertDisplay._lines_equal(lines, lines_expected):
             raise Exception(f"Expected:\n\n{AssertDisplay.lines_to_readable(lines)}\n")

@@ -104,7 +104,6 @@ class Quantity(EnumMixin, enum.Enum):
     StatusReadInsertConnected = "Connected"
     StatusReadErrorCounter = "Error counter"
     StatusReadSettled = "Settled"
-    StatusReadTimout = "Timeout"
     TemperatureReadonlyResistanceCarbon_OHM = "Carbon"
     TemperatureReadonlyResistancePT1000_OHM = "PT1000_K"
     TemperatureReadonlyTemperatureCarbon_K = "Carbon calibrated"

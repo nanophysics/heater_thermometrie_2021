@@ -52,6 +52,8 @@ disable=
         # W0108, # unnecessary-lambda
         W0125, # using-constant-test
         W0212, # protected-access
+        W0401, # wildcard-import
+        W0614, # unused-wildcard-import
         W0511, # fixme
         W0613, # unused-argument
         W0612, # unused-variable
@@ -61,6 +63,7 @@ disable=
         W1202, # logging-format-interpolation
         W1203, # logging-format-interpolation
         W1514, # unspecified-encoding
+
 
 [REPORTS]
 # The following line displays the '\' - which is wrong, but I did not find out a way how to avoid id

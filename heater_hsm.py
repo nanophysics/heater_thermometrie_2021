@@ -9,7 +9,6 @@ from heater_driver_utils import (
     EnumThermometrie,
     Quantity,
 )
-from micropython_interface import TICK_INTERVAL_S
 import hsm
 
 
@@ -72,7 +71,7 @@ class SignalHeaterSerialChanged(SignalInsertSerialChanged):
 SIGNAL_TICK = SignalTick()
 
 
-class HeaterHsm(hsm.Statemachine):
+class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \# lic-methods
     """
     Statemachine Heater.
     """
@@ -90,14 +89,6 @@ class HeaterHsm(hsm.Statemachine):
         """
         During ControlWriteTemperatureAndSettle this flag is set.
         """
-        # Remove
-        # self.timeout = False
-        # Remove
-        # self.time_start_s = None
-        # TODO: Remove
-        # self.settled_duration_s = None
-        # TODO: Remove
-        # self.settled = None
 
     def wait_temperature_and_settle_start(self):
         self.during_wait_temperature_and_settle = True
@@ -299,11 +290,6 @@ class HeaterHsm(hsm.Statemachine):
         settle_time_start_s = time.now()
         """
         self.error_counter = 0
-        return
-        # TODO(Move out: timeout)
-        self.time_start_s = self.out_of_range_s = self.now_s
-        self.settled = False
-        self.timeout = False
 
     def state_connected_thermon_defrost(self, signal) -> None:
         """

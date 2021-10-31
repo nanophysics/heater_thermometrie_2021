@@ -37,10 +37,10 @@ def synchronized(func):
 
 
 class HeaterThread(threading.Thread):
-    def __init__(self, hwserial: str, force_use_realtime:bool=False):
+    def __init__(self, hwserial: str, force_use_realtime_factor: float = None):
         logger.info(f"HeaterThread(hwserial='{hwserial}')")
         super().__init__(daemon=True)
-        self._hw = heater_wrapper.HeaterWrapper(hwserial=hwserial, force_use_realtime=force_use_realtime)
+        self._hw = heater_wrapper.HeaterWrapper(hwserial=hwserial, force_use_realtime_factor=force_use_realtime_factor)
         self._stopping = False
         self.start()
 
@@ -58,7 +58,7 @@ class HeaterThread(threading.Thread):
 
     def stop(self):
         self._stopping = True
-        self.join(timeout=10.0*TICK_TIME_S)
+        self.join(timeout=10.0 * TICK_INTERVAL_S)
 
     @synchronized
     def _tick(self):
@@ -77,11 +77,12 @@ class HeaterThread(threading.Thread):
         quantity = Quantity(name)
         rc = self.set_quantity_sync(quantity=quantity, value=value)
         if quantity == Quantity.ControlWriteTemperatureAndSettle:
+
             def block_until_settled():
                 tick_count_before = self._hw.tick_count
                 timeout_s = self._hw.time_now_s + self._hw.get_quantity(Quantity.ControlWriteTimeoutTime)
                 while True:
-                    self._hw.sleep(TICK_INTERVAL_S/2.0)
+                    self._hw.sleep(TICK_INTERVAL_S / 2.0)
                     if tick_count_before == self._hw.tick_count:
                         # Wait for a tick to make sure that the statemachine was called at least once
                         continue

@@ -2,7 +2,7 @@ import logging
 
 import pytest
 
-from pytest_util  import TEST_HW_SIMULATE
+from pytest_util import TEST_HW_SIMULATE
 import micropython_proxy
 import heater_wrapper
 import heater_hsm
@@ -45,7 +45,6 @@ class Runner:
 
             if time_s > end_time_s:
                 return
-
 
 
 if __name__ == "__main__":

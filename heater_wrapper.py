@@ -55,9 +55,9 @@ class ErrorCounterAssertion:
 
 
 class HeaterWrapper:
-    def __init__(self, hwserial, force_use_realtime:bool=False):
+    def __init__(self, hwserial, force_use_realtime_factor: float = None):
         self.dict_values = {}
-        self.mpi = MicropythonInterface(hwserial,force_use_realtime=force_use_realtime)
+        self.mpi = MicropythonInterface(hwserial, force_use_realtime_factor=force_use_realtime_factor)
         self.controller = None
         self.tick_count = 0
 
@@ -275,9 +275,7 @@ class HeaterWrapper:
         if quantity == Quantity.StatusReadInsertConnected:
             return self.hsm_heater.get_labber_insert_connected
         if quantity == Quantity.StatusReadSettled:
-            return self.hsm_heater.settled
-        if quantity == Quantity.StatusReadTimout:
-            return self.hsm_heater.timeout
+            return self.hsm_heater.is_settled()
         if quantity == Quantity.StatusReadErrorCounter:
             return self.hsm_heater.error_counter
 
@@ -382,7 +380,6 @@ class HeaterWrapper:
             self.dict_values[quantity] = value
             return value
         raise QuantityNotFoundException(quantity.name)
-
 
     def _set_value(self, quantity: Quantity, value, func=None) -> bool:
         """

@@ -24,15 +24,19 @@ TICK_INTERVAL_S = 1.0
 
 
 class Timebase:
+    def __init__(self, realtime_factor: float = 1.0):
+        assert isinstance(realtime_factor, float)
+        self._realtime_factor = realtime_factor
+
     @property
     def now_s(self) -> float:
-        return time.time()
+        return time.time() * self._realtime_factor
 
     def sleep(self, duration_s: float):
         assert isinstance(duration_s, float)
 
         duration_s = max(TICK_INTERVAL_S / 10.0, duration_s)
-        time.sleep(duration_s)
+        time.sleep(duration_s / self._realtime_factor)
 
 
 class TimebaseSimulation:
@@ -45,7 +49,7 @@ class TimebaseSimulation:
 
 
 class MicropythonInterface:
-    def __init__(self, hwserial, force_use_realtime=False):
+    def __init__(self, hwserial, force_use_realtime_factor=1.0):
         self.proxy = None
         self.display = None
         self.onewire_box = None
@@ -54,8 +58,8 @@ class MicropythonInterface:
         self.heater = None
         self.defrost_switch = None
 
-        if force_use_realtime or (hwserial != HWSERIAL_SIMULATE):
-            self.timebase = Timebase()
+        if (force_use_realtime_factor is not None) or (hwserial != HWSERIAL_SIMULATE):
+            self.timebase = Timebase(realtime_factor=force_use_realtime_factor)
         else:
             self.timebase = TimebaseSimulation()
         if hwserial == HWSERIAL_SIMULATE:

@@ -2,20 +2,15 @@ import logging
 
 import pytest
 
-from pytest_util  import TEST_HW_SIMULATE
+from pytest_util import TEST_HW_SIMULATE
 import micropython_proxy
 import heater_wrapper
 import heater_hsm
+from test_constants import *
 from heater_driver_utils import EnumHeating, Quantity
 
 logger = logging.getLogger("LabberDriver")
 
-TEMPERATURE_SET40_K =  40.0
-TEMPERATURE_SET42_K = 42.0
-TEMPERATURE_OUTSIDE_K = 35.0
-
-TIMEOUT_TIME_S = 15.0
-SETTLE_TIME_S = 6.0
 
 class Runner:
     def __init__(self, hwserial):
@@ -33,6 +28,9 @@ class Runner:
 
     def let_time_fly(self, duration_s):
         self._hw.let_time_fly(duration_s=duration_s)
+
+    def reset_errors(self):
+        self._eca.reset()
 
     def assert_no_errors(self):
         self._eca.assert_no_errors()
@@ -54,49 +52,51 @@ class Runner:
         #
         self._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=TEMPERATURE_OUTSIDE_K)
         self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
-        self._hw.expect_display("""
+        self._hw.expect_display(
+            """
         |           16.1K  |
         |  HEATING         |
         |  CONTROLLED      |
         |  out of range    |
         |  errors 0        |
-""")
-        assert not self._hw.hsm_heater.settled
-        assert not self._hw.hsm_heater.timeout
+"""
+        )
+        assert not self._hw.hsm_heater.is_settled()
 
         # Wait with temperature outside range
         self.let_time_fly(duration_s=20.0)
-        assert not self._hw.hsm_heater.settled
-        assert not self._hw.hsm_heater.timeout
-        self.assert_no_errors()
+        assert not self._hw.hsm_heater.is_settled()
+        self.assert_errors()
 
     def continue_40K_40K_A(self):
         # Temperature inside range: Settle time starts
         self._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=TEMPERATURE_SET40_K)
 
-        self.let_time_fly(duration_s=SETTLE_TIME_S-0.5)
+        self.let_time_fly(duration_s=SETTLE_TIME_S - 1.0)
         # Settle time is NOT over
-        assert not self._hw.hsm_heater.settled
-        assert not self._hw.hsm_heater.timeout
+        assert not self._hw.hsm_heater.is_settled()
+
         self.assert_no_errors()
         self.let_time_fly(duration_s=1.0)
         # Settle time is over
-        assert self._hw.hsm_heater.settled
-        assert not self._hw.hsm_heater.timeout
-        self._hw.expect_display("""
+        assert self._hw.hsm_heater.is_settled()
+
+        self._hw.expect_display(
+            """
         |           40.0K  |
         |  HEATING         |
         |  CONTROLLED      |
-        |  in range 11s    |
-        |  errors 0        |
-        """)
+        |  in range 10s    |
+        |  errors 20       |
+        """
+        )
 
     def continue_40K_35K(self):
         self._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=TEMPERATURE_OUTSIDE_K)
 
         self.let_time_fly(duration_s=2.0)
-        assert self._hw.hsm_heater.settled
-        assert not self._hw.hsm_heater.timeout
+        assert self._hw.hsm_heater.is_outofrange()
+
         self.assert_errors()
 
     def continue_40K_40K_B(self):
@@ -114,84 +114,74 @@ class Runner:
         self.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingmanual)
         self.let_time_fly(duration_s=2.0)
         self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
-        self.expect_state(
-            heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
-        )
+        self.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled)
         self._eca.reset()
-        assert not self._hw.hsm_heater.settled
-        assert not self._hw.hsm_heater.timeout
+        assert not self._hw.hsm_heater.is_settled()
+
         self.let_time_fly(duration_s=95.0)
         self._hw.get_quantity(Quantity.StatusReadErrorCounter)
-        self.assert_no_errors()
-        assert not self._hw.hsm_heater.settled
-        assert not self._hw.hsm_heater.timeout
-        self.let_time_fly(duration_s=10.0)
-        assert not self._hw.hsm_heater.settled
-        assert self._hw.hsm_heater.timeout
         self.assert_errors()
+        assert not self._hw.hsm_heater.is_settled()
 
+        self.let_time_fly(duration_s=10.0)
+        assert not self._hw.hsm_heater.is_settled()
+        self.assert_errors()
 
     def start_40K_40K(self):
         self._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=40.0)
         self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
-        self.expect_state(
-            heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
-        )
+        self.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled)
+        self.reset_errors()
 
-        assert not self._hw.hsm_heater.settled
-        assert not self._hw.hsm_heater.timeout
+        assert not self._hw.hsm_heater.is_settled()
 
         # Wait with temperature outside range
         self.let_time_fly(duration_s=SETTLE_TIME_S + 2.0)
-        assert self._hw.hsm_heater.settled
-        assert not self._hw.hsm_heater.timeout
+        assert self._hw.hsm_heater.is_settled()
+
         self.assert_no_errors()
 
     def write_and_wait_40K_40K_C(self):
         # If the temperature is already set, there will be no settle time
         self.set_quantity(Quantity.ControlWriteTemperatureAndSettle, TEMPERATURE_SET40_K)
-        self.expect_state(
-            heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
-        )
+        self.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled)
         self.let_time_fly(duration_s=2.0)
-        assert self._hw.hsm_heater.settled
-        assert not self._hw.hsm_heater.timeout
+        assert self._hw.hsm_heater.is_settled()
 
     def change_42K_42K_C(self):
         # If the temperature is already set, there will be no settle time
         self._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=TEMPERATURE_SET42_K)
         self.set_quantity(Quantity.ControlWriteTemperature, TEMPERATURE_SET42_K)
-        self.expect_state(
-            heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
-        )
-        assert self._hw.hsm_heater.settled
-        assert not self._hw.hsm_heater.timeout
+        self.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled)
+        assert self._hw.hsm_heater.is_settled()
+
         self.let_time_fly(duration_s=2.0)
-        self._hw.expect_display("""
+        self._hw.expect_display(
+            """
         |           42.0K  |
         |  HEATING         |
         |  CONTROLLED      |
         |  in range 16s    |
         |  errors 0        |
-        """)
-        assert self._hw.hsm_heater.settled
-        assert not self._hw.hsm_heater.timeout
+        """
+        )
+        assert self._hw.hsm_heater.is_settled()
 
     def change_40K_35K_C(self):
         # If the temperature is already set, there will be no settle time
         self._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=TEMPERATURE_OUTSIDE_K)
         self.set_quantity(Quantity.ControlWriteTemperature, TEMPERATURE_SET40_K)
-        self.expect_state(
-            heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled
-        )
-        self.let_time_fly(duration_s=TIMEOUT_TIME_S-1.0)
-        self._hw.expect_display("""
+        self.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled)
+        self.let_time_fly(duration_s=TIMEOUT_TIME_S - 1.0)
+        self._hw.expect_display(
+            """
         |           35.0K  |
         |  HEATING         |
         |  CONTROLLED      |
         |  out of range    |
-        |  errors 101      |
-        """)
+        |  errors 59       |
+        """
+        )
 
 
 @pytest.mark.parametrize("hwserial", TEST_HW_SIMULATE)
@@ -240,6 +230,7 @@ def test_settletime_repetitive(hwserial):
 #   set_temp_settle_same
 #   set_temp_settle_diff
 
+
 @pytest.mark.parametrize("hwserial", TEST_HW_SIMULATE)
 def test_settletime_not_reset_by_manual(hwserial):
     """
@@ -247,45 +238,53 @@ def test_settletime_not_reset_by_manual(hwserial):
     Therefore the settle time is still calculated.
     """
     r = Runner(hwserial=hwserial)
-    hw=r._hw
+    hw = r._hw
 
     r.init_40K()
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
-    hw.let_time_fly(duration_s=TIMEOUT_TIME_S+2.0)
+    hw.let_time_fly(duration_s=TIMEOUT_TIME_S + 2.0)
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.MANUAL)
     hw.let_time_fly(duration_s=2.0)
-    hw.expect_display("""
+    hw.expect_display(
+        """
         |           40.5K  |
         |  HEATING         |
         |  MANUAL          |
-        |  in range 19s    |
+        |  in range 64s    |
         |  errors 0        |
-    """)
+    """
+    )
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.OFF)
     hw.let_time_fly(duration_s=2.0)
-    hw.expect_display("""
+    hw.expect_display(
+        """
         |           40.5K  |
         |  HEATING         |
         |  OFF             |
-        |  in range 21s    |
+        |  in range 66s    |
         |  errors 0        |
-    """)
+    """
+    )
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
-    hw.expect_display("""
+    hw.expect_display(
+        """
         |           40.5K  |
         |  HEATING         |
         |  CONTROLLED      |
-        |  in range 21s    |
+        |  in range 66s    |
         |  errors 0        |
-    """)
+    """
+    )
     hw.let_time_fly(duration_s=2.0)
-    hw.expect_display("""
+    hw.expect_display(
+        """
         |           40.5K  |
         |  HEATING         |
         |  CONTROLLED      |
-        |  in range 23s    |
+        |  in range 68s    |
         |  errors 0        |
-    """)
+    """
+    )
 
 
 @pytest.mark.parametrize("hwserial", TEST_HW_SIMULATE)
@@ -295,22 +294,24 @@ def test_settletime_reset_by_off(hwserial):
     Therefore the settle time has to be reset.
     """
     r = Runner(hwserial=hwserial)
-    hw=r._hw
+    hw = r._hw
 
     r.init_40K()
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
-    hw.let_time_fly(duration_s=TIMEOUT_TIME_S+2.0)
+    hw.let_time_fly(duration_s=TIMEOUT_TIME_S + 2.0)
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.OFF)
     hw.let_time_fly(duration_s=2.0)
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
     hw.let_time_fly(duration_s=2.0)
-    hw.expect_display("""
+    hw.expect_display(
+        """
         |           40.5K  |
         |  HEATING         |
         |  CONTROLLED      |
-        |  in range 2s     |
+        |  in range 66s    |
         |  errors 0        |
-    """)
+    """
+    )
 
 
 @pytest.mark.parametrize("hwserial", TEST_HW_SIMULATE)
@@ -320,38 +321,45 @@ def test_controlled_off_controlled(hwserial):
     Verify that timeout time starts from 0
     """
     r = Runner(hwserial=hwserial)
-    hw=r._hw
+    hw = r._hw
 
     r.init_40K()
     hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=40.5)
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
-    hw.let_time_fly(duration_s=TIMEOUT_TIME_S+2.0)
-    hw.expect_display("""
+    hw.let_time_fly(duration_s=TIMEOUT_TIME_S + 2.0)
+    hw.expect_display(
+        """
         |           40.5K  |
         |  HEATING         |
         |  CONTROLLED      |
-        |  in range 17s    |
+        |  in range 62s    |
         |  errors 0        |
-    """)
+    """
+    )
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.OFF)
-    hw.let_time_fly(duration_s=TIMEOUT_TIME_S+2.0)
-    hw.expect_display("""
+    hw.let_time_fly(duration_s=TIMEOUT_TIME_S + 2.0)
+    hw.expect_display(
+        """
         |           40.5K  |
         |  HEATING         |
         |  OFF             |
-        |  in range 34s    |
+        |  in range 124s   |
         |  errors 0        |
-    """)
+    """
+    )
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
     hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=TEMPERATURE_SET42_K)
-    hw.let_time_fly(duration_s=TIMEOUT_TIME_S+2.0)
-    hw.expect_display("""
+    hw.let_time_fly(duration_s=TIMEOUT_TIME_S + 2.0)
+    hw.expect_display(
+        """
         |           42.0K  |
         |  HEATING         |
         |  CONTROLLED      |
         |  out of range    |
-        |  errors 17       |
-    """)
+        |  errors 62       |
+    """
+    )
+
 
 if __name__ == "__main__":
     # test_settletime(hwserial=micropython_proxy.HWSERIAL_SIMULATE)
