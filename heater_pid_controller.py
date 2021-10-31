@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
-
 # https://github.com/pjkundert/ownercredit/blob/master/portable_pid_controller.py
+
+import logging
+
+logger = logging.getLogger("LabberDriver")
+
 config_app_time_delta_max_s = 10.0
 
 PERSIST_PID_fI = "Pid.%s.fI"
@@ -101,7 +105,9 @@ class PidController:
         that change over time.
         """
         time_delta_s = time_now_s - self.time_last_s
-        assert time_delta_s > 0.0
+        if time_delta_s <= 1e-09:
+            logger.warning(f"Expected {time_delta_s:0.3f} to be bigger than zero. Skipped.")
+            return
         self.time_last_s = time_now_s
 
         time_delta_s = min(time_delta_s, config_app_time_delta_max_s)

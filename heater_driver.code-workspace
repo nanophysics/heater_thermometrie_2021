@@ -5,11 +5,12 @@
         }
     ],
     "settings": {
+        "editor.guides.bracketPairs": true,
         "python.formatting.provider": "black",
         "python.testing.pytestArgs": [
             "--rootdir=${workspaceFolder}",
             "--import-mode=importlib",
-            "-m=simulate",  // https://github.com/microsoft/vscode-python/issues/10827
+            "-m=simulate", // https://github.com/microsoft/vscode-python/issues/10827
             "tests"
         ],
         "python.testing.unittestEnabled": false,

@@ -137,6 +137,19 @@
             }
         },
         {
+            "name": "Python: test_ht_therm_controlled.py",
+            "type": "python",
+            "request": "launch",
+            "justMyCode": true,
+            "program": "${workspaceFolder}/tests/test_ht_therm_controlled.py",
+            "cwd": "${workspaceFolder}",
+            "args": [],
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
             "name": "Python: Remote Attach",
             "type": "python",
             "request": "attach",

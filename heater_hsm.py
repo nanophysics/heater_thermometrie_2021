@@ -175,7 +175,7 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
 
         if isinstance(signal, SignalThermometrie):
             if signal.on:
-                raise hsm.StateChangeException(self.state_connected_thermon)
+                raise hsm.StateChangeException(self.state_connected_thermon_heatingoff)
         if isinstance(signal, SignalDefrostSwitchChanged):
             if signal.on:
                 raise hsm.StateChangeException(self.state_connected_thermon_defrost)

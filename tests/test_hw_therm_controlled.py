@@ -200,12 +200,12 @@ def test_settletime(hwserial):
 def test_settletime_repetitive(hwserial):
     """
     Verify behaviour of
-      ControlWriteTemperatureAndSettle = "temperature and wait"
+      ControlWriteTemperatureAndSettle = "temperature and settle"
 
     When calling the first time, the settle time should apply (the tail should settle is temperature).
     When calling consecutive times, no settle time is required (as the controller hold the temperature constant)
     A settle time applays again if:
-      - The "temperature and wait" changed.
+      - The "temperature and settle" changed.
       - The heater mode was changed (eg. manual)
     """
     r = Runner(hwserial=hwserial)

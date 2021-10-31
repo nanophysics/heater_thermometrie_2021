@@ -8,8 +8,9 @@ logger = logging.getLogger("LabberDriver")
 
 class Display:
     def show_lines(self, lines):
-        for line in lines:
-            print(f"   | {line:16} |")
+        if 1 == 0:
+            for line in lines:
+                print(f"   | {line:16} |")
         return b"None"
 
 

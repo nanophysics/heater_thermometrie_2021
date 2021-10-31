@@ -73,7 +73,7 @@ class MicropythonInterface:
             logger.warning(f"******************* {hwserial}")
             self._init_pyboard(hwserial=hwserial)
             self.sim_update_time = lambda time_now_s: None
-            self.sim_set_resistance_OHM = lambda carbon, value: None
+            self.sim_set_resistance_OHM = lambda carbon, temperature_K: None
             self.sim_set_insert_onewire_id = lambda onewire_id: None
 
     def close(self):
@@ -113,16 +113,6 @@ class MicropythonInterface:
         self.display.clear()
         self.display.line(2, "      ...")
         self.display.show_lines()
-
-        if False:
-            self.onewire_insert.set_power(on=True)
-            ident = self.onewire_insert.scan()
-            if ident is not None:
-                temp = self.onewire_insert.read_temp(ident=ident)
-                print(f"ID vom insert={ident} temp={temp}")
-            else:
-                print("Onewire of insert did not respond")
-            self.onewire_insert.set_power(on=False)
 
         self.temperature_insert.enable_thermometrie(enable=False)
         self.heater.set_power(power=2 ** 15 - 1)

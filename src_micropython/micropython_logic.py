@@ -155,13 +155,6 @@ class TemperatureInsert:
         self.adc.set_channel(channel=attrs.SPI_CHANNEL)
         return self.adc.read_data_signed() * attrs.factor_adc_to_OHM()
 
-    # hw.adc.set_channel(ADS1219.CHANNEL_AIN2_AIN3) # carbon
-    # voltage_carbon = hw.adc.read_data_signed() * electronics.ADC24_FACTOR_CARBON
-    # hw.adc.set_channel(ADS1219.CHANNEL_AIN0_AIN1) # pt1000
-    # voltage_pt1000 = hw.adc.read_data_signed() * electronics.ADC24_FACTOR_PT1000
-    # print("voltage_carbon: %f V, voltage_pt1000: %f V" % (voltage_carbon, voltage_pt1000))
-    # print("resistance_carbon: %f Ohm, resistance_pt1000: %f Ohm" % (voltage_carbon/electronics.CURRENT_A_CARBON, voltage_pt1000/electronics.CURRENT_A_PT1000))
-
 
 class Heater:
     ADC_MAX = 2 ** 16 - 1

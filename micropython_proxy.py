@@ -82,25 +82,6 @@ class TemperatureInsert:
         assert isinstance(carbon, bool)
         return self.proxy.eval_as(float, f"proxy().temperature_insert.read_resistance_OHM(carbon={carbon})")
 
-    # hw.adc.set_channel(ADS1219.CHANNEL_AIN2_AIN3) # carbon
-    # voltage_carbon = hw.adc.read_data_signed() * electronics.ADC24_FACTOR_CARBON
-    # hw.adc.set_channel(ADS1219.CHANNEL_AIN0_AIN1) # pt1000
-    # voltage_pt1000 = hw.adc.read_data_signed() * electronics.ADC24_FACTOR_PT1000
-    # print("voltage_carbon: %f V, voltage_pt1000: %f V" % (voltage_carbon, voltage_pt1000))
-    # print("resistance_carbon: %f Ohm, resistance_pt1000: %f Ohm" % (voltage_carbon/electronics.CURRENT_A_CARBON, voltage_pt1000/electronics.CURRENT_A_PT1000))
-
-    # SHORT_CARB = Pin('X1', Pin.OUT_PP)
-    # SHORT_PT1000 = Pin('X2', Pin.OUT_PP)
-
-    # thermometrie_running = True
-    # if thermometrie_running:
-    #     SHORT_CARB.value(0)
-    #     SHORT_PT1000.value(0)
-    # else:
-    #     SHORT_CARB.value(1)
-    #     SHORT_PT1000.value(1)
-
-
 class Heater:
     def __init__(self, proxy):
         self._proxy = proxy

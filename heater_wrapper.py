@@ -24,7 +24,7 @@ logger = logging.getLogger("LabberDriver")
 DIRECTORY_OF_THIS_FILE = pathlib.Path(__file__).absolute().parent
 
 
-TEMPERATURE_SETTLE_K = -1
+TEMPERATURE_SETTLE_K = -1.0
 
 
 @dataclass
@@ -104,7 +104,7 @@ class HeaterWrapper:
         self.dict_values[Quantity.ControlWriteTemperatureToleranceBand] = 1.0
         self.dict_values[Quantity.ControlWriteSettleTime] = 10.0
         self.dict_values[Quantity.ControlWriteTimeoutTime] = 20.0
-        self.dict_values[Quantity.TemperatureReadonlyTemperatureCalibrated_K] = -1.0
+        self.dict_values[Quantity.TemperatureReadonlyTemperatureCalibrated_K] = TEMPERATURE_SETTLE_K
         self.dict_values[Quantity.StatusReadErrorCounter] = 0
         self.tick()
 
