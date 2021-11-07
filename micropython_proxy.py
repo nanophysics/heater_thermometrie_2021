@@ -82,6 +82,7 @@ class TemperatureInsert:
         assert isinstance(carbon, bool)
         return self.proxy.eval_as(float, f"proxy().temperature_insert.read_resistance_OHM(carbon={carbon})")
 
+
 class Heater:
     def __init__(self, proxy):
         self._proxy = proxy

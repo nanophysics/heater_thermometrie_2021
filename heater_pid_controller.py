@@ -107,7 +107,7 @@ class PidController:
         time_delta_s = time_now_s - self.time_last_s
         if time_delta_s <= 1e-09:
             logger.warning(f"Expected {time_delta_s:0.3f} to be bigger than zero. Skipped.")
-            return
+            return 0.0
         self.time_last_s = time_now_s
 
         time_delta_s = min(time_delta_s, config_app_time_delta_max_s)

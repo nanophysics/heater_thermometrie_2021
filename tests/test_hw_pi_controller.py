@@ -31,7 +31,8 @@ def test_controller(hwserial):
         |  CONTROLLED      |
         |  out of range    |
         |  errors 10       |
-    """)
+    """
+    )
 
     hw.let_time_fly(duration_s=10.0)
     hw.expect_display(
@@ -41,7 +42,8 @@ def test_controller(hwserial):
         |  CONTROLLED      |
         |  out of range    |
         |  errors 20       |
-    """)
+    """
+    )
 
     hw.let_time_fly(duration_s=100.0)
     hw.expect_display(
@@ -51,7 +53,9 @@ def test_controller(hwserial):
         |  CONTROLLED      |
         |  in range 73s    |
         |  errors 43       |
-    """)
+    """
+    )
+
 
 if __name__ == "__main__":
     test_controller(hwserial=micropython_proxy.HWSERIAL_SIMULATE)

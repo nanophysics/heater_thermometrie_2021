@@ -17,7 +17,6 @@ from heater_driver_utils import (
     EnumExpert,
     EnumThermometrie,
 )
-from heater_pid_controller import PidController
 
 logger = logging.getLogger("LabberDriver")
 
@@ -58,7 +57,6 @@ class HeaterWrapper:
     def __init__(self, hwserial, force_use_realtime_factor: float = None):
         self.dict_values = {}
         self.mpi = MicropythonInterface(hwserial, force_use_realtime_factor=force_use_realtime_factor)
-        self.controller = None
         self.tick_count = 0
 
         self.heater_2021_config = config_all.ConfigHeater2021.load_config(serial=self.mpi.heater_thermometrie_2021_serial)
@@ -164,8 +162,6 @@ class HeaterWrapper:
 
         self._tick_read_onewire()
 
-        self._tick_run_controller()
-
         # Run statemachine
         self.hsm_heater.assert_valid_state()
         self.hsm_heater.dispatch(heater_hsm.SIGNAL_TICK)
@@ -217,24 +213,6 @@ class HeaterWrapper:
             self.mpi.onewire_insert.scan(),
             insert_onewire_id_changed,
         )
-
-    def _tick_run_controller(self):
-        if self.controller is not None:
-            temperature_calibrated_K = self.dict_values[Quantity.TemperatureReadonlyTemperatureCalibrated_K]
-            self.controller.process(
-                time_now_s=self.mpi.timebase.now_s,
-                fSetpoint=self.dict_values[Quantity.ControlWriteTemperature],
-                fSensorValue=temperature_calibrated_K,
-                fLimitOutLow=0.0,
-                fLimitOutHigh=100.0,
-            )
-            power100 = self.controller.fOutputValueLimited
-            self.dict_values[Quantity.ControlWritePower100] = power100
-            power_dac = int(2 ** 16 * power100 / 100.0)
-            power_dac = max(0, min(2 ** 16 - 1, power_dac))
-            self.mpi.heater.set_power(power=power_dac)
-
-            logger.info(f"  setpoint={self.controller.fSetpoint:0.2f} K => power={self.controller.fOutputValueLimited:0.2f} % => temperature_calibrated_K={temperature_calibrated_K:0.2f}")
 
     def _tick_update_display(self):
         display = self.mpi.display
@@ -299,20 +277,6 @@ class HeaterWrapper:
         assert isinstance(quantity, Quantity)
         if quantity == Quantity.ControlWriteHeating:
             value_new = EnumHeating(value)
-
-            if value_new == EnumHeating.CONTROLLED:
-                setpoint_k = self.dict_values[Quantity.ControlWriteTemperature]
-                self.controller = PidController(
-                    "insert",
-                    time_now_s=self.mpi.timebase.now_s,
-                    fSetpoint=setpoint_k,
-                    fKi=0.04,
-                    fKp=0.1,
-                    fKd=0.0,
-                )
-            else:
-                self.controller = None
-
             self.hsm_heater.dispatch(heater_hsm.SignalHeating(value=value_new))
             return value
         if quantity == Quantity.ControlWriteExpert:
@@ -333,44 +297,19 @@ class HeaterWrapper:
             self.dict_values[quantity] = value_new
             return value
         if quantity == Quantity.ControlWriteTemperatureAndSettle:
-            # value_current = self.dict_values[Quantity.ControlWriteTemperature]
-            # if abs(value - value_current) < 1e-9:
-            #     logger.info(f"The same temperature {value:0.3f}K is requested. Settle time does not start again.")
-            #     return TEMPERATURE_SETTLE_K
-            # # The value changed. Restart the settle time!
             self.set_quantity(Quantity.ControlWriteTemperature, value)
-            # self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.MANUAL)
-            # self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
             return TEMPERATURE_SETTLE_K
 
-        # if quantity in (
-        #     Quantity.ControlWriteTemperature,
-        #     Quantity.ControlWriteTemperatureAndSettle,
-        # ):
-        #     if self.hsm_heater.is_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled):
-        #         value_diff = self.dict_values[Quantity.ControlWriteTemperature] - value
-        #         if abs(value_diff) < 1e-9:
-        #             logger.info(f"The same temperature {value:0.3f}K is requested. Settle time does not start again.")
-        #             return value
-
-        #         # The set temperature has changed. Force a reset of the settle time
-        #         self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.MANUAL)
-
-        #     # This is the same temperature
-        #     self.dict_values[Quantity.ControlWriteTemperature] = value
-        #     self.controller = PidController(
-        #         "insert",
-        #         time_now_s=self.mpi.timebase.now_s,
-        #         fSetpoint=value,
-        #         fKi=0.04,
-        #         fKp=0.1,
-        #         fKd=0.0,
-        #     )
-        #     self.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
-        #     return value
+        if quantity == Quantity.ControlWritePower100:
+            if not (0.0 <= value <= 100.0):
+                logger.warning(f"Expected power to be between 0 and 100, but got {value:0.3f}.")
+            power_dac = int(2 ** 16 * value / 100.0)
+            power_dac = max(0, min(2 ** 16 - 1, power_dac))
+            self.mpi.heater.set_power(power=power_dac)
+            self.dict_values[quantity] = value
+            return value
 
         if quantity in (
-            Quantity.ControlWritePower100,
             Quantity.ControlWriteTemperature,
             Quantity.TemperatureReadonlyTemperatureBox,
             Quantity.ControlWriteTemperatureToleranceBand,
@@ -391,10 +330,6 @@ class HeaterWrapper:
         if value_changed and func is not None:
             func(value)
         return value_changed
-
-    # def increment_error_counter(self):
-    #     error_counter = self.dict_values[Quantity.StatusReadErrorCounter]
-    #     self.dict_values[Quantity.StatusReadErrorCounter] = error_counter + 1
 
     @property
     def error_counter_assertion(self):

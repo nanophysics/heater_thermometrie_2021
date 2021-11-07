@@ -10,6 +10,7 @@ from heater_driver_utils import (
     Quantity,
 )
 import hsm
+from heater_pid_controller import PidController
 
 
 logger = logging.getLogger("LabberDriver")
@@ -81,6 +82,7 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         assert hw.__class__.__name__ == "HeaterWrapper"
         self._hw = hw
         self.error_counter = 0
+        self.controller = None
         self.last_outofrange_s = 0.0
         """
         Last time we have been outofrange
@@ -283,6 +285,22 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
           Quantity.ErrorCounter += 1
         - settled = time.now() > settle_time_start_s + Quantiy.SettleTime
         """
+        assert self.controller is not None
+
+        setpoint_k = self._hw.get_quantity(Quantity.ControlWriteTemperature)
+        temperature_calibrated_K = self._hw.get_quantity(Quantity.TemperatureReadonlyTemperatureCalibrated_K)
+
+        self.controller.process(
+            time_now_s=self.now_s,
+            fSetpoint=setpoint_k,
+            fSensorValue=temperature_calibrated_K,
+            fLimitOutLow=0.0,
+            fLimitOutHigh=100.0,
+        )
+        power100 = self.controller.fOutputValueLimited
+        self._hw.set_quantity(Quantity.ControlWritePower100, power100)
+
+        logger.debug(f"  setpoint={self.controller.fSetpoint:0.2f} K => calibrated_K={temperature_calibrated_K:0.2f} K => power={self.controller.fOutputValueLimited:0.2f} %")
 
     def entry_connected_thermon_heatingcontrolled(self, signal) -> None:
         """
@@ -290,6 +308,18 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         settle_time_start_s = time.now()
         """
         self.error_counter = 0
+        setpoint_k = self._hw.get_quantity(Quantity.ControlWriteTemperature)
+        self.controller = PidController(
+            "insert",
+            time_now_s=self.now_s,
+            fSetpoint=setpoint_k,
+            fKi=0.04,
+            fKp=0.1,
+            fKd=0.0,
+        )
+
+    def exit_connected_thermon_heatingcontrolled(self, signal) -> None:
+        self.controller = None
 
     def state_connected_thermon_defrost(self, signal) -> None:
         """
