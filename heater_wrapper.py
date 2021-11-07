@@ -97,6 +97,7 @@ class HeaterWrapper:
             logger.warning(f"Expected onewire_id of heater '{id_box_expected}' but got '{id_box}")
 
         # Read all initial values from the pyboard
+        self.dict_values[Quantity.ControlWriteThermometrie] = EnumThermometrie.OFF
         self.dict_values[Quantity.ControlWriteHeating] = EnumHeating.OFF
         self.dict_values[Quantity.ControlWriteTemperature] = 0.0
         self.dict_values[Quantity.ControlWriteTemperatureToleranceBand] = 1.0
@@ -191,9 +192,9 @@ class HeaterWrapper:
         self.dict_values[Quantity.TemperatureReadonlyTemperaturePT1000_K] = calibration.pt1000_K
         self.dict_values[Quantity.TemperatureReadonlyTemperatureCalibrated_K] = calibration.calibrated_K
 
-        def defrost_switch_changed(on: str) -> str:
-            self.hsm_heater.dispatch(heater_hsm.SignalDefrostSwitchChanged(on=on))
-            return on
+        def defrost_switch_changed(defrost_on: str) -> str:
+            self.hsm_heater.dispatch(heater_hsm.SignalDefrostSwitchChanged(defrost_on=defrost_on))
+            return defrost_on
 
         self._set_value(
             Quantity.StatusReadDefrostSwitchOnBox,
@@ -248,18 +249,16 @@ class HeaterWrapper:
 
     def get_quantity(self, quantity: Quantity):
         assert isinstance(quantity, Quantity)
-        if quantity == Quantity.ControlWriteThermometrie:
-            return self.hsm_heater.get_labber_thermometrie
+        # if quantity == Quantity.ControlWriteThermometrie:
+        #     return self.hsm_heater.get_labber_thermometrie
         if quantity == Quantity.StatusReadInsertConnected:
             return self.hsm_heater.get_labber_insert_connected
         if quantity == Quantity.StatusReadSettled:
             return self.hsm_heater.is_settled()
         if quantity == Quantity.StatusReadErrorCounter:
             return self.hsm_heater.error_counter
-
         if quantity == Quantity.ControlWriteTemperatureAndSettle:
             return TEMPERATURE_SETTLE_K
-
         try:
             return self.dict_values[quantity]
         except KeyError as e:
@@ -277,7 +276,8 @@ class HeaterWrapper:
         assert isinstance(quantity, Quantity)
         if quantity == Quantity.ControlWriteHeating:
             value_new = EnumHeating(value)
-            self.hsm_heater.dispatch(heater_hsm.SignalHeating(value=value_new))
+            # self.hsm_heater.dispatch(heater_hsm.SignalHeating(value=value_new))
+            self.dict_values[quantity] = value_new
             return value
         if quantity == Quantity.ControlWriteExpert:
             value_new = EnumExpert(value)
@@ -290,7 +290,8 @@ class HeaterWrapper:
             return value
         if quantity == Quantity.ControlWriteThermometrie:
             value_new = EnumThermometrie(value)
-            self.hsm_heater.dispatch(heater_hsm.SignalThermometrie(value=value_new))
+            # self.hsm_heater.dispatch(heater_hsm.SignalThermometrie(value=value_new))
+            self.dict_values[quantity] = value_new
             return value
         if quantity == Quantity.ControlWriteGreenLED:
             value_new = bool(value)
@@ -345,3 +346,6 @@ class HeaterWrapper:
         self._tick_update_display()
         lines = self.mpi.display.sim_get
         AssertDisplay.assert_equal(lines=lines, readable_expected=readable_expected)
+
+    def sim_reset_error_counter(self):
+        self.hsm_heater.sim_reset_error_counter()

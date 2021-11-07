@@ -9,6 +9,10 @@ class QuantityNotFoundException(Exception):
 
 
 class EnumMixin:
+    def eq(self, other):
+        assert isinstance(other, type(self))
+        return self == other
+
     @classmethod
     def all_text(cls):
         return ", ".join(sorted([f'"{d.name}"' for d in cls]))

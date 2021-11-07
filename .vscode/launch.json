@@ -37,7 +37,7 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Pytest without thread-slow",
+            "name": "Pytest fast (not thread_slow)",
             "type": "python",
             "request": "launch",
             "module": "pytest",
@@ -142,6 +142,19 @@
             "request": "launch",
             "justMyCode": true,
             "program": "${workspaceFolder}/tests/test_ht_therm_controlled.py",
+            "cwd": "${workspaceFolder}",
+            "args": [],
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "Python: test_statemachine.py",
+            "type": "python",
+            "request": "launch",
+            "justMyCode": true,
+            "program": "${workspaceFolder}/tests/test_statemachine.py",
             "cwd": "${workspaceFolder}",
             "args": [],
             "console": "integratedTerminal",

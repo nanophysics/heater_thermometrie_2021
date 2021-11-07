@@ -29,41 +29,49 @@ def test_heater_thread_run_200s(hwserial):
 
 
 @pytest.mark.parametrize("hwserial", TEST_HW_SIMULATE)
-def test_heater_thread(hwserial, force_use_realtime_factor=10.0):
+def test_heater_thread(hwserial):
     logging.basicConfig()
     logger.setLevel(logging.INFO)
 
-    ht = heater_thread.HeaterThread(hwserial=hwserial)
+    ht = heater_thread.HeaterThread(hwserial=hwserial, force_use_realtime_factor=10.0)
     ht._hw.sleep(1.5)
-    ht.signal(heater_hsm.SignalDefrostSwitchChanged(on=False))
+    ht.signal(heater_hsm.SignalDefrostSwitchChanged(defrost_on=False))
+    ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermoff)
+    ht._hw.set_quantity(Quantity.ControlWriteThermometrie, EnumThermometrie.ON)
+    ht._hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.OFF)
+    ht._hw.sleep(5.0)
     ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingoff)
 
-    ht.set_quantity(Quantity.ControlWriteThermometrie, EnumThermometrie.ON)
-    ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermon)
-
     ht.set_quantity(Quantity.ControlWriteHeating, EnumHeating.MANUAL)
+    ht._hw.sleep(5.0)
     ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingmanual)
 
     ht.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
+    ht._hw.sleep(5.0)
     ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled)
 
     ht.set_quantity(Quantity.ControlWriteThermometrie, EnumThermometrie.OFF)
+    ht._hw.sleep(5.0)
     ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermoff)
 
-    ht.signal(heater_hsm.SignalDefrostSwitchChanged(on=True))
+    ht.signal(heater_hsm.SignalDefrostSwitchChanged(defrost_on=True))
+    ht._hw.sleep(5.0)
     ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_defrost)
 
     ht.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
+    ht._hw.sleep(5.0)
     ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_defrost)
 
     ht.signal(heater_hsm.SignalInsertSerialChanged(onewire_id=ONEWIRE_ID_INSERT_NOT_CONNECTED))
+    ht._hw.sleep(5.0)
     ht.expect_state(heater_hsm.HeaterHsm.state_disconnected)
 
     ht.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
+    ht._hw.sleep(5.0)
     ht.expect_state(heater_hsm.HeaterHsm.state_disconnected)
 
-    logger.info("Now sleeping for 200.0s")
-    ht._hw.sleep(200.0)
+    # logger.info("Now sleeping for 200.0s")
+    # ht._hw.sleep(200.0)
     ht.stop()
 
 
@@ -75,7 +83,7 @@ def test_control_and_settle(hwserial):
     Verify that timeout time starts from 0
     """
     logging.basicConfig()
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     ht = heater_thread.HeaterThread(hwserial=hwserial, force_use_realtime_factor=10.0)
     ht.set_quantity(Quantity.ControlWriteTemperature, TEMPERATURE_SET40_K)
@@ -83,9 +91,10 @@ def test_control_and_settle(hwserial):
     ht.set_quantity(Quantity.ControlWriteSettleTime, SETTLE_TIME_S)
     ht.set_quantity(Quantity.ControlWriteTimeoutTime, TIMEOUT_TIME_S)
     ht._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=40.5)
-
+    ht.set_quantity(Quantity.ControlWriteThermometrie, EnumThermometrie.ON)
     ht.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
     ht._hw.let_time_fly(duration_s=1.0)
+    ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled)
 
     before_s = ht._hw.time_now_s
     ht.set_value(
@@ -139,4 +148,4 @@ def test_control_and_settle(hwserial):
 
 if __name__ == "__main__":
     test_control_and_settle(hwserial=micropython_proxy.HWSERIAL_SIMULATE)
-    # test_heater_thread(hwserial=micropython_proxy.HWSERIAL_SIMULATE)
+    test_heater_thread(hwserial=micropython_proxy.HWSERIAL_SIMULATE)

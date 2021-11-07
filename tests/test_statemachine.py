@@ -18,16 +18,21 @@ def test_statemachine(hwserial):
     logger.setLevel(logging.INFO)
 
     hw = heater_wrapper.HeaterWrapper(hwserial=hwserial)
-    hw.signal(heater_hsm.SignalDefrostSwitchChanged(on=False))
-    hw.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingoff)
+    hw.expect_state(heater_hsm.HeaterHsm.state_connected_thermoff)
+    hw.signal(heater_hsm.SignalDefrostSwitchChanged(defrost_on=False))
+    hw.let_time_fly(duration_s=5.0)
+    hw.expect_state(heater_hsm.HeaterHsm.state_connected_thermoff)
 
     hw.set_quantity(Quantity.ControlWriteThermometrie, EnumThermometrie.ON)
-    hw.expect_state(heater_hsm.HeaterHsm.state_connected_thermon)
+    hw.let_time_fly(duration_s=5.0)
+    hw.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingoff)
 
     hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.MANUAL)
+    hw.let_time_fly(duration_s=5.0)
     hw.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingmanual)
 
     hw.set_quantity(Quantity.ControlWriteThermometrie, EnumThermometrie.OFF)
+    hw.let_time_fly(duration_s=5.0)
     hw.expect_state(heater_hsm.HeaterHsm.state_connected_thermoff)
 
 

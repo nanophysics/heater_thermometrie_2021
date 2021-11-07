@@ -23,33 +23,11 @@ class SignalTick:
 
 @dataclass
 class SignalDefrostSwitchChanged:
-    on: bool = None
+    defrost_on: bool = None
 
-    def __init__(self, on: bool) -> None:
-        assert isinstance(on, bool)
-        self.on = on
-
-
-@dataclass
-class SignalThermometrie:
-    value: EnumThermometrie = None
-
-    def __init__(self, value: EnumThermometrie) -> None:
-        assert isinstance(value, EnumThermometrie)
-        self.value = value
-
-    @property
-    def on(self):
-        return self.value.on
-
-
-@dataclass
-class SignalHeating:
-    value: EnumHeating = None
-
-    def __init__(self, value: EnumHeating) -> None:
-        assert isinstance(value, EnumHeating)
-        self.value = value
+    def __init__(self, defrost_on: bool) -> None:
+        assert isinstance(defrost_on, bool)
+        self.defrost_on = defrost_on
 
 
 @dataclass
@@ -83,7 +61,7 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         self._hw = hw
         self.error_counter = 0
         self.controller = None
-        self.last_outofrange_s = 0.0
+        self.last_outofrange_s = self.now_s
         """
         Last time we have been outofrange
         """
@@ -91,6 +69,9 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         """
         During ControlWriteTemperatureAndSettle this flag is set.
         """
+
+    def sim_reset_error_counter(self):
+        self.error_counter = 0
 
     def wait_temperature_and_settle_start(self):
         self.during_wait_temperature_and_settle = True
@@ -108,11 +89,6 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         list_non_states = (HeaterHsm.state_connected, HeaterHsm.state_connected_thermon)
         if actual_meth in list_non_states:
             raise Exception(f"Entering non state '{actual_meth.__name__}'!")
-
-    @property
-    def get_labber_thermometrie(self):
-        on = self._state_actual.startswith("connected_thermon")
-        return EnumThermometrie.get_labber(on)
 
     @property
     def get_labber_insert_connected(self) -> str:
@@ -136,20 +112,17 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
     def is_settled(self):
         return self.duration_inrange_s() >= self._hw.get_quantity(Quantity.ControlWriteSettleTime)
 
-    def get_heating_state(self, heating: EnumHeating):
+    def get_heating_state(self, heating: EnumHeating = None):
+        if heating is None:
+            heating = self._hw.get_quantity(Quantity.ControlWriteHeating)
         assert isinstance(heating, EnumHeating)
-        if heating == EnumHeating.OFF:
+        if heating.eq(EnumHeating.OFF):
             return self.state_connected_thermon_heatingoff
-        if heating == EnumHeating.MANUAL:
+        if heating.eq(EnumHeating.MANUAL):
             return self.state_connected_thermon_heatingmanual
-        if heating == EnumHeating.CONTROLLED:
+        if heating.eq(EnumHeating.CONTROLLED):
             return self.state_connected_thermon_heatingcontrolled
         raise AttributeError(f"Case {heating} not handled.")
-
-    # def temperature_settled(self) -> bool:
-    #     # TODO: Remove method
-    #     self.expect_state(expected_meth=HeaterHsm.state_connected_thermon_heatingcontrolled)
-    #     return self.settled # or self.timeout
 
     def state_disconnected(self, signal) -> None:
         """
@@ -158,7 +131,7 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         """
         if isinstance(signal, SignalInsertSerialChanged):
             if signal.is_connected:
-                raise hsm.StateChangeException(self.get_heating_state(heating=self._hw.get_quantity(Quantity.ControlWriteHeating)))
+                raise hsm.StateChangeException(self.state_connected_thermoff)
         raise hsm.DontChangeStateException()
 
     def state_connected(self, signal) -> None:
@@ -175,15 +148,10 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
             if signal.serial == ONEWIRE_ID_INSERT_NOT_CONNECTED:
                 raise hsm.StateChangeException(self.state_disconnected)
 
-        if isinstance(signal, SignalThermometrie):
-            if signal.on:
-                raise hsm.StateChangeException(self.state_connected_thermon_heatingoff)
         if isinstance(signal, SignalDefrostSwitchChanged):
-            if signal.on:
+            if signal.defrost_on:
                 raise hsm.StateChangeException(self.state_connected_thermon_defrost)
             raise hsm.DontChangeStateException()
-        if isinstance(signal, SignalHeating):
-            raise hsm.StateChangeException(self.get_heating_state(signal.value))
 
         if isinstance(signal, SignalTick):
             raise hsm.DontChangeStateException()
@@ -195,6 +163,9 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
 
         A insert disconnect is NOT detected in this state.
         """
+        thermometrie = self._hw.get_quantity(Quantity.ControlWriteThermometrie)
+        if thermometrie.eq(EnumThermometrie.ON):
+            raise hsm.StateChangeException(self.get_heating_state())
 
     def entry_connected_thermoff(self, signal) -> None:
         """
@@ -217,34 +188,18 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         - Read temperature_insert.get_voltage(carbon=False)
         - Calibration table -> temperature
         """
-        if isinstance(signal, SignalThermometrie):
-            if not signal.on:
-                raise hsm.StateChangeException(self.state_connected_thermoff)
+        thermometrie = self._hw.get_quantity(Quantity.ControlWriteThermometrie)
+        if thermometrie.eq(EnumThermometrie.OFF):
+            raise hsm.StateChangeException(self.state_connected_thermoff)
 
         in_range = self.is_inrange()
         if not in_range:
             self.last_outofrange_s = self.now_s
             self.error_counter += 1
 
-        # SETTLED or TIMEOUT
-        # if self.settled or self.timeout:
-        # if self.timeout:
-        #     if not in_range:
-        #         self._hw.increment_error_counter()
-        #     return
-
-        # # Settling
-        # # During settling, the error counter will never be incremented!
-        # assert (not self.settled) and (not self.timeout)
-        # if in_range:
-        #     assert isinstance(self.settled_duration_s, float)
-        #     if self.settled_duration_s > self._hw.get_quantity(Quantity.ControlWriteSettleTime):
-        #         # During the settle time, the error counter should not be incremented
-        #         self.settled = True
-        #     return
-        # # if now_s > self.time_start_s + self._hw.get_quantity(Quantity.ControlWriteTimeoutTime):
-        # #     self._hw.increment_error_counter()
-        # #     self.timeout = True
+        new_heating_state = self.get_heating_state()
+        if not self.is_state(new_heating_state):
+            raise hsm.StateChangeException(new_heating_state)
 
     def entry_connected_thermon(self, signal) -> None:
         """
@@ -252,7 +207,9 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         Load calibration tables for this insert.
         temperature_insert.enable_thermometrie(True)
         """
-        self._hw.mpi.temperature_insert.enable_thermometrie(enable=False)
+        self._hw.mpi.temperature_insert.enable_thermometrie(enable=True)
+        self.last_outofrange_s = self.now_s
+        self.error_counter = 0
 
     def state_connected_thermon_heatingoff(self, signal) -> None:
         """
@@ -318,7 +275,7 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
             fKd=0.0,
         )
 
-    def exit_connected_thermon_heatingcontrolled(self, signal) -> None:
+    def exit_connected_thermon_heatingcontrolled(self) -> None:
         self.controller = None
 
     def state_connected_thermon_defrost(self, signal) -> None:
@@ -332,7 +289,7 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         - disconnect the tail
         """
         if isinstance(signal, SignalDefrostSwitchChanged):
-            if not signal.on:
+            if not signal.defrost_on:
                 # Let a outer state take control
                 return
         if isinstance(signal, SignalInsertSerialChanged):

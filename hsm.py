@@ -46,10 +46,11 @@ class Statemachine:
         self.func_log_main = log_main
         self.func_log_sub = log_sub
         self.func_state_change = log_state_change
-        self._state_actual = NOT_INITIALIZED_YET
+        self._state_actual: str = NOT_INITIALIZED_YET
 
     @property
-    def state(self):
+    def state(self) -> str:
+        assert isinstance(self._state_actual, str)
         return self._state_actual
 
     def actual_meth(self):
@@ -58,6 +59,8 @@ class Statemachine:
         return meth
 
     def is_state(self, expected_meth):
+        if inspect.ismethod(expected_meth):
+            expected_meth = expected_meth.__func__
         assert isinstance(expected_meth, types.FunctionType)
         return expected_meth == self.actual_meth()
 
