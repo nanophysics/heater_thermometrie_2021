@@ -24,7 +24,9 @@ TICK_INTERVAL_S = 1.0
 
 
 class Timebase:
-    def __init__(self, realtime_factor: float = 1.0):
+    def __init__(self, realtime_factor: float = None):
+        if realtime_factor is None:
+            realtime_factor = 1.0
         assert isinstance(realtime_factor, float)
         self._realtime_factor = realtime_factor
 

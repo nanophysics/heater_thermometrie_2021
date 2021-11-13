@@ -145,8 +145,9 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         if isinstance(signal, SignalInsertSerialChanged):
             if not signal.is_connected:
                 raise hsm.StateChangeException(self.state_disconnected)
-            if signal.serial == ONEWIRE_ID_INSERT_NOT_CONNECTED:
+            if signal.onewire_id == ONEWIRE_ID_INSERT_NOT_CONNECTED:
                 raise hsm.StateChangeException(self.state_disconnected)
+            raise hsm.DontChangeStateException()
 
         if isinstance(signal, SignalDefrostSwitchChanged):
             if signal.defrost_on:
@@ -172,7 +173,7 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         heater.set_power(0)
         temperature_insert.enable_thermometrie(False)
         """
-        self._hw.mpi.heater.set_power(power=False)
+        self._hw.mpi.heater.set_power(power=0)
         self._hw.mpi.temperature_insert.enable_thermometrie(enable=False)
 
     def state_connected_thermon(self, signal) -> None:

@@ -88,6 +88,7 @@ class Heater:
         self._proxy = proxy
 
     def set_power(self, power: int) -> None:
+        assert not isinstance(power, bool)
         assert isinstance(power, int)
         assert 0 <= power < 2 ** 16
         return self._proxy.eval_as(str, f"proxy().heater.set_power(power={power})")
