@@ -10,14 +10,11 @@ CMD_CONVERT = const(0x44)
 CMD_RDSCRATCH = const(0xBE)
 CMD_WRSCRATCH = const(0x4E)
 CMD_RDPOWER = const(0xB4)
-PULLUP_ON = const(1)
-PULLUP_OFF = const(0)
 
 CMD_SEARCHROM = const(0xF0)
 CMD_READROM = const(0x33)
 CMD_MATCHROM = const(0x55)
 CMD_SKIPROM = const(0xCC)
-# PULLUP_ON = const(1)
 
 
 class DS18X20:
@@ -25,39 +22,19 @@ class DS18X20:
         self.ow = onewire
         self.buf = bytearray(9)
         self.config = bytearray(3)
-        self.power = 1  # strong power supply by default
-        self.powerpin = None
-
-    def powermode(self, powerpin=None):
-        if self.powerpin is not None:  # deassert strong pull-up
-            self.powerpin(PULLUP_OFF)
-        self.ow.writebyte(CMD_SKIPROM)
-        self.ow.writebyte(CMD_RDPOWER)
-        self.power = self.ow.readbit()
-        if powerpin is not None:
-            assert isinstance(powerpin, Pin)
-            self.powerpin = powerpin
-            self.powerpin.init(mode=Pin.OUT, value=0)
-        return self.power
 
     def scan(self):
-        if self.powerpin is not None:  # deassert strong pull-up
-            self.powerpin(PULLUP_OFF)
         return [rom for rom in self.ow.scan() if rom[0] in (0x10, 0x22, 0x28)]
 
     def convert_temp(self, rom=None):
-        if self.powerpin is not None:  # deassert strong pull-up
-            self.powerpin(PULLUP_OFF)
         self.ow.reset()
         if rom is None:
             self.ow.writebyte(CMD_SKIPROM)
         else:
             self.ow.select_rom(rom)
-        self.ow.writebyte(CMD_CONVERT)  # , self.powerpin)
+        self.ow.writebyte(CMD_CONVERT)
 
     def read_scratch(self, rom):
-        if self.powerpin is not None:  # deassert strong pull-up
-            self.powerpin(PULLUP_OFF)
         self.ow.reset()
         self.ow.select_rom(rom)
         self.ow.writebyte(CMD_RDSCRATCH)
@@ -66,8 +43,6 @@ class DS18X20:
         return self.buf
 
     def write_scratch(self, rom, buf):
-        if self.powerpin is not None:  # deassert strong pull-up
-            self.powerpin(PULLUP_OFF)
         self.ow.reset()
         self.ow.select_rom(rom)
         self.ow.writebyte(CMD_WRSCRATCH)

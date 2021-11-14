@@ -8,7 +8,7 @@
 OneWire library for MicroPython
 """
 
-import time
+from time import sleep_us
 import machine  # pylint: disable=import-error
 
 
@@ -32,7 +32,6 @@ class OneWire:
         Perform the onewire reset function.
         Returns True if a device asserted a presence pulse, False otherwise.
         """
-        sleep_us = time.sleep_us  # pylint: disable=no-member
         pin = self.pin
 
         pin(0)
@@ -47,7 +46,6 @@ class OneWire:
         return status
 
     def readbit(self):
-        sleep_us = time.sleep_us  # pylint: disable=no-member
         pin = self.pin
 
         pin(1)  # half of the devices don't match CRC without this line
@@ -78,7 +76,6 @@ class OneWire:
             buf[i] = self.readbyte()
 
     def writebit(self, value, powerpin=None):
-        sleep_us = time.sleep_us  # pylint: disable=no-member
         pin = self.pin
 
         i = self.disable_irq()

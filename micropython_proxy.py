@@ -34,7 +34,7 @@ class DisplayProxy:
         self.lines = ["" for line in range(self.LINES)]
 
     def show_lines(self):
-        self.proxy.eval_as_none(f"proxy().display.show_lines({self.lines})")
+        self.proxy.eval_as_none(f"proxy.display.show_lines({self.lines})")
 
     def line(self, line: int, text: str):
         assert isinstance(line, int)
@@ -48,7 +48,7 @@ class DisplayProxy:
 
 
 class OnewireBox:
-    def __init__(self, proxy, name="proxy().onewire_box"):
+    def __init__(self, proxy, name="proxy.onewire_box"):
         self._name = name
         self._proxy = proxy
 
@@ -67,7 +67,7 @@ class OnewireBox:
 
 class OnewireInsert(OnewireBox):
     def __init__(self, proxy):
-        super().__init__(proxy=proxy, name="proxy().onewire_insert")
+        super().__init__(proxy=proxy, name="proxy.onewire_insert")
 
 
 class TemperatureInsert:
@@ -76,11 +76,11 @@ class TemperatureInsert:
 
     def enable_thermometrie(self, enable: bool) -> None:
         assert isinstance(enable, bool)
-        return self.proxy.eval_as_none(f"proxy().temperature_insert.enable_thermometrie(enable={enable})")
+        return self.proxy.eval_as_none(f"proxy.temperature_insert.enable_thermometrie(enable={enable})")
 
     def read_resistance_OHM(self, carbon=True) -> float:
         assert isinstance(carbon, bool)
-        return self.proxy.eval_as(float, f"proxy().temperature_insert.read_resistance_OHM(carbon={carbon})")
+        return self.proxy.eval_as(float, f"proxy.temperature_insert.read_resistance_OHM(carbon={carbon})")
 
 
 class Heater:
@@ -91,7 +91,7 @@ class Heater:
         assert not isinstance(power, bool)
         assert isinstance(power, int)
         assert 0 <= power < 2 ** 16
-        return self._proxy.eval_as(str, f"proxy().heater.set_power(power={power})")
+        return self._proxy.eval_as(str, f"proxy.heater.set_power(power={power})")
 
 
 class DefrostSwitch:
@@ -99,7 +99,7 @@ class DefrostSwitch:
         self._proxy = proxy
 
     def is_on(self) -> bool:
-        return self._proxy.eval_as(bool, "proxy().get_defrost()")
+        return self._proxy.eval_as(bool, "proxy.get_defrost()")
 
 
 class MicropythonProxy:
@@ -109,15 +109,7 @@ class MicropythonProxy:
         # Start the program
         self.fe.exec("import main")
         self.fe.exec("proxy = main.proxy")
-        # self.fe.exec("import micropython_logic")
-        # self.fe.exec("proxy = micropython_logic.Proxy()")
-
-        # hw.DS18_PWR
-        # One wire in heater
-
-        # One wire on insert
-        # ow = OneWire(Pin('X4'))
-        # temp_insert = DS18X20(ow)
+        self.fe.exec("main.enter_driver_mode()")
 
     def eval_as(self, type_expected, cmd, accept_none=False):
         assert isinstance(cmd, str)

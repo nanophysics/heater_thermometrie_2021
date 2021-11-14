@@ -5,7 +5,7 @@ import time
 
 # import errno
 import ubinascii
-from machine import Pin, I2C
+from machine import Pin, I2C, WDT
 
 from onewire import OneWire
 from ds18x20 import DS18X20
@@ -69,7 +69,7 @@ class OnewireBox:
     def read_temp(self, ident):
         rom = ubinascii.unhexlify(ident)
         self._dx18x20.resolution(rom=rom, bits=12)
-        self._dx18x20.convert_temp()
+        self._dx18x20.convert_temp(rom=rom)
         # conversion takes up to 750ms
         time.sleep(0.8)
         return self._dx18x20.read_temp(rom)
@@ -88,24 +88,20 @@ class OnewireInsert(OnewireBox):
         self._set_power(on=False)
 
     def _set_power(self, on):
-        # TODO(peter): Ist power on/off korrekt?
         isinstance(on, bool)
         self.DS18_PWR.value(on)
         self.DS18_SHORT.value(not on)
-        # if on:
-        #     # pin to power DA18 during conversion
-        #     Pin('X3', Pin.IN)
-        #     return
-        # pin_power = Pin('X3', Pin.OUT_PP)
-        # pin_power.value(True)
 
     def scan(self):
         self._set_power(on=True)
         # Empirical value: 100us works, so 1ms might be safe
-        time.sleep(0.001)
-        rc = OnewireBox.scan(self)
+        # Usuing 0.001s, sometimes the id could not be read
+        # Using 0.01s this negative effect has gone.
+        # time.sleep(0.001)
+        time.sleep(0.005)
+        onewire_id = OnewireBox.scan(self)
         self._set_power(on=False)
-        return rc
+        return onewire_id
 
     def read_temp(self, ident):
         self._set_power(on=True)
@@ -221,7 +217,13 @@ class Display:
 
 
 class Proxy:
+    ACTIVATE_WATCHDOG = False
+    WATCHDOG_TIMEOUT_MS = 60000
+
     def __init__(self):
+        self._wdt = None
+        if Proxy.ACTIVATE_WATCHDOG:
+            self._wdt = WDT(timeout=Proxy.WATCHDOG_TIMEOUT_MS)
         self.defrost = Pin(PIN_DEFROST, Pin.IN)
         # >>> i2c.scan()
         # [60]
@@ -240,8 +242,10 @@ class Proxy:
         self.heater = Heater(i2c=i2c_AD_DA)
         self.defrost_process = DefrostProcess(self)
 
-    def get_defrost(self):
-        return not self.defrost()
+    def wdt_feed(self):
+        if self._wdt:
+            self._wdt.feed()
 
-    def tick(self):
-        self.defrost_process.tick()
+    def get_defrost(self):
+        self.wdt_feed()
+        return not self.defrost()

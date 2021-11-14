@@ -92,3 +92,15 @@ ControlWriteTemperatureAndSettle is always set by the labber driver to -1K.
 Setting ControlWriteTemperatureAndSettle will set ControlWriteTemperature.
 Setting ControlWriteTemperatureAndSettle will reset error counter to 0.
 Settrig ControlWriteTemperatureAndSettle will prevent counting errors till the command returns.
+
+# Micropython standalone
+
+Micropython starts in standalone mode:
+The watchdog is initialized.
+A timer will call `main.defrost_tick()` every second.
+Every tick will reset the wathdog.
+
+When the driver starts, it will call `main.enter_driver_mode` which stopps the timer.
+`proxy.get_defrost()` will reset the watchdog.
+When the driver is stopped, the watchdog will fire and we are back in standalone mode.
+
