@@ -4,3 +4,4 @@ calib_*_out.txt
 Values-*.txt
 calibration_correction/**/calib_raw_*
 calibration_raw/
+heater_driver_labber.log

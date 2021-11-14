@@ -1,165 +1,98 @@
 #
-# Compact_2012
+# heater_thermometrie_2021
 #
-# This file contains production-data of all Compact2012 which where produced.
+# This file contains production-data of all heater_thermometrie_2021 which where produced.
 #
-SERIAL_UNDEFINED = "SERIAL_UNDEFINED"
-dict_compact2012 = {}
+import logging
+
+logger = logging.getLogger("LabberDriver")
+
+SERIAL_UNDEFINED = "UNDEFINED"
+ONEWIRE_ID_HEATER_UNDEFINED = "UNDEFINED"
+ONEWIRE_ID_INSERT_UNDEFINED = "UNDEFINED"
+ONEWIRE_ID_INSERT_NOT_CONNECTED = "NOT_CONNECTED"
+dict_heater2021 = {}
+dict_insert = {}
 
 
-class ConfigCompact2012:
-    def __init__(self, HWSERIAL, HARDWARE_VERSION, COMMENT):
-        dict_compact2012[HWSERIAL] = self
+class ConfigHeater2021:
+    def __init__(self, HWSERIAL, HARDWARE_VERSION, COMMENT, ONEWIRE_ID_HEATER):
+        dict_heater2021[HWSERIAL] = self
         self.HWSERIAL = HWSERIAL
         self.HARDWARE_VERSION = HARDWARE_VERSION
         self.COMMENT = COMMENT
+        self.ONEWIRE_ID_HEATER = ONEWIRE_ID_HEATER
 
     def __repr__(self):
-        return f'serial "{self.HWSERIAL}" with Hardware "{self.HARDWARE_VERSION}". {self.COMMENT}'
+        return f"{self.HWSERIAL}, hardware version {self.HARDWARE_VERSION}, {self.COMMENT}"
+
+    @staticmethod
+    def load_config(serial: str) -> dict:
+        try:
+            return dict_heater2021[serial]
+        except KeyError:
+            logger.warning(f'The connected "compact_2012" has serial "{serial}". However, this serial in unknown!')
+            serials_defined = sorted(dict_heater2021.keys())
+            serials_defined.remove(SERIAL_UNDEFINED)
+            logger.warning(f'"config_all.py" lists these serials: {",".join(serials_defined)}')
+            return dict_heater2021[SERIAL_UNDEFINED]
 
 
-ConfigCompact2012(SERIAL_UNDEFINED, HARDWARE_VERSION="2019", COMMENT="Serial not defined, hardware unknown! Assuming a bare micropython board.")
+class ConfigInsert:
+    def __init__(self, ONEWIRE_ID, HWSERIAL, COMMENT):
+        dict_insert[ONEWIRE_ID] = self
+        self.ONEWIRE_ID = ONEWIRE_ID
+        self.HWSERIAL = HWSERIAL
+        self.COMMENT = COMMENT
 
-ConfigCompact2012("20190606_01", HARDWARE_VERSION="2019", COMMENT="Prototype for the Compact_2012 series of 2019")
+    def __repr__(self):
+        return f"{self.HWSERIAL}, onewireid {self.ONEWIRE_ID}, {self.COMMENT}"
 
-ConfigCompact2012("20191217_09", HARDWARE_VERSION="2020", COMMENT="compact_2012_da_simplebox fuer Hansjuerg Schmutz")
+    @property
+    def __name__(self):
+        "pytest test name"
+        return self.HWSERIAL
 
-ConfigCompact2012(
-    "20190606_02",
-    HARDWARE_VERSION="2020",
-    COMMENT="compact_2012_da"
-    # HV_amplifier = Unknown
-    # Resolution_dac_12 = True
-    # extension_left = 'empty'
-    # extension_right = 'empty'
+    @staticmethod
+    def load_config(onewire_id: str) -> dict:
+        try:
+            return dict_insert[onewire_id]
+        except KeyError:
+            logger.warning(f'The connected "insert" has a onewire serial "{onewire_id}". However, this serial in unknown!')
+            ids_defined = sorted(dict_insert.keys())
+            ids_defined.remove(ONEWIRE_ID_INSERT_UNDEFINED)
+            logger.warning(f'"config_all.py" lists these ids for inserts: {",".join(ids_defined)}')
+            return dict_insert[ONEWIRE_ID_INSERT_UNDEFINED]
+
+
+ConfigHeater2021(
+    SERIAL_UNDEFINED,
+    HARDWARE_VERSION="2021",
+    COMMENT="Serial not defined, hardware unknown! Assuming a bare micropython board.",
+    ONEWIRE_ID_HEATER=ONEWIRE_ID_HEATER_UNDEFINED,
 )
 
-ConfigCompact2012(
-    "20200918_71",
-    HARDWARE_VERSION="2020",
-    COMMENT="compact_2012_da, kein calib step, da_out -10V etwas grosse steps"
-    # HV_amplifier = True
-    # Resolution_dac_12 = True
-    # extension_left = 'empty'
-    # extension_right = 'empty'
+ConfigHeater2021(
+    "20210601_01",
+    HARDWARE_VERSION="2021",
+    COMMENT="Prototype 2021",
+    ONEWIRE_ID_HEATER="28e3212e0d00002e",
 )
 
-ConfigCompact2012(
-    "20200918_72",
-    HARDWARE_VERSION="2020",
-    COMMENT="compact_2012_da, gut, wenig flicker"
-    # HV_amplifier = True
-    # Resolution_dac_12 = True
-    # extension_left = 'empty'
-    # extension_right = 'empty'
+ConfigInsert(
+    ONEWIRE_ID=ONEWIRE_ID_INSERT_NOT_CONNECTED,
+    HWSERIAL="unknown",
+    COMMENT="Onewire ID could not be read: Insert not connected!",
 )
 
-ConfigCompact2012(
-    "20200918_73",
-    HARDWARE_VERSION="2020",
-    COMMENT="compact_2012_da, todo quality comment"
-    # HV_amplifier = True
-    # Resolution_dac_12 = True
-    # extension_left = 'empty'
-    # extension_right = 'empty'
+ConfigInsert(
+    ONEWIRE_ID=ONEWIRE_ID_INSERT_UNDEFINED,
+    HWSERIAL="unknown",
+    COMMENT="Onewire ID not defined, insert unknown!",
 )
 
-ConfigCompact2012(
-    "20200918_74",
-    HARDWARE_VERSION="2020",
-    COMMENT="compact_2012_da, kein calib step, SUPPLY_+14V etwas zu tief, akzept."
-    # HV_amplifier = True
-    # Resolution_dac_12 = True
-    # extension_left = 'empty'
-    # extension_right = 'empty'
-)
-
-ConfigCompact2012(
-    "20200918_75",
-    HARDWARE_VERSION="2020",
-    COMMENT="compact_2012_da, SUPPLY_+14V zappelt etwas aber ok"
-    # HV_amplifier = True
-    # Resolution_dac_12 = True
-    # extension_left = 'empty'
-    # extension_right = 'empty'
-)
-
-ConfigCompact2012(
-    "20200918_76",
-    HARDWARE_VERSION="2020",
-    COMMENT="compact_2012_da, knapp ueber einigen rauschgrenzen aber ok"
-    # HV_amplifier = True
-    # Resolution_dac_12 = True
-    # extension_left = 'empty'
-    # extension_right = 'empty'
-)
-
-ConfigCompact2012(
-    "20200918_77",
-    HARDWARE_VERSION="2020",
-    COMMENT="compact_2012_da, todo quali comment"
-    # HV_amplifier = True
-    # Resolution_dac_12 = True
-    # extension_left = 'empty'
-    # extension_right = 'empty'
-)
-
-ConfigCompact2012(
-    "20200918_78",
-    HARDWARE_VERSION="2020",
-    COMMENT="compact_2012_da,HV_OUT_DIR_+100V CH11 stepsize ueberschritten, aber ok"
-    # HV_amplifier = True
-    # Resolution_dac_12 = True
-    # extension_left = 'empty'
-    # extension_right = 'empty'
-)
-
-ConfigCompact2012(
-    "20200918_79",
-    HARDWARE_VERSION="2020",
-    COMMENT="compact_2012_da, SUPPLY_+14V rumpelt, aber ok"
-    # HV_amplifier = True
-    # Resolution_dac_12 = True
-    # extension_left = 'empty'
-    # extension_right = 'empty'
-)
-
-ConfigCompact2012(
-    "20200918_80",
-    HARDWARE_VERSION="2020",
-    COMMENT="compact_2012_da"
-    # HV_amplifier = True
-    # Resolution_dac_12 = True
-    # extension_left = 'empty'
-    # extension_right = 'empty'
-)
-
-ConfigCompact2012(
-    "20200918_81",
-    HARDWARE_VERSION="2020",
-    COMMENT="compact_2012_da, SUPPLY_+14V rumpelt, CH11 etwas grosse steps aber ok"
-    # HV_amplifier = True
-    # Resolution_dac_12 = True
-    # extension_left = 'empty'
-    # extension_right = 'empty'
-)
-
-ConfigCompact2012(
-    "20200918_83",
-    HARDWARE_VERSION="2020",
-    COMMENT="compact_2012_da, SUPPLY_+14V noise, aber ok"
-    # HV_amplifier = True
-    # Resolution_dac_12 = True
-    # extension_left = 'empty'
-    # extension_right = 'empty'
-)
-
-ConfigCompact2012(
-    "20200918_84",
-    HARDWARE_VERSION="2020",
-    COMMENT="compact_2012_da, SUPPLY_+14V noise, aber ok"
-    # HV_amplifier = False
-    # Resolution_dac_12 = True
-    # extension_left = 'empty'
-    # extension_right = 'empty'
+ConfigInsert(
+    ONEWIRE_ID="28d821950d00003e",
+    HWSERIAL="20171228_03",
+    COMMENT="Blue Testbox Fischer 104",
 )

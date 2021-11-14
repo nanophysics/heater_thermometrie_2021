@@ -3,11 +3,13 @@
 [MASTER]
 # Use multiple processes to speed up Pylint. Specifying 0 will auto-detect the
 # number of processors available to use.
-jobs=0
+jobs=1
 extension-pkg-whitelist=
 
 # Add files or directories to the blacklist
 ignore=
+
+init-hook="import pylint.config; import os, pathlib; sys.path.append(pathlib.Path(pylint.config.find_pylintrc()).parent)"
 
 [MESSAGES CONTROL]
 
@@ -35,21 +37,23 @@ disable=
         # I1101, # c-extension-no-member
         R0201, # Method could be a function (no-self-use)
         # R0205, # useless-object-inheritance
-        R0801, # duplicate-code  # TODO: This is a very good test and a lot of code is duplicated!
+        R0801, # duplicate-code
         R0902, # too-many-instance-attributes
         R0903, # too-few-public-methods
         # R0904, # too-many-public-methods
-        # R0911, # too-many-return-statements
+        R0911, # too-many-return-statements
         # R0912, # too-many-branches
-        # R0913, # too-many-arguments
+        R0913, # too-many-arguments
         R0914, # too-many-locals
-        # R0915, # too-many-statements
+        R0915, # too-many-statements
         # R1702, # too-many-nested-blocks
         # R1715, # consider-using-get
         # W0105, # pointless-string-statement
         # W0108, # unnecessary-lambda
         W0125, # using-constant-test
         W0212, # protected-access
+        W0401, # wildcard-import
+        W0614, # unused-wildcard-import
         W0511, # fixme
         W0613, # unused-argument
         W0612, # unused-variable
@@ -57,6 +61,9 @@ disable=
         # W0107, # unnecessary-pass
         # W0703, # broad-except
         W1202, # logging-format-interpolation
+        W1203, # logging-format-interpolation
+        W1514, # unspecified-encoding
+
 
 [REPORTS]
 # The following line displays the '\' - which is wrong, but I did not find out a way how to avoid id
