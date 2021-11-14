@@ -48,7 +48,7 @@ class TemperatureInsert:
 
 class Heater:
     def __init__(self):
-        self.power = 0.0
+        self.power = 0
 
     def set_power(self, power: int):
         assert isinstance(power, int)
@@ -65,7 +65,7 @@ class OnewireBox:
     def scan(self):
         return self._onwire_id.encode("ascii")
 
-    def read_temp(self, ident):
+    def read_temp_C(self, ident):
         return b"43.43"
 
 
@@ -98,7 +98,7 @@ class FeSimulator:
 
     def eval(self, cmd: str):
         try:
-            return eval(cmd, {"proxy": lambda: self.proxy})  # pylint: disable=eval-used
+            return eval(cmd, {"proxy": self.proxy})  # pylint: disable=eval-used
         except Exception as e:
             logger.warning(f"{cmd}: {e}")
             raise

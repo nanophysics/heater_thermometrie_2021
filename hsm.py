@@ -64,6 +64,14 @@ class Statemachine:
         assert isinstance(expected_meth, types.FunctionType)
         return expected_meth == self.actual_meth()
 
+    def is_state_or_substate(self, expected_meth):
+        if inspect.ismethod(expected_meth):
+            expected_meth = expected_meth.__func__
+        assert isinstance(expected_meth, types.FunctionType)
+        expected = expected_meth.__name__
+        actual = self.actual_meth().__name__
+        return actual.startswith(expected)
+
     def expect_state(self, expected_meth):
         assert isinstance(expected_meth, types.FunctionType)
         actual_meth = self.actual_meth()
@@ -230,11 +238,11 @@ class Statemachine:
             if state.find(parent_state) != 0:
                 continue
             if len(state.split("_")) == len(parent_state.split("_")) + 1:
-                strName = state.split("_")[-1]
+                str_name = state.split("_")[-1]
                 list_level.append(
                     {
                         "fullname": state,
-                        "name": strName,
+                        "name": str_name,
                         "substates": self.get_hierarchy(state),
                     }
                 )
@@ -257,41 +265,41 @@ class Statemachine:
 
     def doc_state(self, state):
         f = io.StringIO()
-        f.write('<table class="table_state">')
-        f.write("  <tr>")
+        f.write('<table class="table_state">\n')
+        f.write("  <tr>\n")
         text = state.split("_")[-1]
-        f.write(f'    <td class="td_header" colSpan="3">{text}</td>')
-        f.write("  </tr>")
+        f.write(f'    <td class="td_header" colSpan="3">{text}</td>\n')
+        f.write("  </tr>\n")
         if state in self._list_init_names:
             init_state = self._dict_init_state[state]
-            f.write('<TR class="tr_init">')
-            f.write("  <TD></TD>")
-            f.write('  <TD class="td_label">init</TD>')
-            f.write(f'  <TD class="td_text">{init_state}</TD>')
-            f.write("</TR>")
+            f.write('<TR class="tr_init">\n')
+            f.write("  <TD></TD>\n")
+            f.write('  <TD class="td_label">init</TD>\n')
+            f.write(f'  <TD class="td_text">{init_state}</TD>\n')
+            f.write("</TR>\n")
         if state in self._list_entry_names:
             docstring = self.get_docstring("entry_" + state)
             if docstring:
-                f.write('<TR class="tr_entry">')
-                f.write("  <TD></TD>")
-                f.write('  <TD class="td_label">entry</TD>')
-                f.write(f'  <TD class="td_text">{docstring}</TD>')
-                f.write("</TR>")
+                f.write('<TR class="tr_entry">\n')
+                f.write("  <TD></TD>\n")
+                f.write('  <TD class="td_label">entry</TD>\n')
+                f.write(f'  <TD class="td_text">{docstring}</TD>\n')
+                f.write("</TR>\n")
         docstring = self.get_docstring(f"state_{state}")
         if docstring:
-            f.write('<tr class="tr_comment">')
-            f.write('  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>')
-            f.write('  <td class="td_label">comment</td>')
-            f.write(f'  <td class="td_text">{docstring}</td>')
-            f.write("</tr>")
+            f.write('<tr class="tr_comment">\n')
+            f.write('  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>\n')
+            f.write('  <td class="td_label">comment</td>\n')
+            f.write(f'  <td class="td_text">{docstring}</td>\n')
+            f.write("</tr>\n")
         if state in self._list_exit_names:
             docstring = self.get_docstring("exit_" + state)
             if docstring:
-                f.write('<TR class="tr_exit">')
-                f.write("  <TD></TD>")
-                f.write('  <TD class="td_label">exit</TD>')
-                f.write(f'  <TD class="td_text">{docstring}</TD>')
-                f.write("</TR>")
+                f.write('<TR class="tr_exit">\n')
+                f.write("  <TD></TD>\n")
+                f.write('  <TD class="td_label">exit</TD>\n')
+                f.write(f'  <TD class="td_text">{docstring}</TD>\n')
+                f.write("</TR>\n")
         if False:
             bShowSource = False
             if bShowSource:
@@ -308,12 +316,12 @@ class Statemachine:
             state_sub = self.doc_state_recursive(list_state)
             f.write(state_begin)
             if state_sub:
-                f.write('  <tr class="tr_sub">')
-                f.write('    <td class="td_space">&nbsp;&nbsp;&nbsp;</td>')
-                f.write('    <td class="td_substate" colSpan="2">')
+                f.write('  <tr class="tr_sub">\n')
+                f.write('    <td class="td_space">&nbsp;&nbsp;&nbsp;</td>\n')
+                f.write('    <td class="td_substate" colSpan="2">\n')
                 f.write(state_sub)
-                f.write("    </td>")
-                f.write("  </tr>")
+                f.write("    </td>\n")
+                f.write("  </tr>\n")
             f.write(state_end)
         return f.getvalue()
 
@@ -325,7 +333,7 @@ class Statemachine:
         f.write(html_header)
         docstring = self._beautify_docstring(self.__doc__)
         if docstring:
-            f.write("<p>" + docstring + "</p><br>")
+            f.write("<p>" + docstring + "</p><br>\n")
         list_level = self.get_hierarchy()
         s = self.doc_state_recursive(list_level)
         f.write(s)

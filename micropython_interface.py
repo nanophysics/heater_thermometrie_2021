@@ -65,6 +65,7 @@ class MicropythonInterface:
         else:
             self.timebase = TimebaseSimulation()
         if hwserial == HWSERIAL_SIMULATE:
+            logger.warning(f"******************* Simulation hwserial='{hwserial}'")
             self.heater_thermometrie_2021_serial = "v42"
             self.fe = FeSimulator()
             self.sim_update_time = self.fe.sim_update_time
@@ -72,7 +73,6 @@ class MicropythonInterface:
             self.sim_set_resistance_OHM = self.fe.sim_set_resistance_OHM
             self.sim_set_insert_onewire_id = self.fe.proxy.onewire_insert.sim_set_onewire_id
         else:
-            logger.warning(f"******************* {hwserial}")
             self._init_pyboard(hwserial=hwserial)
             self.sim_update_time = lambda time_now_s: None
             self.sim_set_resistance_OHM = lambda carbon, temperature_K: None

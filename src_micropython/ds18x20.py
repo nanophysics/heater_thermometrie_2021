@@ -4,7 +4,6 @@
 # MIT license; Copyright (c) 2016 Damien P. George
 
 from micropython import const
-from machine import Pin
 
 CMD_CONVERT = const(0x44)
 CMD_RDSCRATCH = const(0xBE)
@@ -48,7 +47,7 @@ class DS18X20:
         self.ow.writebyte(CMD_WRSCRATCH)
         self.ow.write(buf)
 
-    def read_temp(self, rom):
+    def read_temp_C(self, rom) -> float:
         try:
             buf = self.read_scratch(rom)
             if rom[0] == 0x10:

@@ -9,11 +9,12 @@
 * HEATING controlled
 * Remove insert tail
 
-TODO: Unit tests: Save screens
+TODO: 2 PIN's to detect insert
+DONE: Unit tests: Save screens
 TODO: Console window should not become visible!
 TODO: Python 3.9
-TODO: Where to save logfile ?
-TODO: Labber instrument server: Change combobox MANUAL/CONTROLLED
+DONE: Where to save logfile ?
+DONE: Labber instrument server: Change combobox MANUAL/CONTROLLED
 
 ## PID Controller
 

@@ -157,12 +157,12 @@ class Runner:
         self.let_time_fly(duration_s=2.0)
         assert self._hw.hsm_heater.is_settled()
 
-    def change_42K_42K_C(self):
-        # If the temperature is already set, there will be no settle time
+    def change_40K_42K_C(self):
+        # We change the temperature. Settle time starts
         self._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=TEMPERATURE_SET42_K)
         self.set_quantity(Quantity.ControlWriteTemperature, TEMPERATURE_SET42_K)
         self.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled)
-        assert self._hw.hsm_heater.is_settled()
+        assert not self._hw.hsm_heater.is_settled()
 
         self.let_time_fly(duration_s=2.0)
         self._hw.expect_display(
@@ -170,11 +170,11 @@ class Runner:
         |           42.0K  |
         |  HEATING         |
         |  CONTROLLED      |
-        |  in range 20s    |
+        |  in range 2s     |
         |  errors 0        |
         """
         )
-        assert self._hw.hsm_heater.is_settled()
+        assert not self._hw.hsm_heater.is_settled()
 
     def change_40K_35K_C(self):
         # If the temperature is already set, there will be no settle time
@@ -222,7 +222,7 @@ def test_settletime_repetitive(hwserial):
     r.init_40K()
     r.start_40K_40K()
     r.write_and_wait_40K_40K_C()
-    r.change_42K_42K_C()
+    r.change_40K_42K_C()
     r.change_40K_35K_C()
 
 

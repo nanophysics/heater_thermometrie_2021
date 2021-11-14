@@ -17,7 +17,7 @@ def run_driver():
     ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermoff)
     ht._hw.set_quantity(Quantity.ControlWriteThermometrie, EnumThermometrie.ON)
     ht._hw.set_quantity(Quantity.ControlWriteHeating, EnumHeating.OFF)
-    ht._hw.set_quantity(Quantity.ControlWritePower100, 50)
+    ht._hw.set_quantity(Quantity.ControlWritePower100, 0.0)
     # ht._hw.sleep(5.0)
     # ht.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingoff)
 

@@ -59,10 +59,10 @@ class OnewireBox:
             return ONEWIRE_ID_INSERT_NOT_CONNECTED
         return rc
 
-    def read_temp(self, ident: str) -> float:
+    def read_temp_C(self, ident: str) -> float:
         assert isinstance(ident, str)
         assert len(ident) == 16
-        return self._proxy.eval_as(float, f"{self._name}.read_temp('{ident}')", accept_none=True)
+        return self._proxy.eval_as(float, f"{self._name}.read_temp_C('{ident}')", accept_none=True)
 
 
 class OnewireInsert(OnewireBox):
@@ -108,8 +108,8 @@ class MicropythonProxy:
 
         # Start the program
         self.fe.exec("import main")
-        self.fe.exec("proxy = main.proxy")
         self.fe.exec("main.enter_driver_mode()")
+        self.fe.exec("proxy = main.proxy")
 
     def eval_as(self, type_expected, cmd, accept_none=False):
         assert isinstance(cmd, str)

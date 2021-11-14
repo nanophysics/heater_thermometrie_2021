@@ -75,7 +75,7 @@ class HeaterThread(threading.Thread):
     def set_value(self, name: str, value):
         assert isinstance(name, str)
         quantity = Quantity(name)
-        rc = self.set_quantity_sync(quantity=quantity, value=value)
+
         if quantity == Quantity.ControlWriteTemperatureAndSettle:
 
             def block_until_settled():
@@ -96,10 +96,16 @@ class HeaterThread(threading.Thread):
                         logger.info("Timeout while 'ControlWriteTemperatureAndSettle'")
                         return
 
+            self._hw.set_quantity(Quantity.ControlWriteTemperature, value)
             self._hw.hsm_heater.wait_temperature_and_settle_start()
             block_until_settled()
             self._hw.hsm_heater.wait_temperature_and_settle_over()
-        return heater_wrapper.TEMPERATURE_SETTLE_K
+            return heater_wrapper.TEMPERATURE_SETTLE_K
+
+        # logger.info(f"set_value_A('{name}', '{value}'): {quantity}")
+        value_new = self.set_quantity_sync(quantity=quantity, value=value)
+        # logger.info(f"set_value_B('{name}', '{value}'): {quantity} -> rc: {value_new!r}")
+        return value_new
 
     @synchronized
     def set_quantity(self, quantity: Quantity, value):

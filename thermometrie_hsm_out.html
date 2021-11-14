@@ -19,5 +19,113 @@
     </style>
   </head>
   <body>
-<p>Statemachine Heater.</p><br><table class="table_state">  <tr>    <td class="td_header" colSpan="3">connected</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">NONSTATE(entry=state_connected_thermon_xxx)<br>The insert is connected by the cable and the id was read successfully.<br>Periodically:<br>-> If defrost_switch.is_on() => state_connected_thermon_heatingoff</td></tr>  <tr class="tr_sub">    <td class="td_space">&nbsp;&nbsp;&nbsp;</td>    <td class="td_substate" colSpan="2"><table class="table_state">  <tr>    <td class="td_header" colSpan="3">thermoff</td>  </tr><TR class="tr_entry">  <TD></TD>  <TD class="td_label">entry</TD>  <TD class="td_text">heater.set_power(0)<br>temperature_insert.enable_thermometrie(False)</TD></TR><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">Thermometrie is off.<br>No current in Carbon or PT1000 to avoid heating.<br>A insert disconnect is NOT detected in this state.</td></tr></table><table class="table_state">  <tr>    <td class="td_header" colSpan="3">thermon</td>  </tr><TR class="tr_entry">  <TD></TD>  <TD class="td_label">entry</TD>  <TD class="td_text">Read onewire id from insert.<br>Load calibration tables for this insert.<br>temperature_insert.enable_thermometrie(True)</TD></TR><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">NONSTATE(entry=state_connected_thermon_xxx)<br>Thermometrie is on<br>Periodically:<br>- Observe two pins of the pyboard to see if insert was disconnected<br>Periodically:<br>- Read temperature_insert.get_voltage(carbon=True)<br>- Read temperature_insert.get_voltage(carbon=False)<br>- Calibration table -> temperature</td></tr>  <tr class="tr_sub">    <td class="td_space">&nbsp;&nbsp;&nbsp;</td>    <td class="td_substate" colSpan="2"><table class="table_state">  <tr>    <td class="td_header" colSpan="3">defrost</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">Heating controlled by the pyboard.<br>We just display the state.<br>The only way to got out of this state is<br>- that the defrost switch is switched off.<br>- disconnect the tail</td></tr></table><table class="table_state">  <tr>    <td class="td_header" colSpan="3">heatingcontrolled</td>  </tr><TR class="tr_entry">  <TD></TD>  <TD class="td_label">entry</TD>  <TD class="td_text">Initialize PI controller<br>settle_time_start_s = time.now()</TD></TR><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">Heating controlled by PI<br>Periodically:<br>- temperature -> PI controller -> power, 'in range' (Quantity.TemperatureToleranceBand)<br>- heater.set_power(power)<br>- if not 'in range':<br>settle_time_start_s = time.now()<br>Quantity.ErrorCounter += 1<br>- settled = time.now() > settle_time_start_s + Quantiy.SettleTime</td></tr></table><table class="table_state">  <tr>    <td class="td_header" colSpan="3">heatingmanual</td>  </tr><TR class="tr_entry">  <TD></TD>  <TD class="td_label">entry</TD>  <TD class="td_text">heater.set_power(Quantity.Power)</TD></TR><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">Heating manual</td></tr></table><table class="table_state">  <tr>    <td class="td_header" colSpan="3">heatingoff</td>  </tr><TR class="tr_entry">  <TD></TD>  <TD class="td_label">entry</TD>  <TD class="td_text">heater.set_power(0)</TD></TR><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">Heating off</td></tr></table>    </td>  </tr></table>    </td>  </tr></table><table class="table_state">  <tr>    <td class="td_header" colSpan="3">disconnected</td>  </tr><tr class="tr_comment">  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>  <td class="td_label">comment</td>  <td class="td_text">The insert is not connected by the cable.<br>Poll periodically for onewire id of insert.</td></tr></table></body>
+<p>Statemachine Heater.</p><br>
+<table class="table_state">
+  <tr>
+    <td class="td_header" colSpan="3">connected</td>
+  </tr>
+<tr class="tr_comment">
+  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>
+  <td class="td_label">comment</td>
+  <td class="td_text">NONSTATE(entry=state_connected_thermoff)<br>The insert is connected by the cable and the onewire_id was read successfully.<br>Periodically:<br>-> If insert removed => state_disconnected<br>-> If defrost_switch.is_on() => state_connected_thermon_defrost</td>
+</tr>
+  <tr class="tr_sub">
+    <td class="td_space">&nbsp;&nbsp;&nbsp;</td>
+    <td class="td_substate" colSpan="2">
+<table class="table_state">
+  <tr>
+    <td class="td_header" colSpan="3">thermoff</td>
+  </tr>
+<TR class="tr_entry">
+  <TD></TD>
+  <TD class="td_label">entry</TD>
+  <TD class="td_text">heater.set_power(0)<br>temperature_insert.enable_thermometrie(enable=False)</TD>
+</TR>
+<tr class="tr_comment">
+  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>
+  <td class="td_label">comment</td>
+  <td class="td_text">Thermometrie is off.<br>No current in Carbon or PT1000 to avoid heating.<br>A insert disconnect is NOT detected in this state.</td>
+</tr>
+</table><table class="table_state">
+  <tr>
+    <td class="td_header" colSpan="3">thermon</td>
+  </tr>
+<TR class="tr_entry">
+  <TD></TD>
+  <TD class="td_label">entry</TD>
+  <TD class="td_text">- temperature_insert.enable_thermometrie(True)<br>- Reset 'error_counter'<br>- Reset 'last_outofrange_s'</TD>
+</TR>
+<tr class="tr_comment">
+  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>
+  <td class="td_label">comment</td>
+  <td class="td_text">NONSTATE(entry=state_connected_thermon_heatingoff)<br>Thermometrie is on<br>Periodically:<br>-> If termometrie off ==> state_connected_thermoff<br>-> TODO: Observe two pins of the pyboard to see if insert was disconnected<br>-> if not in_range ==> Increment 'error_counter', update 'last_outofrange_s'<br>Done in 'heater_wrapper':<br>-> Read temperature_insert.get_voltage(carbon=True)<br>-> Read temperature_insert.get_voltage(carbon=False)<br>-> Calibration table -> temperature</td>
+</tr>
+  <tr class="tr_sub">
+    <td class="td_space">&nbsp;&nbsp;&nbsp;</td>
+    <td class="td_substate" colSpan="2">
+<table class="table_state">
+  <tr>
+    <td class="td_header" colSpan="3">defrost</td>
+  </tr>
+<tr class="tr_comment">
+  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>
+  <td class="td_label">comment</td>
+  <td class="td_text">Heating controlled by the pyboard.<br>We just display the state.<br>Periodically:<br>-> Defrost switch off ==> see 'state_connected_thermon'<br>-> insert removed ==> state_disconnected<br>-> Otherwise stay in this state</td>
+</tr>
+</table><table class="table_state">
+  <tr>
+    <td class="td_header" colSpan="3">heatingcontrolled</td>
+  </tr>
+<TR class="tr_entry">
+  <TD></TD>
+  <TD class="td_label">entry</TD>
+  <TD class="td_text">Initialize PI controller<br>- Reset 'error_counter'<br>- Initialize PID</TD>
+</TR>
+<tr class="tr_comment">
+  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>
+  <td class="td_label">comment</td>
+  <td class="td_text">Heating controlled by PI<br>Periodically:<br>- temperature -> PI controller -> power, 'in range' (Quantity.TemperatureToleranceBand)<br>- heater.set_power(power)</td>
+</tr>
+</table><table class="table_state">
+  <tr>
+    <td class="td_header" colSpan="3">heatingmanual</td>
+  </tr>
+<TR class="tr_entry">
+  <TD></TD>
+  <TD class="td_label">entry</TD>
+  <TD class="td_text">heater.set_power(Quantity.Power)</TD>
+</TR>
+<tr class="tr_comment">
+  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>
+  <td class="td_label">comment</td>
+  <td class="td_text">Heating manual</td>
+</tr>
+</table><table class="table_state">
+  <tr>
+    <td class="td_header" colSpan="3">heatingoff</td>
+  </tr>
+<TR class="tr_entry">
+  <TD></TD>
+  <TD class="td_label">entry</TD>
+  <TD class="td_text">heater.set_power(0)</TD>
+</TR>
+<tr class="tr_comment">
+  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>
+  <td class="td_label">comment</td>
+  <td class="td_text">Heating off</td>
+</tr>
+</table>    </td>
+  </tr>
+</table>    </td>
+  </tr>
+</table><table class="table_state">
+  <tr>
+    <td class="td_header" colSpan="3">disconnected</td>
+  </tr>
+<tr class="tr_comment">
+  <td class="td_space">&nbsp;&nbsp;&nbsp;</td>
+  <td class="td_label">comment</td>
+  <td class="td_text">The insert is NOT connected by the cable.<br>Periodically:<br>-> if insert connected ==> state_connected_thermoff</td>
+</tr>
+</table></body>
 </html>

@@ -16,11 +16,6 @@ from heater_pid_controller import PidController
 logger = logging.getLogger("LabberDriver")
 
 
-class SignalTick:
-    def __repr__(self):
-        return "SignalTick"
-
-
 @dataclass
 class SignalDefrostSwitchChanged:
     defrost_on: bool = None
@@ -43,11 +38,16 @@ class SignalInsertSerialChanged:
         return self.onewire_id != ONEWIRE_ID_INSERT_NOT_CONNECTED
 
 
-class SignalHeaterSerialChanged(SignalInsertSerialChanged):
-    pass
+class SignalTick:
+    def __repr__(self):
+        return "SignalTick"
 
 
 SIGNAL_TICK = SignalTick()
+
+
+class SignalHeaterSerialChanged(SignalInsertSerialChanged):
+    pass
 
 
 class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \# lic-methods
@@ -71,6 +71,10 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         """
 
     def sim_reset_error_counter(self):
+        self.error_counter = 0
+
+    def reset_outofrange_s(self):
+        self.last_outofrange_s = self.now_s
         self.error_counter = 0
 
     def wait_temperature_and_settle_start(self):
@@ -109,7 +113,7 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
     def duration_inrange_s(self):
         return self.now_s - self.last_outofrange_s
 
-    def is_settled(self):
+    def is_settled(self) -> bool:
         return self.duration_inrange_s() >= self._hw.get_quantity(Quantity.ControlWriteSettleTime)
 
     def get_heating_state(self, heating: EnumHeating = None):
@@ -126,8 +130,11 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
 
     def state_disconnected(self, signal) -> None:
         """
-        The insert is not connected by the cable.
-        Poll periodically for onewire id of insert.
+        The insert is NOT connected by the cable.
+
+        Periodically:
+
+        -> if insert connected ==> state_connected_thermoff
         """
         if isinstance(signal, SignalInsertSerialChanged):
             if signal.is_connected:
@@ -136,16 +143,16 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
 
     def state_connected(self, signal) -> None:
         """
-        NONSTATE(entry=state_connected_thermon_xxx)
-        The insert is connected by the cable and the id was read successfully.
+        NONSTATE(entry=state_connected_thermoff)
+        The insert is connected by the cable and the onewire_id was read successfully.
 
         Periodically:
-        -> If defrost_switch.is_on() => state_connected_thermon_heatingoff
+
+        -> If insert removed => state_disconnected
+        -> If defrost_switch.is_on() => state_connected_thermon_defrost
         """
         if isinstance(signal, SignalInsertSerialChanged):
             if not signal.is_connected:
-                raise hsm.StateChangeException(self.state_disconnected)
-            if signal.onewire_id == ONEWIRE_ID_INSERT_NOT_CONNECTED:
                 raise hsm.StateChangeException(self.state_disconnected)
             raise hsm.DontChangeStateException()
 
@@ -171,23 +178,27 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
     def entry_connected_thermoff(self, signal) -> None:
         """
         heater.set_power(0)
-        temperature_insert.enable_thermometrie(False)
+        temperature_insert.enable_thermometrie(enable=False)
         """
         self._hw.mpi.heater.set_power(power=0)
         self._hw.mpi.temperature_insert.enable_thermometrie(enable=False)
 
     def state_connected_thermon(self, signal) -> None:
         """
-        NONSTATE(entry=state_connected_thermon_xxx)
+        NONSTATE(entry=state_connected_thermon_heatingoff)
 
         Thermometrie is on
 
         Periodically:
-        - Observe two pins of the pyboard to see if insert was disconnected
-        Periodically:
-        - Read temperature_insert.get_voltage(carbon=True)
-        - Read temperature_insert.get_voltage(carbon=False)
-        - Calibration table -> temperature
+
+        -> If termometrie off ==> state_connected_thermoff
+        -> TODO: Observe two pins of the pyboard to see if insert was disconnected
+        -> if not in_range ==> Increment 'error_counter', update 'last_outofrange_s'
+
+        Done in 'heater_wrapper':
+        -> Read temperature_insert.get_voltage(carbon=True)
+        -> Read temperature_insert.get_voltage(carbon=False)
+        -> Calibration table -> temperature
         """
         thermometrie = self._hw.get_quantity(Quantity.ControlWriteThermometrie)
         if thermometrie.eq(EnumThermometrie.OFF):
@@ -204,13 +215,12 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
 
     def entry_connected_thermon(self, signal) -> None:
         """
-        Read onewire id from insert.
-        Load calibration tables for this insert.
-        temperature_insert.enable_thermometrie(True)
+        - temperature_insert.enable_thermometrie(True)
+        - Reset 'error_counter'
+        - Reset 'last_outofrange_s'
         """
         self._hw.mpi.temperature_insert.enable_thermometrie(enable=True)
-        self.last_outofrange_s = self.now_s
-        self.error_counter = 0
+        self.reset_outofrange_s()
 
     def state_connected_thermon_heatingoff(self, signal) -> None:
         """
@@ -235,13 +245,10 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
     def state_connected_thermon_heatingcontrolled(self, signal) -> None:
         """
         Heating controlled by PI
+
         Periodically:
         - temperature -> PI controller -> power, 'in range' (Quantity.TemperatureToleranceBand)
         - heater.set_power(power)
-        - if not 'in range':
-          settle_time_start_s = time.now()
-          Quantity.ErrorCounter += 1
-        - settled = time.now() > settle_time_start_s + Quantiy.SettleTime
         """
         assert self.controller is not None
 
@@ -263,7 +270,8 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
     def entry_connected_thermon_heatingcontrolled(self, signal) -> None:
         """
         Initialize PI controller
-        settle_time_start_s = time.now()
+        - Reset 'error_counter'
+        - Initialize PID
         """
         self.error_counter = 0
         setpoint_k = self._hw.get_quantity(Quantity.ControlWriteTemperature)
@@ -285,9 +293,11 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
 
         We just display the state.
 
-        The only way to got out of this state is
-        - that the defrost switch is switched off.
-        - disconnect the tail
+        Periodically:
+
+        -> Defrost switch off ==> see 'state_connected_thermon'
+        -> insert removed ==> state_disconnected
+        -> Otherwise stay in this state
         """
         if isinstance(signal, SignalDefrostSwitchChanged):
             if not signal.defrost_on:
@@ -299,7 +309,7 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         raise hsm.DontChangeStateException()
 
     init_ = state_disconnected
-    init_state_connected = entry_connected_thermoff
+    init_state_connected = state_connected_thermoff
     init_state_connected_thermon = state_connected_thermon_heatingoff
 
 

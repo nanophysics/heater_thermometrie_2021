@@ -8,7 +8,7 @@
 OneWire library for MicroPython
 """
 
-from time import sleep_us
+from time import sleep_us  # pylint: disable=no-name-in-module
 import machine  # pylint: disable=import-error
 
 

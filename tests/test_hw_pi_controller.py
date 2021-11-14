@@ -29,33 +29,33 @@ def test_controller(hwserial):
     hw.let_time_fly(duration_s=10.0)
     hw.expect_display(
         """
-        |           28.2K  |
+        | ? |
         |  HEATING         |
         |  CONTROLLED      |
         |  out of range    |
-        |  errors 10       |
+        | ? |
     """
     )
 
     hw.let_time_fly(duration_s=10.0)
     hw.expect_display(
         """
-        |           39.6K  |
+        | ? |
         |  HEATING         |
         |  CONTROLLED      |
         |  out of range    |
-        |  errors 20       |
+        | ? |
     """
     )
 
     hw.let_time_fly(duration_s=100.0)
     hw.expect_display(
         """
-        |           42.0K  |
+        | ? |
         |  HEATING         |
         |  CONTROLLED      |
-        |  in range 73s    |
-        |  errors 43       |
+        | ? |
+        | ? |
     """
     )
 

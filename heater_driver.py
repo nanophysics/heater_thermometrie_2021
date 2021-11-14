@@ -1,22 +1,25 @@
 # pylint: disable=dangerous-default-value
+import pathlib
 import logging
 
-import InstrumentDriver  # # pylint: disable=import-error
+import InstrumentDriver  # pylint: disable=import-error
 
 import micropython_proxy
 import heater_thread
-from heater_wrapper import QuantityNotFoundException
+from heater_wrapper import DIRECTORY_OF_THIS_FILE, QuantityNotFoundException
 
 logger = logging.getLogger("LabberDriver")
 
 
-fh = logging.FileHandler(r"c:\tmp\labber.log")
-fh.setLevel(logging.DEBUG)
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-fh.setFormatter(formatter)
-# add the handlers to the logger
-logger.addHandler(fh)
-logger.setLevel(logging.DEBUG)
+if 0 > 1:
+    DIRECTORY_OF_THIS_FILE = pathlib.Path(__file__).resolve().parent
+    fh = logging.handlers.RotatingFileHandler(DIRECTORY_OF_THIS_FILE / "heater_driver_labber.log", maxBytes=10 * 1000 * 1000)
+    fh.setLevel(logging.DEBUG)
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    fh.setFormatter(formatter)
+    # add the handlers to the logger
+    logger.addHandler(fh)
+    logger.setLevel(logging.DEBUG)
 
 LABBER_INTERNAL_QUANTITIES = ("Expert",)
 MODEL_SIMULATION = "Simulation"

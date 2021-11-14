@@ -24,6 +24,8 @@ DIRECTORY_OF_THIS_FILE = pathlib.Path(__file__).absolute().parent
 
 
 TEMPERATURE_SETTLE_K = -1.0
+TEMPERATURE_BOX_UNDEFINED_C = -1.0
+TICK_INTERVAL_READ_BOXTEMP = 10  # To read the box temperature takes 0.8s, therefore we do not read it every time
 
 
 @dataclass
@@ -55,9 +57,10 @@ class ErrorCounterAssertion:
 
 class HeaterWrapper:
     def __init__(self, hwserial, force_use_realtime_factor: float = None):
+        self.tick_count = 0
+        self.tick_count_next_boxtemp = 0
         self.dict_values = {}
         self.mpi = MicropythonInterface(hwserial, force_use_realtime_factor=force_use_realtime_factor)
-        self.tick_count = 0
 
         self.heater_2021_config = config_all.ConfigHeater2021.load_config(serial=self.mpi.heater_thermometrie_2021_serial)
         logger.info(f"{HWTYPE_HEATER_THERMOMETRIE_2021} connected: {self.heater_2021_config}")
@@ -105,6 +108,8 @@ class HeaterWrapper:
         self.dict_values[Quantity.ControlWriteTimeoutTime] = 20.0
         self.dict_values[Quantity.TemperatureReadonlyTemperatureCalibrated_K] = TEMPERATURE_SETTLE_K
         self.dict_values[Quantity.StatusReadErrorCounter] = 0
+        self.dict_values[Quantity.StatusReadTemperatureBox] = TEMPERATURE_BOX_UNDEFINED_C
+
         self.tick()
 
     def close(self):
@@ -163,6 +168,8 @@ class HeaterWrapper:
 
         self._tick_read_onewire()
 
+        self._tick_read_onewire_boxtemp()
+
         # Run statemachine
         self.hsm_heater.assert_valid_state()
         self.hsm_heater.dispatch(heater_hsm.SIGNAL_TICK)
@@ -203,6 +210,7 @@ class HeaterWrapper:
         )
 
     def _tick_read_onewire(self):
+        # TODO: Only call if termon
         def insert_onewire_id_changed(onewire_id: str) -> str:
             self.hsm_heater.dispatch(heater_hsm.SignalInsertSerialChanged(onewire_id=onewire_id))
             self.insert_connected(onewire_id=onewire_id)
@@ -214,6 +222,19 @@ class HeaterWrapper:
             self.mpi.onewire_insert.scan(),
             insert_onewire_id_changed,
         )
+
+    def _tick_read_onewire_boxtemp(self):
+        if self.hsm_heater.is_state_or_substate(heater_hsm.HeaterHsm.state_connected_thermon):
+            if self.tick_count < self.tick_count_next_boxtemp:
+                self.tick_count_next_boxtemp = self.tick_count + TICK_INTERVAL_READ_BOXTEMP
+                return
+            onewire_id = self.heater_2021_config.ONEWIRE_ID_HEATER
+            if onewire_id != config_all.ONEWIRE_ID_HEATER_UNDEFINED:
+                box_temp_c = self.mpi.onewire_box.read_temp_C(ident=onewire_id)
+                self.dict_values[Quantity.StatusReadTemperatureBox] = box_temp_c
+                return
+
+        self.dict_values[Quantity.StatusReadTemperatureBox] = TEMPERATURE_BOX_UNDEFINED_C
 
     def _tick_update_display(self):
         display = self.mpi.display
@@ -232,11 +253,7 @@ class HeaterWrapper:
         display.line(1, status1)
         display.line(2, status2)
 
-        # is_in_range = self.hsm_heater.is_in_range()
-        # settled_duration_s = self.hsm_heater.settled_duration_s
         error_counter = self.get_quantity(Quantity.StatusReadErrorCounter)
-        # settled = self.get_quantity(Quantity.StatusReadSettled)
-        # timeout = self.get_quantity(Quantity.StatusReadTimout)
 
         if self.hsm_heater.is_outofrange():
             text = " out of range"
@@ -266,7 +283,7 @@ class HeaterWrapper:
 
     def get_value(self, name: str):
         assert isinstance(name, str)
-        self.get_quantity(quantity=Quantity(name))
+        return self.get_quantity(quantity=Quantity(name))
 
     def set_value(self, name: str, value):
         assert isinstance(name, str)
@@ -297,6 +314,13 @@ class HeaterWrapper:
             value_new = bool(value)
             self.dict_values[quantity] = value_new
             return value
+        if quantity == Quantity.ControlWriteTemperature:
+            difference_K = abs(value - self.dict_values[quantity])
+            if difference_K > 1e-9:
+                # settle and timeout must start from zero
+                self.hsm_heater.reset_outofrange_s()
+            self.dict_values[quantity] = value
+            return value
         if quantity == Quantity.ControlWriteTemperatureAndSettle:
             self.set_quantity(Quantity.ControlWriteTemperature, value)
             return TEMPERATURE_SETTLE_K
@@ -304,6 +328,7 @@ class HeaterWrapper:
         if quantity == Quantity.ControlWritePower100:
             if not (0.0 <= value <= 100.0):
                 logger.warning(f"Expected power to be between 0 and 100, but got {value:0.3f}.")
+                value = max(100.0, min(0.0, value))
             power_dac = int(2 ** 16 * value / 100.0)
             power_dac = max(0, min(2 ** 16 - 1, power_dac))
             self.mpi.heater.set_power(power=power_dac)
@@ -311,8 +336,6 @@ class HeaterWrapper:
             return value
 
         if quantity in (
-            Quantity.ControlWriteTemperature,
-            Quantity.TemperatureReadonlyTemperatureBox,
             Quantity.ControlWriteTemperatureToleranceBand,
             Quantity.ControlWriteSettleTime,
             Quantity.ControlWriteTimeoutTime,

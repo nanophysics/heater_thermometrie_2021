@@ -66,13 +66,13 @@ class OnewireBox:
         assert len(roms) <= 1, "Maximum one sensor expected"
         return ubinascii.hexlify(roms[0]).decode("ascii")
 
-    def read_temp(self, ident):
+    def read_temp_C(self, ident):
         rom = ubinascii.unhexlify(ident)
         self._dx18x20.resolution(rom=rom, bits=12)
         self._dx18x20.convert_temp(rom=rom)
         # conversion takes up to 750ms
         time.sleep(0.8)
-        return self._dx18x20.read_temp(rom)
+        return self._dx18x20.read_temp_C(rom)
 
 
 class OnewireInsert(OnewireBox):
@@ -103,11 +103,8 @@ class OnewireInsert(OnewireBox):
         self._set_power(on=False)
         return onewire_id
 
-    def read_temp(self, ident):
-        self._set_power(on=True)
-        rc = OnewireBox.read_temp(self, ident=ident)
-        self._set_power(on=False)
-        return rc
+    def read_temp_C(self, ident):
+        raise Exception("Not supported (would be easy to implement...)")
 
 
 class TemperatureInsert:
@@ -217,12 +214,13 @@ class Display:
 
 
 class Proxy:
-    ACTIVATE_WATCHDOG = False
-    WATCHDOG_TIMEOUT_MS = 60000
+    ACTIVATE_WATCHDOG = True
+    WATCHDOG_TIMEOUT_MS = 32767  # Max 32767
 
     def __init__(self):
         self._wdt = None
         if Proxy.ACTIVATE_WATCHDOG:
+            assert Proxy.WATCHDOG_TIMEOUT_MS <= 2 ** 15 - 1, "WATCHDOG_TIMEOUT_MS too high!"
             self._wdt = WDT(timeout=Proxy.WATCHDOG_TIMEOUT_MS)
         self.defrost = Pin(PIN_DEFROST, Pin.IN)
         # >>> i2c.scan()
