@@ -6,7 +6,6 @@ import importlib
 import config_all
 
 import heater_hsm
-from pytest_util import AssertDisplay
 from micropython_proxy import HWTYPE_HEATER_THERMOMETRIE_2021
 from micropython_interface import MicropythonInterface, TICK_INTERVAL_S
 from heater_driver_utils import (
@@ -368,6 +367,8 @@ class HeaterWrapper:
     def expect_display(self, readable_expected):
         self._tick_update_display()
         lines = self.mpi.display.sim_get
+        from pytest_util import AssertDisplay
+
         AssertDisplay.assert_equal(lines=lines, readable_expected=readable_expected)
 
     def sim_reset_error_counter(self):

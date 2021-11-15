@@ -11,6 +11,7 @@ try:
     import mp.version
     import mp.micropythonshell
     import mp.pyboard_query
+    from mp.pyboard import PyboardError
 except ModuleNotFoundError as ex:
     raise Exception('The module "mpfshell2" is missing. Did you call "pip -r requirements.txt"?') from ex
 
@@ -107,13 +108,29 @@ class MicropythonProxy:
         self.fe = fe
 
         # Start the program
-        self.fe.exec("import main")
-        self.fe.exec("main.enter_driver_mode()")
-        self.fe.exec("proxy = main.proxy")
+        self._fe_exec("import main")
+        self._fe_exec("main.enter_driver_mode()")
+        self._fe_exec("proxy = main.proxy")
+
+    def _fe_exec(self, cmd):
+        try:
+            self.fe.exec(cmd)
+        except PyboardError as e:
+            logger.error(f"ERROR on pyboard: '{cmd}' -> {e!r}")
+            logger.exception(e)
+            raise
+
+    def _fe_eval(self, cmd):
+        try:
+            return self.fe.eval(cmd)
+        except PyboardError as e:
+            logger.error(f"ERROR on pyboard: '{cmd}' -> {e!r}")
+            logger.exception(e)
+            raise
 
     def eval_as(self, type_expected, cmd, accept_none=False):
         assert isinstance(cmd, str)
-        result = self.fe.eval(cmd)
+        result = self._fe_eval(cmd)
         assert isinstance(result, bytes)
         if accept_none:
             if result == b"None":

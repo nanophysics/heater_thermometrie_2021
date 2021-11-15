@@ -15,7 +15,7 @@ LOCK = threading.Lock()
 
 try:
     if False:
-        import debugpy
+        import debugpy  # pylint: disable=import-error
 
         debugpy.listen(5678)
         debugpy.wait_for_client()

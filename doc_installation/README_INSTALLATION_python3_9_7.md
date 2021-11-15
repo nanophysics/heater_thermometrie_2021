@@ -38,13 +38,31 @@ C:\Users\maerki\AppData\Local\Programs\Python\Python39\python.exe -m pip install
 C:\Users\maerki\AppData\Local\Programs\Python\Python39\python.exe -m pip install -r requirements.txt
 ```
 
+## Prerequisits Python 3.9.7 64bit
+https://www.python.org/ftp/python/3.9.7/python-3.9.7-amd64.exe
+Windows 64bit msi installer
+ - Add Python 3.9 to path
+ - Customize
+   - Uncheck: Python test suite
+   - Uncheck: pylauncher
+ - Advanced
+   - Uncheck: Install for all users
+   - `C:\Users\maerki\AppData\Local\Programs\Python\Python39`
+
+
+Python packages installed
+```bash
+C:\Users\maerki\AppData\Local\Programs\Python\Python39\python.exe -m pip install --upgrade pip
+C:\Users\maerki\AppData\Local\Programs\Python\Python39\python.exe -m pip install -r requirements.txt
+```
+
 ### Labber 1.7.7 installed.
 
 ### Configure Labber to user Python 3.9.7
 
 Windows explorer: Copy directory `<git>/doc_installation/multiproc-include-py39` to `C:\Program Files\Labber\python-labber\multiproc-include\py39`
 
-*This this step is skipped, a error window will pop up ""Optimizer Error: No application found ad ...".*
+*If this this step is skipped, a error window will pop up ""Optimizer Error: No application found ad ...".*
 
 Labber Measurement Windows -> Edit -> Preferences -> Advanced -> Python distribution -> `C:\Users\maerki\AppData\Local\Programs\Python\Python39\python.exe`
 
