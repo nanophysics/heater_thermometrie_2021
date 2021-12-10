@@ -99,6 +99,7 @@ class HeaterWrapper:
             logger.warning(f"Expected onewire_id of heater '{id_box_expected}' but got '{id_box}")
 
         # Read all initial values from the pyboard
+        self.dict_values[Quantity.ControlWritePower100] = 0.0
         self.dict_values[Quantity.ControlWriteThermometrie] = EnumThermometrie.OFF
         self.dict_values[Quantity.ControlWriteHeating] = EnumHeating.OFF
         self.dict_values[Quantity.ControlWriteTemperature] = 0.0
