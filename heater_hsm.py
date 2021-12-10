@@ -180,7 +180,7 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         heater.set_power(0)
         temperature_insert.enable_thermometrie(enable=False)
         """
-        self._hw.mpi.heater.set_power(power=0)
+        self._hw.set_power100(power100=0.0)
         self._hw.mpi.temperature_insert.enable_thermometrie(enable=False)
 
     def state_connected_thermon(self, signal) -> None:
@@ -229,7 +229,7 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
 
     def entry_connected_thermon_heatingoff(self, signal) -> None:
         """
-        heater.set_power(0)
+        ? heater.set_power(0)
         """
 
     def state_connected_thermon_heatingmanual(self, signal) -> None:
@@ -239,8 +239,14 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
 
     def entry_connected_thermon_heatingmanual(self, signal) -> None:
         """
-        heater.set_power(Quantity.Power)
+        ? heater.set_power(Quantity.Power)
         """
+
+    def exit_connected_thermon_heatingmanual(self) -> None:
+        """
+        heater.set_power(0)
+        """
+        self._hw.set_power100(power100=0.0)
 
     def state_connected_thermon_heatingcontrolled(self, signal) -> None:
         """

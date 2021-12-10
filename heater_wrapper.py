@@ -331,13 +331,7 @@ class HeaterWrapper:
                 logger.warning(f"The power may only controlled in mode MANUAL. Actual mode '{actual_meth.__name__}'")
                 return 0.0
 
-            if not (0.0 <= value <= 100.0):
-                logger.warning(f"Expected power to be between 0 and 100, but got {value:0.3f}.")
-                value = max(100.0, min(0.0, value))
-            power_dac = int(2 ** 16 * value / 100.0)
-            power_dac = max(0, min(2 ** 16 - 1, power_dac))
-            self.mpi.heater.set_power(power=power_dac)
-            self.dict_values[quantity] = value
+            self.set_power100(power100=value)
             return value
 
         if quantity in (
@@ -379,3 +373,19 @@ class HeaterWrapper:
 
     def sim_reset_error_counter(self):
         self.hsm_heater.sim_reset_error_counter()
+
+    def set_power100(self, power100:float):
+        """
+        Limit power to 0..100.
+        Set labber relevant variable.
+        Set power in the pyboard.
+        """
+        assert isinstance(power100, float)
+        if not (0.0 <= power100 <= 100.0):
+            logger.warning(f"Expected power to be between 0 and 100, but got {power100:0.3f}.")
+            power100 = max(100.0, min(0.0, power100))
+        self.dict_values[Quantity.ControlWritePower100] = power100
+
+        power_dac = int(2 ** 16 * power100 / 100.0)
+        power_dac = max(0, min(2 ** 16 - 1, power_dac))
+        self.mpi.heater.set_power(power=power_dac)
