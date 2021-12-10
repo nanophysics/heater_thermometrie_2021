@@ -325,6 +325,11 @@ class HeaterWrapper:
             return TEMPERATURE_SETTLE_K
 
         if quantity == Quantity.ControlWritePower100:
+            actual_meth = self.hsm_heater.actual_meth()
+            if actual_meth != heater_hsm.HeaterHsm.state_connected_thermon_heatingmanual:
+                logger.warning(f"The power may only controlled in mode MANUAL. Actual mode '{actual_meth.__name__}'")
+                return 0.0
+
             if not (0.0 <= value <= 100.0):
                 logger.warning(f"Expected power to be between 0 and 100, but got {value:0.3f}.")
                 value = max(100.0, min(0.0, value))
