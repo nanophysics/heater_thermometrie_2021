@@ -112,6 +112,7 @@ class HeaterWrapper:
         self.dict_values[Quantity.TemperatureReadonlyTemperatureCalibrated_K] = TEMPERATURE_SETTLE_K
         self.dict_values[Quantity.StatusReadErrorCounter] = 0
         self.dict_values[Quantity.StatusReadTemperatureBox] = TEMPERATURE_BOX_UNDEFINED_C
+        self.dict_values[Quantity.ControlWriteLogging] = EnumLogging.WARNING
 
         self.tick()
 
