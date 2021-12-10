@@ -91,7 +91,7 @@ class Quantity(EnumMixin, enum.Enum):
     ControlWriteHeating = "Control Heating / Mode"
     ControlWriteExpert = "Expert"
     ControlWriteLogging = "Control Mode / Logging"
-    ControlWriteThermometrie = "Control Thermometrie / Thermometrie "
+    ControlWriteThermometrie = "Control Heating / Thermometrie"
     ControlWriteGreenLED = "Green LED"
     ControlWritePower100 = "Control Heating / set power (mode manual)"
     ControlWriteTemperature = "Control Heating / set temperature (mode controlled)"

@@ -199,6 +199,11 @@ class HeaterWrapper:
         self.dict_values[Quantity.TemperatureReadonlyTemperaturePT1000_K] = calibration.pt1000_K
         self.dict_values[Quantity.TemperatureReadonlyTemperatureCalibrated_K] = calibration.calibrated_K
 
+        if calibration.pt1000_K > 343.15: #
+            # Overheat protection
+            # Power off bei Temperatur > 70C(343.15K).
+            self.set_power100(power100=0.0)
+
         def defrost_switch_changed(defrost_on: str) -> str:
             self.hsm_heater.dispatch(heater_hsm.SignalDefrostSwitchChanged(defrost_on=defrost_on))
             return defrost_on

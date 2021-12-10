@@ -1,20 +1,22 @@
 Peter Maerki 2021-11-23_18_08_13
 
-meine Aenderungen einchecken? todo wo?
+# meine Aenderungen einchecken? todo wo?
 
-Namen: im Measurement setup sind die gruppen nicht mehr sichtbar. Namen der Elemente aufblasen. Nie ausblenden. Einfach.
+# Namen: im Measurement setup sind die gruppen nicht mehr sichtbar. Namen der Elemente aufblasen. Nie ausblenden. Einfach.
 
-Instrument Server:
-Ich setze Heating manual
-Power 70%, LED leuchten ok.
-Heating off: LED leuchte noch immer. Sollten auf 0%.
+# ok  Instrument Server:
+  Ich setze Heating manual
+  Power 70%, LED leuchten ok.
+  Heating off: LED leuchte noch immer. Sollten auf 0%.
 
-Komisch: wenn ich dann thermometrie auf off mache, so loeschen led aus. Thermometrie wieder auf on: led bleiben aus. Sollte keinen Zusammenhang haben.
+  Komisch: wenn ich dann thermometrie auf off mache, so loeschen led aus. Thermometrie wieder auf on: led bleiben aus. Sollte keinen Zusammenhang haben.
 
-Heating manual, 60%, LED leuchten.
-Ich schalte auf defrost on mit mechanischem Schalter.
-Leuchtet immer gleich, sollte regeln.
+  Heating manual, 60%, LED leuchten.
+  Ich schalte auf defrost on mit mechanischem Schalter.
+  Leuchtet immer gleich, sollte regeln.
 
+
+Übertemperaturschutz: if temperature > 343.15K: alles ausschalten bei Temperatur > 70 C.
 
 Heizleistung: siehe heizleistung.py
 alt: prozent
@@ -55,7 +57,7 @@ Temperature_Kelvin
 Im Measurement Setup sieht man nur die Werte welche im Instrumentserver eingeblendet werden. So ein Seich!
 Habe das ganze Ausblenden entfernt.
 
-Measurement Setupich habe den heater_thermometrie_2021, rechte maustaste drauf, Get Instrument Configuration. 
+Measurement Setup ich habe den heater_thermometrie_2021, rechte maustaste drauf, Get Instrument Configuration. 
 
 --------------------------------------------------------------------------------
 2021-11-29, 14:09:18
@@ -71,10 +73,10 @@ Traceback (most recent call last):
 ModuleNotFoundError: No module named 'heater_driver_utils'
 
 
-Peter: bei 100% heating überlastet das netzteil. pyboard vergessen. Limitieren auf 80%.
+# Peter: bei 100% heating überlastet das netzteil. pyboard vergessen. Limitieren auf 80%.
 Hans: leistung neu in Watt. Limite neu in Watt, DA ist dabei nicht ganz ausgesteuert, kann später allenfalls noch angepasst werden.
 
-Temperature Box muss auch gelegen werden können wenn Thermometrie off
+Temperature Box muss auch gelesen werden können wenn Thermometrie off
 
 Siehe # Korrekturwerte abhaengig von heater_thermometrie_2021, todo ablegen in file
 
