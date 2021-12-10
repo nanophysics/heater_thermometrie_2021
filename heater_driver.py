@@ -83,3 +83,5 @@ class Driver(InstrumentDriver.InstrumentWorker):
 
 if __name__ == "__main__":
     pass
+    # import pathlib
+    # (pathlib.Path(__file__).parent / "exception.txt").write_text(quantity.name)

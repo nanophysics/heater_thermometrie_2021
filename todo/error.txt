@@ -1,0 +1,12 @@
+--------------------------------------------------------------------------------
+2021-12-10, 21:32:45
+Version: 1.7.7
+--------------------------------------------------------------------------------
+<class 'ModuleNotFoundError'>: 
+No module named 'heater_driver_utils'
+--------------------------------------------------------------------------------
+Traceback (most recent call last):
+  File "InstrumentDriver_Dlg.py", line 1907, in process
+  File "InstrumentDriver_Dlg.py", line 1915, in mainLoop
+  File "multiprocessing\queues.py", line 113, in get
+ModuleNotFoundError: No module named 'heater_driver_utils'
