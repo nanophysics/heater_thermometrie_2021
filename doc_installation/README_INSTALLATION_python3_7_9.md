@@ -20,23 +20,7 @@ Tag        | Labber Instrument Server, Menu Preferences
 `<LABBERLOCALDRIVERS>` | Tab Folders, Local Drivers
 
 
-## Prerequisits Python 3.7.9 64bit
-https://www.python.org/ftp/python/3.7.9/python-3.7.9-amd64.exe
-Windows 64bit msi installer
- - Add Python 3.7 to path
- - Customize
-   - Uncheck: Python test suite
-   - Uncheck: pylauncher
- - Advanced
-   - Uncheck: Install for all users
-   - `C:\Users\maerki\AppData\Local\Programs\Python\Python37`
 
-
-Python packages installed
-```bash
-C:\Users\maerki\AppData\Local\Programs\Python\Python37\python.exe -m pip install --upgrade pip
-C:\Users\maerki\AppData\Local\Programs\Python\Python37\python.exe -m pip install -r requirements.txt
-```
 
 ## Prerequisits Python 3.7.9 64bit
 https://www.python.org/ftp/python/3.7.9/python-3.7.9-amd64.exe
@@ -59,7 +43,7 @@ Windows 64bit msi installer
 Python packages installed
 ```bash
 C:\Users\maerki\AppData\Local\Programs\Python\Python37\python.exe -m pip install --upgrade pip
-C:\Users\maerki\AppData\Local\Programs\Python\Python37\python.exe -m pip install -r requirements.txt
+C:\Users\maerki\AppData\Local\Programs\Python\Python37\python.exe -m pip install -r requirements.txt -r requirements_development.txt
 ```
 
 ### Labber 1.7.7 installed.
@@ -67,36 +51,6 @@ C:\Users\maerki\AppData\Local\Programs\Python\Python37\python.exe -m pip install
 ### Configure Labber to user Python 3.7.9
 
 Labber Instrument Server Window -> Edit -> Preferences -> Advanced -> Python distribution -> `C:\Users\maerki\AppData\Local\Programs\Python\Python37\python.exe`
-
-### Patch Python 3.7.9 for Labber
-
-If the following patch is NOT applied, this message will be displayed on the measurement console:
-
-cmd.exe: `"C:\Program Files\Labber\Program\InstrumentServer-Console.exe"`
-```python
-Process Simple Signal Generator - ssg:
-Traceback (most recent call last):
-  File "C:\Users\maerki\AppData\Local\Programs\Python\Python37\lib\multiprocessing\process.py", line 303, in _bootstrap
-    self._parent_name, self._parent_pid, parent_sentinel)
-AttributeError: 'Process' object has no attribute '_parent_name'
-```
-
-Patch file `C:\Users\maerki\AppData\Local\Programs\Python\Python37\Lib\multiprocessing\process.py`:
-
-
-```python
-def _bootstrap(self, parent_sentinel=None):
-    ...
-    # PATCH BEGIN
-    print("Apply patch for Labber 1.7.7")
-    try:
-        self._parent_name
-    except AttributeError:
-        self._parent_name = f"Parent_{self._name}"
-    # PATCH BEGIN
-    _parent_process = _ParentProcess(
-```
-
 
 
 ### git installed.
@@ -118,41 +72,3 @@ Navigate to https://git-scm.com/download/win and download "64-bit Git for Window
 ![GIT G](images/installation_git_g.png "GIT G")
 
 ![GIT H](images/installation_git_h.png "GIT H")
-
-## Install compact_2012 labber driver
-
-### Clone git repository
-
-Run `cmd.exe`:
-```bash
-cd C:\Users\maerki\Labber\Drivers
-git clone https://github.com/nanophysics/compact_2012
-cd compact_2012
-```
-
-### Install python requirements
-
-Run `cmd.exe` below as **Administrator**.
-```bash
-cd C:\Users\maerki\Labber\Drivers\compact_2012\doc_installation
-
-"C:\Program Files\Labber\python-labber\Scripts\pip.exe" install --force-reinstall --no-cache-dir -r requirements.txt
-```
-
-There will be some warnings about *PATH*. You may ignore them.
-
-The last line should be `Successfully installed ... mpfshell2-100.9.13 ...`!
-
-Above command will install the required python libraries in `C:\Program Files\Labber\python-labber` (Labber 64bit Python).
-
-## Configure the compact_2012 in the Labber Instrument Server
-
-Start the Labber Instrument Server and choose menu `Edit -> Add...`
-
-![LABBER ADD](images/installation_labber_add.png "LABBER ADD")
-
-## Update the compact_2012 driver and calibration data
-
-The driver AND the calibration data is stored in the git repository located at `<LABBERLOCALDRIVERS>\compact_2012`.
-
-Double click `<LABBERLOCALDRIVERS>\compact_2012\run_git_pull.bat` to pull the newest version.

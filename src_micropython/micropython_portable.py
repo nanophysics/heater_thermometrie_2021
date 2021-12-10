@@ -7,7 +7,7 @@ class Thermometrie:
     U3V = 3.33333333
     ZEROCELSIUS_K = 273.15
     CURRENT_A = 10e-6
-    R31_44_OHM = "do be defined by derived class"
+    R31_44_OHM = "to be defined by derived class"
 
     @classmethod
     def ia_gain(cls):

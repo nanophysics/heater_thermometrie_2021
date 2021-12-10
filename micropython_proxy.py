@@ -81,7 +81,13 @@ class TemperatureInsert:
 
     def read_resistance_OHM(self, carbon=True) -> float:
         assert isinstance(carbon, bool)
-        return self.proxy.eval_as(float, f"proxy.temperature_insert.read_resistance_OHM(carbon={carbon})")
+        if carbon:
+            offset = -0.9 # Korrekturwerte abhaengig von heater_thermometrie_2021, todo ablegen in file
+            gain = 100 / 99.86
+        else:
+            offset = -1.0 # Offset gemessen mit Testbox und Thermometrie off
+            gain = 1000 / 998.5 # Gain gemessen mit Testbox und Thermometrie on
+        return gain * (offset + self.proxy.eval_as(float, f"proxy.temperature_insert.read_resistance_OHM(carbon={carbon})"))
 
 
 class Heater:

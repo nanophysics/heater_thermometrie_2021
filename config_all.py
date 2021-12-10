@@ -31,7 +31,7 @@ class ConfigHeater2021:
         try:
             return dict_heater2021[serial]
         except KeyError:
-            logger.warning(f'The connected "compact_2012" has serial "{serial}". However, this serial in unknown!')
+            logger.warning(f'The connected "heater_thermometrie_2021" has serial "{serial}". However, this serial in unknown!')
             serials_defined = sorted(dict_heater2021.keys())
             serials_defined.remove(SERIAL_UNDEFINED)
             logger.warning(f'"config_all.py" lists these serials: {",".join(serials_defined)}')
@@ -96,3 +96,10 @@ ConfigInsert(
     HWSERIAL="20171228_03",
     COMMENT="Blue Testbox Fischer 104",
 )
+
+ConfigInsert(
+    ONEWIRE_ID="289986980d000083",
+    HWSERIAL="20210916_proto",
+    COMMENT="First proto insert_2019",
+)
+

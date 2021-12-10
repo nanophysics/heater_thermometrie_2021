@@ -16,5 +16,17 @@
         "python.testing.unittestEnabled": false,
         "python.testing.pytestEnabled": true,
         "python.linting.pylintEnabled": true
+    },
+    "launch": {
+        "version": "0.2.0",
+        "configurations": [
+            {
+                "name": "Python: Aktuelle Datei",
+                "type": "python",
+                "request": "launch",
+                "program": "${file}",
+                "console": "integratedTerminal"
+            }
+        ]
     }
 }
