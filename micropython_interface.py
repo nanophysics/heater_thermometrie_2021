@@ -115,10 +115,3 @@ class MicropythonInterface:
         self.display.clear()
         self.display.line(2, "      ...")
         self.display.show_lines()
-
-        # self.temperature_insert.enable_thermometrie(enable=False)
-        # self.heater.set_power(power=2 ** 15 - 1)
-        # self.timebase.sleep(1.5)
-        # self.heater.set_power(power=2 ** 16 - 1)
-        # self.timebase.sleep(0.5)
-        # self.heater.set_power(power=0)

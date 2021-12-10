@@ -39,7 +39,7 @@
 <TR class="tr_entry">
   <TD></TD>
   <TD class="td_label">entry</TD>
-  <TD class="td_text">heater.set_power(0)<br>temperature_insert.enable_thermometrie(enable=False)</TD>
+  <TD class="td_text">set_power_W(0.0)<br>temperature_insert.enable_thermometrie(enable=False)</TD>
 </TR>
 <tr class="tr_comment">
   <td class="td_space">&nbsp;&nbsp;&nbsp;</td>
@@ -84,7 +84,7 @@
 <tr class="tr_comment">
   <td class="td_space">&nbsp;&nbsp;&nbsp;</td>
   <td class="td_label">comment</td>
-  <td class="td_text">Heating controlled by PI<br>Periodically:<br>- temperature -> PI controller -> power, 'in range' (Quantity.TemperatureToleranceBand)<br>- heater.set_power(power)</td>
+  <td class="td_text">Heating controlled by PI<br>Periodically:<br>- temperature -> PI controller -> power, 'in range' (Quantity.TemperatureToleranceBand)<br>- set_power_W(power)</td>
 </tr>
 </table><table class="table_state">
   <tr>
@@ -93,13 +93,18 @@
 <TR class="tr_entry">
   <TD></TD>
   <TD class="td_label">entry</TD>
-  <TD class="td_text">heater.set_power(Quantity.Power)</TD>
+  <TD class="td_text">? heater.set_power(Quantity.Power)</TD>
 </TR>
 <tr class="tr_comment">
   <td class="td_space">&nbsp;&nbsp;&nbsp;</td>
   <td class="td_label">comment</td>
   <td class="td_text">Heating manual</td>
 </tr>
+<TR class="tr_exit">
+  <TD></TD>
+  <TD class="td_label">exit</TD>
+  <TD class="td_text">set_power_W(0.0)</TD>
+</TR>
 </table><table class="table_state">
   <tr>
     <td class="td_header" colSpan="3">heatingoff</td>
@@ -107,7 +112,7 @@
 <TR class="tr_entry">
   <TD></TD>
   <TD class="td_label">entry</TD>
-  <TD class="td_text">heater.set_power(0)</TD>
+  <TD class="td_text">? set_power_W(0.0)</TD>
 </TR>
 <tr class="tr_comment">
   <td class="td_space">&nbsp;&nbsp;&nbsp;</td>

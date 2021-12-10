@@ -177,10 +177,10 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
 
     def entry_connected_thermoff(self, signal) -> None:
         """
-        heater.set_power(0)
+        set_power_W(0.0)
         temperature_insert.enable_thermometrie(enable=False)
         """
-        self._hw.set_power100(power100=0.0)
+        self._hw.set_power_W(power_W=0.0)
         self._hw.mpi.temperature_insert.enable_thermometrie(enable=False)
 
     def state_connected_thermon(self, signal) -> None:
@@ -229,7 +229,7 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
 
     def entry_connected_thermon_heatingoff(self, signal) -> None:
         """
-        ? heater.set_power(0)
+        ? set_power_W(0.0)
         """
 
     def state_connected_thermon_heatingmanual(self, signal) -> None:
@@ -244,9 +244,9 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
 
     def exit_connected_thermon_heatingmanual(self) -> None:
         """
-        heater.set_power(0)
+        set_power_W(0.0)
         """
-        self._hw.set_power100(power100=0.0)
+        self._hw.set_power_W(power_W=0.0)
 
     def state_connected_thermon_heatingcontrolled(self, signal) -> None:
         """
@@ -254,7 +254,7 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
 
         Periodically:
         - temperature -> PI controller -> power, 'in range' (Quantity.TemperatureToleranceBand)
-        - heater.set_power(power)
+        - set_power_W(power)
         """
         assert self.controller is not None
 
@@ -268,8 +268,8 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
             fLimitOutLow=0.0,
             fLimitOutHigh=100.0,
         )
-        power100 = self.controller.fOutputValueLimited
-        self._hw.set_quantity(Quantity.ControlWritePower100, power100)
+        power_W = self.controller.fOutputValueLimited
+        self._hw.set_quantity(Quantity.ControlWritePower_W, power_W)
 
         logger.debug(f"  setpoint={self.controller.fSetpoint:0.2f} K => calibrated_K={temperature_calibrated_K:0.2f} K => power={self.controller.fOutputValueLimited:0.2f} %")
 
