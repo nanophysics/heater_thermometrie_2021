@@ -102,4 +102,3 @@ ConfigInsert(
     HWSERIAL="20210916_proto",
     COMMENT="First proto insert_2019",
 )
-
