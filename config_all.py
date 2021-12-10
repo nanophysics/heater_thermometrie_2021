@@ -16,15 +16,26 @@ dict_insert = {}
 
 
 class ConfigHeater2021:
-    def __init__(self, HWSERIAL, HARDWARE_VERSION, COMMENT, ONEWIRE_ID_HEATER):
+    def __init__(self, HWSERIAL, HARDWARE_VERSION, COMMENT, ONEWIRE_ID_HEATER, CALIBRATION_CARBON, CALIBRATION_PT1000):
         dict_heater2021[HWSERIAL] = self
         self.HWSERIAL = HWSERIAL
         self.HARDWARE_VERSION = HARDWARE_VERSION
         self.COMMENT = COMMENT
         self.ONEWIRE_ID_HEATER = ONEWIRE_ID_HEATER
+        self.CALIBRATION_CARBON = CALIBRATION_CARBON
+        self.CALIBRATION_PT1000 = CALIBRATION_PT1000
 
     def __repr__(self):
         return f"{self.HWSERIAL}, hardware version {self.HARDWARE_VERSION}, {self.COMMENT}"
+
+    def calibrate_resistance_OHM(self, carbon: bool, measured_OHM: float) -> float:
+        assert isinstance(carbon, bool)
+        assert isinstance(measured_OHM, float)
+        gain, offset_OHM = self.CALIBRATION_CARBON if carbon else self.CALIBRATION_PT1000
+        assert isinstance(gain, float)
+        assert isinstance(offset_OHM, float)
+        assert -1.1 < gain < -0.9
+        return gain * (offset_OHM + measured_OHM)
 
     @staticmethod
     def load_config(serial: str) -> dict:
@@ -70,6 +81,8 @@ ConfigHeater2021(
     HARDWARE_VERSION="2021",
     COMMENT="Serial not defined, hardware unknown! Assuming a bare micropython board.",
     ONEWIRE_ID_HEATER=ONEWIRE_ID_HEATER_UNDEFINED,
+    CALIBRATION_CARBON=(-1.0, 1.0),
+    CALIBRATION_PT1000=(-1.0, 1.0),
 )
 
 ConfigHeater2021(
@@ -77,6 +90,11 @@ ConfigHeater2021(
     HARDWARE_VERSION="2021",
     COMMENT="Prototype 2021",
     ONEWIRE_ID_HEATER="28e3212e0d00002e",
+    CALIBRATION_CARBON=(-0.9, 100 / 99.86),
+    CALIBRATION_PT1000=(
+        -1.0,  # Offset gemessen mit Testbox und Thermometrie off
+        1000 / 998.5,  # Gain gemessen mit Testbox und Thermometrie on
+    ),
 )
 
 ConfigInsert(

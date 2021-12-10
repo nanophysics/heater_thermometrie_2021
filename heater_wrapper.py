@@ -188,9 +188,10 @@ class HeaterWrapper:
         # Read carbon and pt1000 and calculate calibrated temperature
         #
         def read(carbon, quantity):
-            resistance_OHM = self.mpi.temperature_insert.read_resistance_OHM(carbon=carbon)
-            self.dict_values[quantity] = resistance_OHM
-            return resistance_OHM
+            measured_OHM = self.mpi.temperature_insert.read_resistance_OHM(carbon=carbon)
+            calibrated_OHM = self.heater_2021_config.calibrate_resistance_OHM(carbon=carbon, measured_OHM=measured_OHM)
+            self.dict_values[quantity] = calibrated_OHM
+            return calibrated_OHM
 
         Calibration = self.insert_calibration.Calibration
         calibration = Calibration(
