@@ -11,7 +11,7 @@ and insert_2019 prototype.
 import numpy
 
 
-class HeatingRate:
+class HeatingCurve:
     """
     # todo: implement somehow.
     max power for powersupply 0.22 A, might change later if not enough
@@ -103,7 +103,7 @@ class HeatingRate:
         4.11e0,
         5.08e0,
     ]
-    _CURVE_ADC = [
+    _CURVE_DAC = [
         0,
         7,
         7,
@@ -191,15 +191,16 @@ class HeatingRate:
     def __init__(self, heating_power_max_W: float):
         assert isinstance(heating_power_max_W, float)
         self._heating_power_max_W = heating_power_max_W
-        assert len(HeatingRate._CURVE_W) == len(HeatingRate._CURVE_ADC)
+        assert len(HeatingCurve._CURVE_W) == len(HeatingCurve._CURVE_DAC)
 
-    def get_ADC(self, power_W):
+    def get_DAC(self, power_W: float) -> float:
         """
-        Given power_w,  interpolates the value of 16bit-ADC.
+        Given power_w,  interpolates the value of 16bit-DAC.
         """
         assert isinstance(power_W, float)
-        adc = numpy.interp(power_W, HeatingRate._CURVE_W, HeatingRate._CURVE_ADC)
-        assert isinstance(adc, float)
-        adc = adc.astype(int)
-        assert HeatingRate.ADC_MIN <= adc <= HeatingRate.ADC_MAX
-        return adc
+        dac = numpy.interp(power_W, HeatingCurve._CURVE_W, HeatingCurve._CURVE_DAC)
+        assert isinstance(dac, float)
+        dac = int(dac)
+        assert isinstance(dac, int)
+        dac = min(max(dac, HeatingCurve.ADC_MIN), HeatingCurve.ADC_MAX)
+        return dac

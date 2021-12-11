@@ -25,16 +25,20 @@ class ConfigHeater2021:
         self.CALIBRATION_CARBON = CALIBRATION_CARBON
         self.CALIBRATION_PT1000 = CALIBRATION_PT1000
 
+        # dummy calculation to fail if datatypes wrong
+        self.calibrate_resistance_OHM(carbon=True, measured_OHM=100.0)
+        self.calibrate_resistance_OHM(carbon=False, measured_OHM=1000.0)
+
     def __repr__(self):
         return f"{self.HWSERIAL}, hardware version {self.HARDWARE_VERSION}, {self.COMMENT}"
 
     def calibrate_resistance_OHM(self, carbon: bool, measured_OHM: float) -> float:
         assert isinstance(carbon, bool)
         assert isinstance(measured_OHM, float)
-        gain, offset_OHM = self.CALIBRATION_CARBON if carbon else self.CALIBRATION_PT1000
-        assert isinstance(gain, float)
+        offset_OHM, gain = self.CALIBRATION_CARBON if carbon else self.CALIBRATION_PT1000
         assert isinstance(offset_OHM, float)
-        assert -1.1 < gain < -0.9
+        assert isinstance(gain, float)
+        assert 0.9 < gain < 1.1
         return gain * (offset_OHM + measured_OHM)
 
     @staticmethod

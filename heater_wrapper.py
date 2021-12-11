@@ -16,7 +16,7 @@ from heater_driver_utils import (
     EnumExpert,
     EnumThermometrie,
 )
-from heater_heatingrate import HeatingRate
+from heater_heatingrate import HeatingCurve
 
 logger = logging.getLogger("LabberDriver")
 
@@ -26,7 +26,7 @@ DIRECTORY_OF_THIS_FILE = pathlib.Path(__file__).absolute().parent
 TEMPERATURE_SETTLE_K = -1.0
 TEMPERATURE_BOX_UNDEFINED_C = -1.0
 TICK_INTERVAL_READ_BOXTEMP = 10  # To read the box temperature takes 0.8s, therefore we do not read it every time
-HEATING_POWER_MAX_W = 3.3
+HEATING_POWER_MAX_W = 3.3 # max power for powersupply 0.22 A, might change later if not enough
 
 
 @dataclass
@@ -58,7 +58,7 @@ class ErrorCounterAssertion:
 
 class HeaterWrapper:
     def __init__(self, hwserial, force_use_realtime_factor: float = None):
-        self.heatingrate = HeatingRate(heating_power_max_W=HEATING_POWER_MAX_W)
+        self.heatingrate = HeatingCurve(heating_power_max_W=HEATING_POWER_MAX_W)
         self.tick_count = 0
         self.tick_count_next_boxtemp = 0
         self.dict_values = {}
@@ -204,9 +204,11 @@ class HeaterWrapper:
         self.dict_values[Quantity.TemperatureReadonlyTemperaturePT1000_K] = calibration.pt1000_K
         self.dict_values[Quantity.TemperatureReadonlyTemperatureCalibrated_K] = calibration.calibrated_K
 
-        if calibration.pt1000_K > 343.15:  #
+        overhead_protection_C = 70.0
+        if calibration.pt1000_K > overhead_protection_C + 273.15:
             # Overheat protection
             # Power off bei Temperatur > 70C(343.15K).
+            logger.warning(f"Overheat protection {overhead_protection_C}C. Switch power off!")
             self.set_power_W(power_W=0.0)
 
         def defrost_switch_changed(defrost_on: str) -> str:
@@ -341,8 +343,7 @@ class HeaterWrapper:
                 logger.warning(f"The power may only controlled in mode MANUAL. Actual mode '{actual_meth.__name__}'")
                 return 0.0
 
-            self.set_power_W(power_W=value)
-            return value
+            return self.set_power_W(power_W=value)
 
         if quantity in (
             Quantity.ControlWriteTemperatureToleranceBand,
@@ -386,15 +387,17 @@ class HeaterWrapper:
 
     def set_power_W(self, power_W: float):
         """
-        Limit power to 0..100.
+        Limit power.
         Set labber relevant variable.
         Set power in the pyboard.
         """
         assert isinstance(power_W, float)
         if not (0.0 <= power_W <= HEATING_POWER_MAX_W):
             logger.warning(f"Expected power to be between 0 and {HEATING_POWER_MAX_W:0.3f} W, but got {power_W:0.3f}.")
-            power_W = min(0.0, max(HEATING_POWER_MAX_W, power_W))
+            power_W = max(0.0, min(HEATING_POWER_MAX_W, power_W))
         self.dict_values[Quantity.ControlWritePower_W] = power_W
 
-        power_dac = self.heatingrate.get_ADC(power_W=power_W)
+        power_dac = self.heatingrate.get_DAC(power_W=power_W)
         self.mpi.heater.set_power(power=power_dac)
+
+        return power_W
