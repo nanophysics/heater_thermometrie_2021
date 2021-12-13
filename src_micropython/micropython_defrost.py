@@ -3,6 +3,7 @@
 
 from micropython_portable import ThermometriePT1000
 
+TEMPERATURE_DEFROST_OFF_C = 30.0
 
 class DefrostProcess:
     def __init__(self, proxy):
@@ -12,7 +13,7 @@ class DefrostProcess:
 
     def tick(self):
         lines = self._control_defrost()
-        self._display.show_lines(lines=lines)
+        self._display.show_lines(lines=lines, labber_driver=False)
 
     def _control_defrost(self):
         """
@@ -28,7 +29,7 @@ class DefrostProcess:
         else:
             lines[0] = "{:>14.0f}C".format(temperature_C)
 
-        if not self._proxy.get_defrost():
+        if not self._proxy.defrost:
             lines[2] = " waiting for"
             lines[3] = " labber"
             lines[4] = " driver..."
@@ -36,8 +37,10 @@ class DefrostProcess:
 
         self._temperature_insert.enable_thermometrie(enable=True)
         lines[1] = " DEFROST"
-        if temperature_C < 30.0:
+        if temperature_C < TEMPERATURE_DEFROST_OFF_C:
             self._proxy.heater.set_power_max()
+
+        if temperature_C < TEMPERATURE_DEFROST_OFF_C - 2.0:
             lines[3] = " Defrosting"
             lines[4] = " do not open!"
             return lines

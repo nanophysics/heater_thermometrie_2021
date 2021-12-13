@@ -182,7 +182,8 @@ class Display:
     LINES = 5
     LINEHIGHT = 8 + 4
 
-    def __init__(self, i2c):
+    def __init__(self, i2c, proxy):
+        self._proxy = proxy
         self._sh1106 = SH1106_I2C(width=128, height=64, i2c=i2c, res=None, addr=0x3C)
         self._sh1106.sleep(False)
         self._sh1106.rotate(True, update=False)
@@ -200,7 +201,13 @@ class Display:
     def _show(self):
         self._sh1106.show()
 
-    def show_lines(self, lines):
+    def show_lines(self, lines, labber_driver=True):
+        "This method will be called from the Labber Driver"
+        if labber_driver:
+            if self._proxy.defrost:
+                # While the defrost switch is on, the defrost process controls the gui
+                # and the labber is ignored
+                return
         self._clear()
         for i, line in enumerate(lines):
             self._line(i, line)
@@ -222,7 +229,7 @@ class Proxy:
         if Proxy.ACTIVATE_WATCHDOG:
             assert Proxy.WATCHDOG_TIMEOUT_MS <= 2 ** 15 - 1, "WATCHDOG_TIMEOUT_MS too high!"
             self._wdt = WDT(timeout=Proxy.WATCHDOG_TIMEOUT_MS)
-        self.defrost = Pin(PIN_DEFROST, Pin.IN)
+        self._defrost_pin = Pin(PIN_DEFROST, Pin.IN)
         # >>> i2c.scan()
         # [60]
         # 60=0x3C: OLED
@@ -233,7 +240,7 @@ class Proxy:
         # 76=0x4C: DAC8571, DAC16
         # 98=0x62: MCP4725, DAC12
         i2c_OLED = I2C(2, freq=40000)
-        self.display = Display(i2c=i2c_OLED)
+        self.display = Display(i2c=i2c_OLED, proxy=self)
         self.onewire_box = OnewireBox()
         self.onewire_insert = OnewireInsert()
         self.temperature_insert = TemperatureInsert(i2c=i2c_AD_DA)
@@ -244,6 +251,13 @@ class Proxy:
         if self._wdt:
             self._wdt.feed()
 
+    @property
+    def defrost(self):
+        return not self._defrost_pin.value()
+
     def get_defrost(self):
+        defrost = self.defrost
+        if defrost:
+            self.defrost_process.tick()
         self.wdt_feed()
-        return not self.defrost()
+        return defrost
