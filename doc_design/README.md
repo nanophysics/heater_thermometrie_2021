@@ -31,20 +31,20 @@ TODO: Python 3.9
 The labber combobox will signal the statemachine the change state.
 
 In state HEATING CONTROLLED these values will be used:
-  * ControlWriteTemperature
-  * ControlWriteTemperatureToleranceBand
-  * ControlWriteSettleTime
-  * ControlWriteTimeoutTime
+  * ControlWriteTemperature_K
+  * ControlWriteTemperatureToleranceBand_K
+  * ControlWriteSettleTime_S
+  * ControlWriteTimeoutTime_S
 
 The settle time starts when switching from term_off to term_on(defrost/off/manual/controlled).
 
 
-## Change of ControlWriteTemperatureAndSettle
+## Change of ControlWriteTemperatureAndSettle_K
 
-ControlWriteTemperatureAndSettle is always set by the labber driver to -1K.
-Setting ControlWriteTemperatureAndSettle will set ControlWriteTemperature.
-Setting ControlWriteTemperatureAndSettle will reset error counter to 0.
-Settrig ControlWriteTemperatureAndSettle will prevent counting errors till the command returns.
+ControlWriteTemperatureAndSettle_K is always set by the labber driver to -1K.
+Setting ControlWriteTemperatureAndSettle_K will set ControlWriteTemperature_K.
+Setting ControlWriteTemperatureAndSettle_K will reset error counter to 0.
+Settrig ControlWriteTemperatureAndSettle_K will prevent counting errors till the command returns.
 
 # Micropython standalone
 

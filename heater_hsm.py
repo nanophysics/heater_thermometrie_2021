@@ -15,6 +15,7 @@ from heater_pid_controller import PidController
 
 logger = logging.getLogger("LabberDriver")
 
+HEATING_POWER_MAX_W = 3.3 # max power for powersupply 0.22 A, might change later if not enough
 
 @dataclass
 class SignalDefrostSwitchChanged:
@@ -67,7 +68,7 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         """
         self.during_wait_temperature_and_settle = False
         """
-        During ControlWriteTemperatureAndSettle this flag is set.
+        During ControlWriteTemperatureAndSettle_K this flag is set.
         """
 
     def sim_reset_error_counter(self):
@@ -100,9 +101,9 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         return EnumInsertConnected.get_labber(connected)
 
     def is_inrange(self):
-        band_K = self._hw.get_quantity(Quantity.ControlWriteTemperatureToleranceBand)
+        band_K = self._hw.get_quantity(Quantity.ControlWriteTemperatureToleranceBand_K)
         temperature_K = self._hw.get_quantity(Quantity.TemperatureReadonlyTemperatureCalibrated_K)
-        temperature_should_K = self._hw.get_quantity(Quantity.ControlWriteTemperature)
+        temperature_should_K = self._hw.get_quantity(Quantity.ControlWriteTemperature_K)
         temperature_diff_K = temperature_K - temperature_should_K
         in_range = abs(temperature_diff_K) <= band_K
         return in_range
@@ -114,7 +115,7 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         return self.now_s - self.last_outofrange_s
 
     def is_settled(self) -> bool:
-        return self.duration_inrange_s() >= self._hw.get_quantity(Quantity.ControlWriteSettleTime)
+        return self.duration_inrange_s() >= self._hw.get_quantity(Quantity.ControlWriteSettleTime_S)
 
     def get_heating_state(self, heating: EnumHeating = None):
         if heating is None:
@@ -258,20 +259,22 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         """
         assert self.controller is not None
 
-        setpoint_k = self._hw.get_quantity(Quantity.ControlWriteTemperature)
-        temperature_calibrated_K = self._hw.get_quantity(Quantity.TemperatureReadonlyTemperatureCalibrated_K)
+        setpoint_k = self._hw.get_quantity(Quantity.ControlWriteTemperature_K)
+        temperature_K = self._hw.get_quantity(Quantity.TemperatureReadonlyTemperatureCalibrated_K)
 
         self.controller.process(
             time_now_s=self.now_s,
             fSetpoint=setpoint_k,
-            fSensorValue=temperature_calibrated_K,
+            fSensorValue=temperature_K,
             fLimitOutLow=0.0,
-            fLimitOutHigh=100.0,
+            fLimitOutHigh=HEATING_POWER_MAX_W,
+            bAllowDecreaseI=True, # ? todo was ist das
+            bAllowIncreaseI=True, # ? todo was ist das
         )
         power_W = self.controller.fOutputValueLimited
-        self._hw.set_quantity(Quantity.ControlWritePower_W, power_W)
-
-        logger.debug(f"  setpoint={self.controller.fSetpoint:0.2f} K => calibrated_K={temperature_calibrated_K:0.2f} K => power={self.controller.fOutputValueLimited:0.2f} %")
+        logger.debug(f"  setpoint={self.controller.fSetpoint:0.2f} K => calibrated_K={temperature_K:0.2f} K => power={self.controller.fOutputValueLimited:0.2f} %")
+        logger.warning(f"  setpoint={self.controller.fSetpoint:0.3f} K => temperature_K={temperature_K:0.3f} K => power={power_W:0.3f} W   controller fI ={self.controller.fI:0.2f} ?")
+        self._hw.set_power_W(power_W=power_W)
 
     def entry_connected_thermon_heatingcontrolled(self, signal) -> None:
         """
@@ -280,14 +283,25 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         - Initialize PID
         """
         self.error_counter = 0
-        setpoint_k = self._hw.get_quantity(Quantity.ControlWriteTemperature)
+        setpoint_k = self._hw.get_quantity(Quantity.ControlWriteTemperature_K)
+        # temperature_K = self._hw.get_quantity(Quantity.TemperatureReadonlyTemperatureCalibrated_K)
+
+        fkAlles = 1.0
         self.controller = PidController(
             "insert",
             time_now_s=self.now_s,
             fSetpoint=setpoint_k,
-            fKi=0.04,
-            fKp=0.1,
-            fKd=0.0,
+            # fKi=0.04,
+            # fKp=0.1,
+            #fKp=7.7,
+            #fKi=0.323,
+            #fKd=32.65,
+            fKp=4.8 * fkAlles,
+            fKi=0.12 * fkAlles,
+            fKd=0.0 * fkAlles,
+            #fSensorValue=temperature_K,
+            fSensorValue=setpoint_k, # damit wird der i Anteil auf 0 initialisiert
+            fOutputValue=0.0,
         )
 
     def exit_connected_thermon_heatingcontrolled(self) -> None:

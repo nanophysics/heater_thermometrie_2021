@@ -76,36 +76,46 @@ class HeaterThread(threading.Thread):
         assert isinstance(name, str)
         quantity = Quantity(name)
 
-        if quantity == Quantity.ControlWriteTemperatureAndSettle:
-
-            def block_until_settled():
-                tick_count_before = self._hw.tick_count
-                timeout_s = self._hw.time_now_s + self._hw.get_quantity(Quantity.ControlWriteTimeoutTime)
-                while True:
-                    self._hw.sleep(TICK_INTERVAL_S / 2.0)
-                    if tick_count_before == self._hw.tick_count:
-                        # Wait for a tick to make sure that the statemachine was called at least once
-                        continue
-                    if not self._hw.hsm_heater.is_state(HeaterHsm.state_connected_thermon_heatingcontrolled):
-                        # Unexpected state change
-                        logger.info(f"Waiting for 'ControlWriteTemperatureAndSettle'. Unexpected state change. Got '{self._hw.hsm_heater._state_actual}'!")
-                        return
-                    if self._is_settled():
-                        return
-                    if self._hw.time_now_s > timeout_s:
-                        logger.info("Timeout while 'ControlWriteTemperatureAndSettle'")
-                        return
-
-            self._hw.set_quantity(Quantity.ControlWriteTemperature, value)
-            self._hw.hsm_heater.wait_temperature_and_settle_start()
-            block_until_settled()
-            self._hw.hsm_heater.wait_temperature_and_settle_over()
-            return heater_wrapper.TEMPERATURE_SETTLE_K
+        if quantity == Quantity.ControlWriteTemperatureAndSettle_K:
+            return self._set_temperature_and_settle(quantity=quantity, value=value)
 
         # logger.info(f"set_value_A('{name}', '{value}'): {quantity}")
         value_new = self.set_quantity_sync(quantity=quantity, value=value)
         # logger.info(f"set_value_B('{name}', '{value}'): {quantity} -> rc: {value_new!r}")
         return value_new
+
+    def _set_temperature_and_settle(self, quantity: Quantity, value:float):
+        assert quantity == Quantity.ControlWriteTemperatureAndSettle_K
+
+        def block_until_settled():
+            tick_count_before = self._hw.tick_count
+            timeout_s = self._hw.time_now_s + self._hw.get_quantity(Quantity.ControlWriteTimeoutTime_S)
+            while True:
+                self._hw.sleep(TICK_INTERVAL_S / 2.0)
+                if tick_count_before == self._hw.tick_count:
+                    # Wait for a tick to make sure that the statemachine was called at least once
+                    continue
+                if not self._hw.hsm_heater.is_state(HeaterHsm.state_connected_thermon_heatingcontrolled):
+                    # Unexpected state change
+                    logger.info(f"Waiting for 'ControlWriteTemperatureAndSettle_K'. Unexpected state change. Got '{self._hw.hsm_heater._state_actual}'!")
+                    return
+                if self._is_settled():
+                    return
+                if self._hw.time_now_s > timeout_s:
+                    logger.info("Timeout while 'ControlWriteTemperatureAndSettle_K'")
+                    return
+
+        if abs(value - heater_wrapper.TEMPERATURE_SETTLE_OFF_K) < 1.e-9:
+            logger.warning(f"'{quantity.value}' set to {value:0.1f} K: SKIPPED")
+            return
+
+        self._hw.set_quantity(Quantity.ControlWriteTemperature_K, value)
+        self._hw.hsm_heater.wait_temperature_and_settle_start()
+        logger.warning(f"'{quantity.value}' set to {value:0.1f} K: Blocking. Timout = {self._hw.get_quantity(Quantity.ControlWriteTimeoutTime_S)}s")
+        block_until_settled()
+        self._hw.hsm_heater.wait_temperature_and_settle_over()
+        logger.warning("Settle/Timeout time over")
+        return heater_wrapper.TEMPERATURE_SETTLE_OFF_K
 
     @synchronized
     def set_quantity(self, quantity: Quantity, value):

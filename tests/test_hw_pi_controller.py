@@ -23,7 +23,7 @@ def test_controller(hwserial):
     hw.let_time_fly(duration_s=5.0)
     hw.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled)
 
-    hw.set_quantity(Quantity.ControlWriteTemperature, 42.0)
+    hw.set_quantity(Quantity.ControlWriteTemperature_K, 42.0)
     hw.sim_reset_error_counter()
 
     hw.let_time_fly(duration_s=10.0)

@@ -79,17 +79,17 @@ def test_heater_thread(hwserial):
 def test_control_and_settle(hwserial):
     """
     Combobox heating controlled
-    Now ControlWriteTemperatureAndSettle
+    Now ControlWriteTemperatureAndSettle_K
     Verify that timeout time starts from 0
     """
     logging.basicConfig()
     logger.setLevel(logging.INFO)
 
     ht = heater_thread.HeaterThread(hwserial=hwserial, force_use_realtime_factor=10.0)
-    ht.set_quantity(Quantity.ControlWriteTemperature, TEMPERATURE_SET40_K)
-    ht.set_quantity(Quantity.ControlWriteTemperatureToleranceBand, 1.0)
-    ht.set_quantity(Quantity.ControlWriteSettleTime, SETTLE_TIME_S)
-    ht.set_quantity(Quantity.ControlWriteTimeoutTime, TIMEOUT_TIME_S)
+    ht.set_quantity(Quantity.ControlWriteTemperature_K, TEMPERATURE_SET40_K)
+    ht.set_quantity(Quantity.ControlWriteTemperatureToleranceBand_K, 1.0)
+    ht.set_quantity(Quantity.ControlWriteSettleTime_S, SETTLE_TIME_S)
+    ht.set_quantity(Quantity.ControlWriteTimeoutTime_S, TIMEOUT_TIME_S)
     ht._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=40.5)
     ht.set_quantity(Quantity.ControlWriteThermometrie, EnumThermometrie.ON)
     ht.set_quantity(Quantity.ControlWriteHeating, EnumHeating.CONTROLLED)
@@ -98,7 +98,7 @@ def test_control_and_settle(hwserial):
 
     before_s = ht._hw.time_now_s
     ht.set_value(
-        Quantity.ControlWriteTemperatureAndSettle.value,
+        Quantity.ControlWriteTemperatureAndSettle_K.value,
         TEMPERATURE_SET40_K,
     )
     duration_s = ht._hw.time_now_s - before_s
@@ -112,7 +112,7 @@ def test_control_and_settle(hwserial):
     #
     before_s = ht._hw.time_now_s
     ht.set_value(
-        Quantity.ControlWriteTemperatureAndSettle.value,
+        Quantity.ControlWriteTemperatureAndSettle_K.value,
         TEMPERATURE_SET42_K,
     )
     duration_s = ht._hw.time_now_s - before_s

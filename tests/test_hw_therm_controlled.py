@@ -40,10 +40,10 @@ class Runner:
 
     def init_40K(self):
         # Prepare Settle Test
-        self.set_quantity(Quantity.ControlWriteTemperature, TEMPERATURE_SET40_K)
-        self.set_quantity(Quantity.ControlWriteTemperatureToleranceBand, 1.0)
-        self.set_quantity(Quantity.ControlWriteSettleTime, SETTLE_TIME_S)
-        self.set_quantity(Quantity.ControlWriteTimeoutTime, TIMEOUT_TIME_S)
+        self.set_quantity(Quantity.ControlWriteTemperature_K, TEMPERATURE_SET40_K)
+        self.set_quantity(Quantity.ControlWriteTemperatureToleranceBand_K, 1.0)
+        self.set_quantity(Quantity.ControlWriteSettleTime_S, SETTLE_TIME_S)
+        self.set_quantity(Quantity.ControlWriteTimeoutTime_S, TIMEOUT_TIME_S)
         self._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=40.5)
 
     def start_40K_35K(self):
@@ -152,7 +152,7 @@ class Runner:
 
     def write_and_wait_40K_40K_C(self):
         # If the temperature is already set, there will be no settle time
-        self.set_quantity(Quantity.ControlWriteTemperatureAndSettle, TEMPERATURE_SET40_K)
+        self.set_quantity(Quantity.ControlWriteTemperatureAndSettle_K, TEMPERATURE_SET40_K)
         self.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled)
         self.let_time_fly(duration_s=2.0)
         assert self._hw.hsm_heater.is_settled()
@@ -160,7 +160,7 @@ class Runner:
     def change_40K_42K_C(self):
         # We change the temperature. Settle time starts
         self._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=TEMPERATURE_SET42_K)
-        self.set_quantity(Quantity.ControlWriteTemperature, TEMPERATURE_SET42_K)
+        self.set_quantity(Quantity.ControlWriteTemperature_K, TEMPERATURE_SET42_K)
         self.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled)
         assert not self._hw.hsm_heater.is_settled()
 
@@ -179,7 +179,7 @@ class Runner:
     def change_40K_35K_C(self):
         # If the temperature is already set, there will be no settle time
         self._hw.mpi.sim_set_resistance_OHM(carbon=True, temperature_K=TEMPERATURE_OUTSIDE_K)
-        self.set_quantity(Quantity.ControlWriteTemperature, TEMPERATURE_SET40_K)
+        self.set_quantity(Quantity.ControlWriteTemperature_K, TEMPERATURE_SET40_K)
         self.expect_state(heater_hsm.HeaterHsm.state_connected_thermon_heatingcontrolled)
         self.let_time_fly(duration_s=TIMEOUT_TIME_S - 1.0)
         self._hw.expect_display(
@@ -209,7 +209,7 @@ def test_settletime(hwserial):
 def test_settletime_repetitive(hwserial):
     """
     Verify behaviour of
-      ControlWriteTemperatureAndSettle = "temperature and settle"
+      ControlWriteTemperatureAndSettle_K = "temperature and settle"
 
     When calling the first time, the settle time should apply (the tail should settle is temperature).
     When calling consecutive times, no settle time is required (as the controller hold the temperature constant)

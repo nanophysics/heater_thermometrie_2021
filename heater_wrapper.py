@@ -23,10 +23,9 @@ logger = logging.getLogger("LabberDriver")
 DIRECTORY_OF_THIS_FILE = pathlib.Path(__file__).absolute().parent
 
 
-TEMPERATURE_SETTLE_K = -1.0
+TEMPERATURE_SETTLE_OFF_K = -1.0
 TEMPERATURE_BOX_UNDEFINED_C = -1.0
 TICK_INTERVAL_READ_BOXTEMP = 10  # To read the box temperature takes 0.8s, therefore we do not read it every time
-HEATING_POWER_MAX_W = 3.3 # max power for powersupply 0.22 A, might change later if not enough
 
 
 @dataclass
@@ -58,7 +57,7 @@ class ErrorCounterAssertion:
 
 class HeaterWrapper:
     def __init__(self, hwserial, force_use_realtime_factor: float = None):
-        self.heatingrate = HeatingCurve(heating_power_max_W=HEATING_POWER_MAX_W)
+        self.heatingrate = HeatingCurve(heating_power_max_W=heater_hsm.HEATING_POWER_MAX_W)
         self.tick_count = 0
         self.tick_count_next_boxtemp = 0
         self.dict_values = {}
@@ -105,13 +104,13 @@ class HeaterWrapper:
         self.dict_values[Quantity.ControlWritePower_W] = 0.0
         self.dict_values[Quantity.ControlWriteThermometrie] = EnumThermometrie.OFF
         self.dict_values[Quantity.ControlWriteHeating] = EnumHeating.OFF
-        self.dict_values[Quantity.ControlWriteTemperature] = 0.0
-        self.dict_values[Quantity.ControlWriteTemperatureToleranceBand] = 1.0
-        self.dict_values[Quantity.ControlWriteSettleTime] = 10.0
-        self.dict_values[Quantity.ControlWriteTimeoutTime] = 20.0
-        self.dict_values[Quantity.TemperatureReadonlyTemperatureCalibrated_K] = TEMPERATURE_SETTLE_K
+        self.dict_values[Quantity.ControlWriteTemperature_K] = 0.0
+        self.dict_values[Quantity.ControlWriteTemperatureToleranceBand_K] = 1.0
+        self.dict_values[Quantity.ControlWriteSettleTime_S] = 10.0
+        self.dict_values[Quantity.ControlWriteTimeoutTime_S] = 20.0
+        self.dict_values[Quantity.TemperatureReadonlyTemperatureCalibrated_K] = TEMPERATURE_SETTLE_OFF_K
         self.dict_values[Quantity.StatusReadErrorCounter] = 0
-        self.dict_values[Quantity.StatusReadTemperatureBox] = TEMPERATURE_BOX_UNDEFINED_C
+        self.dict_values[Quantity.StatusReadTemperatureBox_C] = TEMPERATURE_BOX_UNDEFINED_C
         self.dict_values[Quantity.ControlWriteLogging] = EnumLogging.WARNING
 
         self.tick()
@@ -243,16 +242,16 @@ class HeaterWrapper:
             onewire_id = self.heater_2021_config.ONEWIRE_ID_HEATER
             if onewire_id != config_all.ONEWIRE_ID_HEATER_UNDEFINED:
                 box_temp_c = self.mpi.onewire_box.read_temp_C(ident=onewire_id)
-                self.dict_values[Quantity.StatusReadTemperatureBox] = box_temp_c
+                self.dict_values[Quantity.StatusReadTemperatureBox_C] = box_temp_c
                 return
 
-        self.dict_values[Quantity.StatusReadTemperatureBox] = TEMPERATURE_BOX_UNDEFINED_C
+        self.dict_values[Quantity.StatusReadTemperatureBox_C] = TEMPERATURE_BOX_UNDEFINED_C
 
     def _tick_update_display(self):
         display = self.mpi.display
         display.clear()
-        temperature_calibrated_K = self.get_quantity(Quantity.TemperatureReadonlyTemperatureCalibrated_K)
-        display.line(0, f" {temperature_calibrated_K:>13.1f}K")
+        temperature_K = self.get_quantity(Quantity.TemperatureReadonlyTemperatureCalibrated_K)
+        display.line(0, f" {temperature_K:>13.1f}K")
         status = {
             heater_hsm.HeaterHsm.state_disconnected: " DISCONNECTED",
             heater_hsm.HeaterHsm.state_connected_thermoff: " THERMOFF",
@@ -286,9 +285,16 @@ class HeaterWrapper:
             return self.hsm_heater.is_settled()
         if quantity == Quantity.StatusReadErrorCounter:
             return self.hsm_heater.error_counter
-        if quantity == Quantity.ControlWriteTemperatureAndSettle:
-            return TEMPERATURE_SETTLE_K
+        if quantity == Quantity.ControlWriteTemperatureAndSettle_K:
+            return TEMPERATURE_SETTLE_OFF_K
         try:
+            # Verify if all keys are of enum 'Quantity'
+            for q in self.dict_values.keys():
+                assert isinstance(q, Quantity), f"{q}`is not a enum Quantity"
+            if 1<0:
+                logger.info("*"*100)
+                for q in sorted(self.dict_values.keys(), key=lambda q: q.name):
+                    logger.info(f"   {q} -> {self.dict_values[q]}")
             return self.dict_values[quantity]
         except KeyError as e:
             raise QuantityNotFoundException(quantity.name) from e
@@ -326,16 +332,16 @@ class HeaterWrapper:
             value_new = bool(value)
             self.dict_values[quantity] = value_new
             return value
-        if quantity == Quantity.ControlWriteTemperature:
+        if quantity == Quantity.ControlWriteTemperature_K:
             difference_K = abs(value - self.dict_values[quantity])
             if difference_K > 1e-9:
                 # settle and timeout must start from zero
                 self.hsm_heater.reset_outofrange_s()
             self.dict_values[quantity] = value
             return value
-        if quantity == Quantity.ControlWriteTemperatureAndSettle:
-            self.set_quantity(Quantity.ControlWriteTemperature, value)
-            return TEMPERATURE_SETTLE_K
+        if quantity == Quantity.ControlWriteTemperatureAndSettle_K:
+            self.set_quantity(Quantity.ControlWriteTemperature_K, value)
+            return TEMPERATURE_SETTLE_OFF_K
 
         if quantity == Quantity.ControlWritePower_W:
             actual_meth = self.hsm_heater.actual_meth()
@@ -346,9 +352,9 @@ class HeaterWrapper:
             return self.set_power_W(power_W=value)
 
         if quantity in (
-            Quantity.ControlWriteTemperatureToleranceBand,
-            Quantity.ControlWriteSettleTime,
-            Quantity.ControlWriteTimeoutTime,
+            Quantity.ControlWriteTemperatureToleranceBand_K,
+            Quantity.ControlWriteSettleTime_S,
+            Quantity.ControlWriteTimeoutTime_S,
         ):
             self.dict_values[quantity] = value
             return value
@@ -392,9 +398,9 @@ class HeaterWrapper:
         Set power in the pyboard.
         """
         assert isinstance(power_W, float)
-        if not (0.0 <= power_W <= HEATING_POWER_MAX_W):
-            logger.warning(f"Expected power to be between 0 and {HEATING_POWER_MAX_W:0.3f} W, but got {power_W:0.3f}.")
-            power_W = max(0.0, min(HEATING_POWER_MAX_W, power_W))
+        if not (0.0 <= power_W <= heater_hsm.HEATING_POWER_MAX_W):
+            logger.warning(f"Expected power to be between 0 and {heater_hsm.HEATING_POWER_MAX_W:0.3f} W, but got {power_W:0.3f}.")
+            power_W = max(0.0, min(heater_hsm.HEATING_POWER_MAX_W, power_W))
         self.dict_values[Quantity.ControlWritePower_W] = power_W
 
         power_dac = self.heatingrate.get_DAC(power_W=power_W)
