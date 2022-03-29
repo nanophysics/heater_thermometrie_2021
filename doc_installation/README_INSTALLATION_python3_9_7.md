@@ -19,23 +19,6 @@ Tag        | Labber Instrument Server, Menu Preferences
 `<LABBERDRIVERS>` | Tab Folders, Instrument Drivers
 `<LABBERLOCALDRIVERS>` | Tab Folders, Local Drivers
 
-
-## Prerequisits Python 3.9.7 64bit
-https://www.python.org/ftp/python/3.9.7/python-3.9.7-amd64.exe
-Windows 64bit msi installer
- - Add Python 3.9 to path
- - Customize
-   - Uncheck: Python test suite
-   - Uncheck: pylauncher
- - Advanced
-   - Uncheck: Install for all users
-   - `C:\Users\maerki\AppData\Local\Programs\Python\Python39`
-
-
-Python packages installed
-```bash
-C:\Users\maerki\AppData\Local\Programs\Python\Python39\python.exe -m pip install --upgrade pip
-C:\Users\maerki\AppData\Local\Programs\Python\Python39\python.exe -m pip install -r requirements.txt
 ```
 
 ## Prerequisits Python 3.9.7 64bit
