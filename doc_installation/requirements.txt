@@ -1,2 +1,4 @@
 wheel
+numpy
+matplotlib
 mpfshell2>=100.9.13
