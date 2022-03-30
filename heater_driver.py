@@ -37,3 +37,35 @@ class Driver(InstrumentDriver.InstrumentWorker):
     def performClose(self, bError=False, options={}):
         """Perform the close instrument connection operation"""
         self.ht.stop()
+
+    def performSetValue(self, quant, value, sweepRate=0.0, options={}):
+        """Perform the Set Value instrument operation. This function should
+        return the actual value set by the instrument"""
+        # keep track of multiple calls, to set multiple voltages efficiently
+        if quant.name in LABBER_INTERNAL_QUANTITIES:
+            return value
+        try:
+            value_new = self.ht.set_value(name=quant.name, value=value)
+            logger.debug(f"performSetValue('{quant.name}', '{value}') -> '{value_new}'")
+            return value_new
+        except QuantityNotFoundException as e:
+            logger.exception(e)
+            raise
+
+    def checkIfSweeping(self, quant):
+        """Always return false, sweeping is done in loop"""
+        return False
+
+    def performGetValue(self, quant, options={}):
+        """Perform the Get Value instrument operation"""
+        # only implmeneted for geophone voltage
+        logger.debug(f"performGetValue({quant.name})")
+        if quant.name in LABBER_INTERNAL_QUANTITIES:
+            return quant.getValue()
+        try:
+            value = self.ht.get_value(name=quant.name)
+            logger.debug(f"performGetValue({quant.name}) -> '{value}'")
+            return value
+        except QuantityNotFoundException as e:
+            logger.exception(e)
+            raise
