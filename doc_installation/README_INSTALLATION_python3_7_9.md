@@ -1,4 +1,4 @@
-# Installation of Labber Driver for compact_2012
+# Installation of Labber Driver for heater_thermometrie_2021
 
 ## Pathnames
 
@@ -40,13 +40,9 @@ Windows 64bit msi installer
    - `C:\Users\maerki\AppData\Local\Programs\Python\Python37`
 
 
-Python packages installed
-```bash
-C:\Users\maerki\AppData\Local\Programs\Python\Python37\python.exe -m pip install --upgrade pip
-C:\Users\maerki\AppData\Local\Programs\Python\Python37\python.exe -m pip install -r requirements.txt -r requirements_development.txt
-```
+### Labber 1.7.7 installed
 
-### Labber 1.7.7 installed.
+Install Labber using the installer
 
 ### Configure Labber to user Python 3.7.9
 
@@ -72,3 +68,41 @@ Navigate to https://git-scm.com/download/win and download "64-bit Git for Window
 ![GIT G](images/installation_git_g.png "GIT G")
 
 ![GIT H](images/installation_git_h.png "GIT H")
+
+## Install heater_thermometrie_2021 labber driver
+
+### Clone git repository
+
+Run `cmd.exe`:
+```bash
+cd C:\Users\maerki\Labber\Drivers
+git clone https://github.com/nanophysics/heater_thermometrie_2021
+cd heater_thermometrie_2021
+```
+
+### Install python requirements
+
+Run `cmd.exe` below as **Administrator**.
+```bash
+cd C:\Users\maerki\Labber\Drivers\heater_thermometrie_2021
+
+"C:\Users\maerki\AppData\Local\Programs\Python\Python37\python.exe" -m pip install --upgrade pip
+"C:\Users\maerki\AppData\Local\Programs\Python\Python37\python.exe" -m pip install -r requirements.txt -r requirements_development.txt
+```
+
+There will be some warnings about *PATH*. You may ignore them.
+
+The last line should be `Successfully installed ... mpfshell2-100.9.xx ...`!
+
+
+## Configure the heater_thermometrie_2021 in the Labber Instrument Server
+
+Start the Labber Instrument Server and choose menu `Edit -> Add...`
+
+![LABBER ADD](images/installation_labber_add.png "LABBER ADD")
+
+## Update the heater_thermometrie_2021 driver and calibration data
+
+The driver AND the calibration data is stored in the git repository located at `<LABBERLOCALDRIVERS>\heater_thermometrie_2021`.
+
+Double click `<LABBERLOCALDRIVERS>\heater_thermometrie_2021\run_git_pull.bat` to pull the newest version.
