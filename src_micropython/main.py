@@ -1,5 +1,4 @@
 # pylint: disable=import-error
-# pylint: disable=consider-using-f-string
 
 import pyb
 import machine

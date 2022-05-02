@@ -29,10 +29,7 @@
             "args": [
                 "--config",
                 "${workspaceFolder}/.blackconfig.yaml",
-                "*.py",
-                "tests",
-                "calibration",
-                "src_micropython"
+                "."
             ],
             "console": "integratedTerminal"
         },
