@@ -232,8 +232,9 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
 
     def entry_connected_thermon_heatingoff(self, signal) -> None:
         """
-        ? set_power_W(0.0)
+        set_power_W(0.0)
         """
+        self._hw.set_power_W(power_W=0.0)
 
     def state_connected_thermon_heatingmanual(self, signal) -> None:
         """
