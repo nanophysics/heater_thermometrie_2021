@@ -30,9 +30,7 @@ class Driver(InstrumentDriver.InstrumentWorker):
         self.ht = heater_thread.HeaterThread(hwserial=hwserial)
 
         # Reset the usb connection (it must not change the applied voltages)
-        self.log(
-            f"ETH Heater Thermometrie 2021: Connection resetted at startup. hwserial={hwserial} model={self.getModel()}"
-        )
+        self.log(f"ETH Heater Thermometrie 2021: Connection resetted at startup. hwserial={hwserial} model={self.getModel()}")
 
     def performClose(self, bError=False, options={}):
         """Perform the close instrument connection operation"""

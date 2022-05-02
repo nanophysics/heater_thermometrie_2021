@@ -11,11 +11,13 @@ from heater_driver_utils import (
 )
 import hsm
 from heater_pid_controller import PidController
+from heater_pid_params import HeaterPidParams
 
 
 logger = logging.getLogger("LabberDriver")
 
-HEATING_POWER_MAX_W = 3.3 # max power for powersupply 0.22 A, might change later if not enough
+HEATING_POWER_MAX_W = 3.3  # max power for powersupply 0.22 A, might change later if not enough
+
 
 @dataclass
 class SignalDefrostSwitchChanged:
@@ -262,14 +264,20 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         setpoint_k = self._hw.get_quantity(Quantity.ControlWriteTemperature_K)
         temperature_K = self._hw.get_quantity(Quantity.TemperatureReadonlyTemperatureCalibrated_K)
 
+        params = HeaterPidParams(setpoint_k=setpoint_k)
+
+        self.controller.fKp = params.fKp
+        self.controller.fKi = params.fKi
+        self.controller.fKd = params.fKd
+
         self.controller.process(
             time_now_s=self.now_s,
             fSetpoint=setpoint_k,
             fSensorValue=temperature_K,
             fLimitOutLow=0.0,
             fLimitOutHigh=HEATING_POWER_MAX_W,
-            bAllowDecreaseI=True, # ? todo was ist das
-            bAllowIncreaseI=True, # ? todo was ist das
+            bAllowDecreaseI=True,  # ? todo was ist das
+            bAllowIncreaseI=True,  # ? todo was ist das
         )
         power_W = self.controller.fOutputValueLimited
         logger.debug(f"  setpoint={self.controller.fSetpoint:0.2f} K => calibrated_K={temperature_K:0.2f} K => power={self.controller.fOutputValueLimited:0.2f} %")
@@ -286,21 +294,22 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         setpoint_k = self._hw.get_quantity(Quantity.ControlWriteTemperature_K)
         # temperature_K = self._hw.get_quantity(Quantity.TemperatureReadonlyTemperatureCalibrated_K)
 
-        fkAlles = 1.0
+        params = HeaterPidParams(setpoint_k=setpoint_k)
+
         self.controller = PidController(
             "insert",
             time_now_s=self.now_s,
             fSetpoint=setpoint_k,
             # fKi=0.04,
             # fKp=0.1,
-            #fKp=7.7,
-            #fKi=0.323,
-            #fKd=32.65,
-            fKp=4.8 * fkAlles,
-            fKi=0.12 * fkAlles,
-            fKd=0.0 * fkAlles,
-            #fSensorValue=temperature_K,
-            fSensorValue=setpoint_k, # damit wird der i Anteil auf 0 initialisiert
+            # fKp=7.7,
+            # fKi=0.323,
+            # fKd=32.65,
+            fKp=params.fKp,
+            fKi=params.fKi,
+            fKd=params.fKd,
+            # fSensorValue=temperature_K,
+            fSensorValue=setpoint_k,  # damit wird der i Anteil auf 0 initialisiert
             fOutputValue=0.0,
         )
 

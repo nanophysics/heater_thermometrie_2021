@@ -291,8 +291,8 @@ class HeaterWrapper:
             # Verify if all keys are of enum 'Quantity'
             for q in self.dict_values.keys():
                 assert isinstance(q, Quantity), f"{q}`is not a enum Quantity"
-            if 1<0:
-                logger.info("*"*100)
+            if 1 < 0:
+                logger.info("*" * 100)
                 for q in sorted(self.dict_values.keys(), key=lambda q: q.name):
                     logger.info(f"   {q} -> {self.dict_values[q]}")
             return self.dict_values[quantity]

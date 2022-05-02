@@ -84,7 +84,7 @@ class HeaterThread(threading.Thread):
         # logger.info(f"set_value_B('{name}', '{value}'): {quantity} -> rc: {value_new!r}")
         return value_new
 
-    def _set_temperature_and_settle(self, quantity: Quantity, value:float):
+    def _set_temperature_and_settle(self, quantity: Quantity, value: float):
         assert quantity == Quantity.ControlWriteTemperatureAndSettle_K
 
         def block_until_settled():
@@ -105,7 +105,7 @@ class HeaterThread(threading.Thread):
                     logger.info("Timeout while 'ControlWriteTemperatureAndSettle_K'")
                     return
 
-        if abs(value - heater_wrapper.TEMPERATURE_SETTLE_OFF_K) < 1.e-9:
+        if abs(value - heater_wrapper.TEMPERATURE_SETTLE_OFF_K) < 1.0e-9:
             logger.warning(f"'{quantity.value}' set to {value:0.1f} K: SKIPPED")
             return
 

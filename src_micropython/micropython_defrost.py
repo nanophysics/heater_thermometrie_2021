@@ -5,6 +5,7 @@ from micropython_portable import ThermometriePT1000
 
 TEMPERATURE_DEFROST_OFF_C = 30.0
 
+
 class DefrostProcess:
     def __init__(self, proxy):
         self._proxy = proxy
