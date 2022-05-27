@@ -46,6 +46,7 @@ class HeaterThread(threading.Thread):
 
     def run(self):
         while not self._stopping:
+            start_s = self._hw.time_now_s
             try:
                 self._tick()
             except serial.serialutil.SerialException as ex:
@@ -54,14 +55,19 @@ class HeaterThread(threading.Thread):
                 return
             except Exception as ex:  # pylint: disable=broad-except
                 logger.exception(ex)
-            self._hw.sleep(TICK_INTERVAL_S)
+
+            elapsed_s = self._hw.time_now_s - start_s
+            sleep_s = TICK_INTERVAL_S - elapsed_s
+            if sleep_s > 0.0:
+                logger.debug(f"sleep_s:{sleep_s:0.3f}s")
+                self._hw.sleep(sleep_s)
 
     def stop(self):
         self._stopping = True
         self.join(timeout=10.0 * TICK_INTERVAL_S)
 
     @synchronized
-    def _tick(self):
+    def _tick(self) -> None:
         self._hw.tick()
 
     @synchronized

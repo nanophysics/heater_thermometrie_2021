@@ -25,8 +25,8 @@ DIRECTORY_OF_THIS_FILE = pathlib.Path(__file__).absolute().parent
 
 TEMPERATURE_SETTLE_OFF_K = -1.0
 TEMPERATURE_BOX_UNDEFINED_C = -1.0
-TICK_INTERVAL_READ_BOXTEMP = 10  # To read the box temperature takes 0.8s, therefore we do not read it every time
-
+INTERVAL_READ_BOXTEMP_S = 30 # To read the box temperature takes 0.8s, therefore we do not read it every time
+INTERVAL_READ_ONEWIRE_S = 2
 
 @dataclass
 class NotInitialized:
@@ -60,6 +60,7 @@ class HeaterWrapper:
         self.heatingrate = HeatingCurve(heating_power_max_W=heater_hsm.HEATING_POWER_MAX_W)
         self.tick_count = 0
         self.tick_count_next_boxtemp = 0
+        self.tick_count_next_read_onewire = 0
         self.dict_values = {}
         self.mpi = MicropythonInterface(hwserial, force_use_realtime_factor=force_use_realtime_factor)
 
@@ -228,6 +229,9 @@ class HeaterWrapper:
             self.dict_values[Quantity.StatusReadSerialNumberInsert] = repr(self.insert_config)
             return onewire_id
 
+        if self.tick_count < self.tick_count_next_read_onewire:
+            return
+        self.tick_count_next_read_onewire = self.tick_count + INTERVAL_READ_ONEWIRE_S // TICK_INTERVAL_S
         self._set_value(
             Quantity.StatusReadSerialNumberInsertHidden,
             self.mpi.onewire_insert.scan(),
@@ -237,8 +241,8 @@ class HeaterWrapper:
     def _tick_read_onewire_boxtemp(self):
         if self.hsm_heater.is_state_or_substate(heater_hsm.HeaterHsm.state_connected_thermon):
             if self.tick_count < self.tick_count_next_boxtemp:
-                self.tick_count_next_boxtemp = self.tick_count + TICK_INTERVAL_READ_BOXTEMP
                 return
+            self.tick_count_next_boxtemp = self.tick_count + INTERVAL_READ_BOXTEMP_S // TICK_INTERVAL_S
             onewire_id = self.heater_2021_config.ONEWIRE_ID_HEATER
             if onewire_id != config_all.ONEWIRE_ID_HEATER_UNDEFINED:
                 box_temp_c = self.mpi.onewire_box.read_temp_C(ident=onewire_id)

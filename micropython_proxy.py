@@ -29,12 +29,18 @@ class DisplayProxy:
 
     def __init__(self, proxy):
         self.proxy = proxy
+        self._lines_on_display = []
         self.lines = [f"{'??':<16s}" for line in range(self.LINES)]
 
     def clear(self):
         self.lines = ["" for line in range(self.LINES)]
 
     def show_lines(self):
+        if self.lines == self._lines_on_display:
+            # The display is already up to date
+            return
+        # This will take 250ms
+        self._lines_on_display = self.lines.copy()
         self.proxy.eval_as_none(f"proxy.display.show_lines({self.lines})")
 
     def line(self, line: int, text: str):
