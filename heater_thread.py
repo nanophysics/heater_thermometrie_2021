@@ -39,6 +39,7 @@ def synchronized(func):
 class HeaterThread(threading.Thread):
     def __init__(self, hwserial: str, force_use_realtime_factor: float = None):
         logger.info(f"HeaterThread(hwserial='{hwserial}')")
+        self.dict_values_labber_thread_copy = {}
         super().__init__(daemon=True)
         self._hw = heater_wrapper.HeaterWrapper(hwserial=hwserial, force_use_realtime_factor=force_use_realtime_factor)
         self._stopping = False
@@ -69,6 +70,8 @@ class HeaterThread(threading.Thread):
     @synchronized
     def _tick(self) -> None:
         self._hw.tick()
+        # Create a copy of all values to allow access for the labber thread without any delay.
+        self.dict_values_labber_thread_copy = self._hw.dict_values.copy()
 
     @synchronized
     def set_quantity_sync(self, quantity: Quantity, value):
@@ -127,9 +130,23 @@ class HeaterThread(threading.Thread):
     def set_quantity(self, quantity: Quantity, value):
         return self._hw.set_quantity(quantity=quantity, value=value)
 
-    @synchronized
     def get_value(self, name: str):
-        return self._hw.get_value(name=name)
+        """
+        This typically returns immedately as it accesses a copy of all values.
+        Only in rare cases, it will delay for max 0.5s.
+        """
+        assert isinstance(name, str)
+        quantity = Quantity(name)
+        try:
+            return self.dict_values_labber_thread_copy[quantity]
+        except KeyError:
+            # Not all values are stored in the dictionary.
+            # In this case we have to use the synchronized call.
+            return self.get_quantity_synchronized(quantity=quantity)
+
+    @synchronized
+    def get_quantity_synchronized(self, quantity: Quantity):
+        return self._hw.get_quantity(quantity=quantity)
 
     @synchronized
     def signal(self, signal):

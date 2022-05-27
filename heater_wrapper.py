@@ -298,7 +298,7 @@ class HeaterWrapper:
             return TEMPERATURE_SETTLE_OFF_K
         try:
             # Verify if all keys are of enum 'Quantity'
-            for q in self.dict_values.keys():
+            for q in self.dict_values:
                 assert isinstance(q, Quantity), f"{q}`is not a enum Quantity"
             if 1 < 0:
                 logger.info("*" * 100)
@@ -307,10 +307,6 @@ class HeaterWrapper:
             return self.dict_values[quantity]
         except KeyError as e:
             raise QuantityNotFoundException(quantity.name) from e
-
-    def get_value(self, name: str):
-        assert isinstance(name, str)
-        return self.get_quantity(quantity=Quantity(name))
 
     def set_value(self, name: str, value):
         assert isinstance(name, str)
