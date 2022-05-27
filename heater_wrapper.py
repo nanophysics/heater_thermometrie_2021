@@ -283,6 +283,8 @@ class HeaterWrapper:
         assert isinstance(quantity, Quantity)
         # if quantity == Quantity.ControlWriteThermometrie:
         #     return self.hsm_heater.get_labber_thermometrie
+        if quantity == Quantity.StatusReadDefrostUserInteraction:
+            return "?"
         if quantity == Quantity.StatusReadInsertConnected:
             return self.hsm_heater.get_labber_insert_connected
         if quantity == Quantity.StatusReadSettled:
