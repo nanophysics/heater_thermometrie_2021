@@ -1,6 +1,7 @@
 import os
 import logging
 import threading
+import enum
 
 import serial
 from heater_hsm import HeaterHsm
@@ -88,10 +89,7 @@ class HeaterThread(threading.Thread):
         if quantity == Quantity.ControlWriteTemperatureAndSettle_K:
             return self._set_temperature_and_settle(quantity=quantity, value=value)
 
-        # logger.info(f"set_value_A('{name}', '{value}'): {quantity}")
-        value_new = self.set_quantity_sync(quantity=quantity, value=value)
-        # logger.info(f"set_value_B('{name}', '{value}'): {quantity} -> rc: {value_new!r}")
-        return value_new
+        return  self.set_quantity_sync(quantity=quantity, value=value)
 
     def _set_temperature_and_settle(self, quantity: Quantity, value: float):
         assert quantity == Quantity.ControlWriteTemperatureAndSettle_K
@@ -120,7 +118,7 @@ class HeaterThread(threading.Thread):
 
         self._hw.set_quantity(Quantity.ControlWriteTemperature_K, value)
         self._hw.hsm_heater.wait_temperature_and_settle_start()
-        logger.warning(f"'{quantity.value}' set to {value:0.1f} K: Blocking. Timout = {self._hw.get_quantity(Quantity.ControlWriteTimeoutTime_S)}s")
+        logger.warning(f"'{quantity.value}' set to {value:0.1f} K: Blocking. Timeout = {self._hw.get_quantity(Quantity.ControlWriteTimeoutTime_S)}s")
         block_until_settled()
         self._hw.hsm_heater.wait_temperature_and_settle_over()
         logger.warning("Settle/Timeout time over")
@@ -138,11 +136,14 @@ class HeaterThread(threading.Thread):
         assert isinstance(name, str)
         quantity = Quantity(name)
         try:
-            return self.dict_values_labber_thread_copy[quantity]
+            value = self.dict_values_labber_thread_copy[quantity]
         except KeyError:
             # Not all values are stored in the dictionary.
             # In this case we have to use the synchronized call.
-            return self.get_quantity_synchronized(quantity=quantity)
+            value = self.get_quantity_synchronized(quantity=quantity)
+        if isinstance(value, enum.Enum):
+            return value.value
+        return value
 
     @synchronized
     def get_quantity_synchronized(self, quantity: Quantity):

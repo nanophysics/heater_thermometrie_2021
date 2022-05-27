@@ -20,7 +20,7 @@ DIRECTORY_OF_THIS_FILE = pathlib.Path(__file__).absolute().parent
 
 logger = logging.getLogger("LabberDriver")
 
-TICK_INTERVAL_S = 0.4
+TICK_INTERVAL_S = 0.2
 
 
 class Timebase:

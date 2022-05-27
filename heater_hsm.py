@@ -285,7 +285,7 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         )
         power_W = self.controller.fOutputValueLimited
         logger.debug(f"  setpoint={self.controller.fSetpoint:0.2f} K => calibrated_K={temperature_K:0.2f} K => power={self.controller.fOutputValueLimited:0.2f} %")
-        logger.warning(f"  setpoint={self.controller.fSetpoint:0.3f} K => temperature_K={temperature_K:0.3f} K => power={power_W:0.3f} W   controller fI ={self.controller.fI:0.2f} ?")
+        logger.warning(f"  setpoint={self.controller.fSetpoint:0.3f} K => temperature_K={temperature_K:0.3f} K => power={power_W:0.3f} W   controller fI ={self.controller.fI:0.2f}")
         self._hw.set_power_W(power_W=power_W)
 
     def entry_connected_thermon_heatingcontrolled(self, signal) -> None:

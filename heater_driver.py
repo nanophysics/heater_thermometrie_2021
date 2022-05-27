@@ -1,5 +1,4 @@
 # pylint: disable=dangerous-default-value
-import pathlib
 import logging
 
 import InstrumentDriver  # pylint: disable=import-error
