@@ -3,7 +3,7 @@
 
 TODO: 2 PIN's to detect insert
 TODO: Console window should not become visible!
-TODO: Python 3.9
+DONE: Python 3.9 -> Only Python 3.7.9 is supported
 
 ## PID Controller
 
