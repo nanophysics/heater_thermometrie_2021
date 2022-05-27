@@ -115,3 +115,6 @@ class MicropythonInterface:
         self.display.clear()
         self.display.line(2, "      ...")
         self.display.show_lines()
+
+    def get_pt1000_connected(self) -> bool:
+        return self.proxy.eval_as(bool, "proxy.get_pt1000_connected()")

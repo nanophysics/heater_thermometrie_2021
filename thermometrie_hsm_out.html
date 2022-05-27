@@ -58,7 +58,7 @@
 <tr class="tr_comment">
   <td class="td_space">&nbsp;&nbsp;&nbsp;</td>
   <td class="td_label">comment</td>
-  <td class="td_text">NONSTATE(entry=state_connected_thermon_heatingoff)<br>Thermometrie is on<br>Periodically:<br>-> If termometrie off ==> state_connected_thermoff<br>-> TODO: Observe two pins of the pyboard to see if insert was disconnected<br>-> if not in_range ==> Increment 'error_counter', update 'last_outofrange_s'<br>Done in 'heater_wrapper':<br>-> Read temperature_insert.get_voltage(carbon=True)<br>-> Read temperature_insert.get_voltage(carbon=False)<br>-> Calibration table -> temperature</td>
+  <td class="td_text">NONSTATE(entry=state_connected_thermon_heatingoff)<br>Thermometrie is on<br>Periodically:<br>-> If termometrie off ==> state_connected_thermoff<br>-> Poll the PT1000 to detect disconnection of the tail (Y1/PIN_CONNECTED_PT1000)<br>-> if not in_range ==> Increment 'error_counter', update 'last_outofrange_s'<br>Done in 'heater_wrapper':<br>-> Read temperature_insert.get_voltage(carbon=True)<br>-> Read temperature_insert.get_voltage(carbon=False)<br>-> Calibration table -> temperature</td>
 </tr>
   <tr class="tr_sub">
     <td class="td_space">&nbsp;&nbsp;&nbsp;</td>
@@ -112,7 +112,7 @@
 <TR class="tr_entry">
   <TD></TD>
   <TD class="td_label">entry</TD>
-  <TD class="td_text">? set_power_W(0.0)</TD>
+  <TD class="td_text">set_power_W(0.0)</TD>
 </TR>
 <tr class="tr_comment">
   <td class="td_space">&nbsp;&nbsp;&nbsp;</td>

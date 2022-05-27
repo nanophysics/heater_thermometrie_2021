@@ -26,7 +26,6 @@ DIRECTORY_OF_THIS_FILE = pathlib.Path(__file__).absolute().parent
 TEMPERATURE_SETTLE_OFF_K = -1.0
 TEMPERATURE_BOX_UNDEFINED_C = -1.0
 INTERVAL_READ_BOXTEMP_S = 30 # To read the box temperature takes 0.8s, therefore we do not read it every time
-INTERVAL_READ_ONEWIRE_S = 2
 
 @dataclass
 class NotInitialized:
@@ -60,7 +59,6 @@ class HeaterWrapper:
         self.heatingrate = HeatingCurve(heating_power_max_W=heater_hsm.HEATING_POWER_MAX_W)
         self.tick_count = 0
         self.tick_count_next_boxtemp = 0
-        self.tick_count_next_read_onewire = 0
         self.dict_values = {}
         self.mpi = MicropythonInterface(hwserial, force_use_realtime_factor=force_use_realtime_factor)
 
@@ -204,12 +202,14 @@ class HeaterWrapper:
         self.dict_values[Quantity.TemperatureReadonlyTemperaturePT1000_K] = calibration.pt1000_K
         self.dict_values[Quantity.TemperatureReadonlyTemperatureCalibrated_K] = calibration.calibrated_K
 
-        overhead_protection_C = 70.0
-        if calibration.pt1000_K > overhead_protection_C + 273.15:
-            # Overheat protection
-            # Power off bei Temperatur > 70C(343.15K).
-            logger.warning(f"Overheat protection {overhead_protection_C}C. Switch power off!")
-            self.set_power_W(power_W=0.0)
+        actual_meth = self.hsm_heater.actual_meth()
+        if actual_meth != heater_hsm.HeaterHsm.state_disconnected:
+            overhead_protection_C = 70.0
+            if calibration.pt1000_K > overhead_protection_C + 273.15:
+                # Overheat protection
+                # Power off bei Temperatur > 70C(343.15K).
+                logger.warning(f"Overheat protection {overhead_protection_C}C. Switch power off!")
+                self.set_power_W(power_W=0.0)
 
         def defrost_switch_changed(defrost_on: str) -> str:
             self.hsm_heater.dispatch(heater_hsm.SignalDefrostSwitchChanged(defrost_on=defrost_on))
@@ -222,16 +222,19 @@ class HeaterWrapper:
         )
 
     def _tick_read_onewire(self):
-        # TODO: Only call if termon
+        actual_meth = self.hsm_heater.actual_meth()
+        if actual_meth != heater_hsm.HeaterHsm.state_disconnected:
+            # The tail has been connected and OneWireID was read.
+            # Now the statemachine will poll the PTC1000 to detect
+            # the disconnection of the tail.
+            return
+
         def insert_onewire_id_changed(onewire_id: str) -> str:
             self.hsm_heater.dispatch(heater_hsm.SignalInsertSerialChanged(onewire_id=onewire_id))
             self.insert_connected(onewire_id=onewire_id)
             self.dict_values[Quantity.StatusReadSerialNumberInsert] = repr(self.insert_config)
             return onewire_id
 
-        if self.tick_count < self.tick_count_next_read_onewire:
-            return
-        self.tick_count_next_read_onewire = self.tick_count + INTERVAL_READ_ONEWIRE_S // TICK_INTERVAL_S
         self._set_value(
             Quantity.StatusReadSerialNumberInsertHidden,
             self.mpi.onewire_insert.scan(),

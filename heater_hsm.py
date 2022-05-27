@@ -195,7 +195,7 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         Periodically:
 
         -> If termometrie off ==> state_connected_thermoff
-        -> TODO: Observe two pins of the pyboard to see if insert was disconnected
+        -> Poll the PT1000 to detect disconnection of the tail (Y1/PIN_CONNECTED_PT1000)
         -> if not in_range ==> Increment 'error_counter', update 'last_outofrange_s'
 
         Done in 'heater_wrapper':
@@ -206,6 +206,9 @@ class HeaterHsm(hsm.Statemachine):  # pylint: disable=too-many-public-methods \#
         thermometrie = self._hw.get_quantity(Quantity.ControlWriteThermometrie)
         if thermometrie.eq(EnumThermometrie.OFF):
             raise hsm.StateChangeException(self.state_connected_thermoff)
+
+        if not self._hw.mpi.get_pt1000_connected():
+            raise hsm.StateChangeException(self.state_disconnected)
 
         in_range = self.is_inrange()
         if not in_range:

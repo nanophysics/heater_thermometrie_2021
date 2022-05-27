@@ -18,6 +18,8 @@ from micropython_portable import ThermometrieCarbon, ThermometriePT1000
 VERSION = "v0.9"
 
 # Pins according to schematics
+PIN_CONNECTED_CARBON = "Y1"
+PIN_CONNECTED_PT1000 = "Y2"
 PIN_SDA_OLED = "Y10"
 PIN_SCL_OLED = "Y9"
 PIN_SDA_AD_DA = "X10"
@@ -94,7 +96,7 @@ class OnewireInsert(OnewireBox):
     def scan(self):
         self._set_power(on=True)
         # Empirical value: 100us works, so 1ms might be safe
-        # Usuing 0.001s, sometimes the id could not be read
+        # Using 0.001s, sometimes the id could not be read
         # Using 0.01s this negative effect has gone.
         # time.sleep(0.001)
         time.sleep(0.005)
@@ -229,6 +231,8 @@ class Proxy:
             assert Proxy.WATCHDOG_TIMEOUT_MS <= 2 ** 15 - 1, "WATCHDOG_TIMEOUT_MS too high!"
             self._wdt = WDT(timeout=Proxy.WATCHDOG_TIMEOUT_MS)
         self._defrost_pin = Pin(PIN_DEFROST, Pin.IN)
+        self._connected_pt1000_pin = Pin(PIN_CONNECTED_PT1000, Pin.IN)
+
         # >>> i2c.scan()
         # [60]
         # 60=0x3C: OLED
@@ -249,6 +253,12 @@ class Proxy:
     def wdt_feed(self):
         if self._wdt:
             self._wdt.feed()
+
+    def get_pt1000_connected(self):
+        """
+        This test only works if 'termon' powers the pt1000.
+        """
+        return bool(self._connected_pt1000_pin.value())
 
     @property
     def defrost(self):
