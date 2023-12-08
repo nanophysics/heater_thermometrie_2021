@@ -2,7 +2,7 @@ import os
 import logging
 import threading
 import enum
-
+import time
 import serial
 from heater_hsm import HeaterHsm
 from micropython_interface import TICK_INTERVAL_S
@@ -29,7 +29,9 @@ def synchronized(func):
     def wrapper(*args, **kwargs):
         with LOCK:
             try:
-                return func(*args, **kwargs)
+                value = func(*args, **kwargs)
+                time.sleep(0.001)
+                return value
             except:  # pylint: disable=bare-except
                 logger.exception('Exception in method "HeaterThread.%s"', func.__name__)
                 raise
@@ -123,10 +125,6 @@ class HeaterThread(threading.Thread):
         self._hw.hsm_heater.wait_temperature_and_settle_over()
         logger.warning("Settle/Timeout time over")
         return heater_wrapper.TEMPERATURE_SETTLE_OFF_K
-
-    @synchronized
-    def set_quantity(self, quantity: Quantity, value):
-        return self._hw.set_quantity(quantity=quantity, value=value)
 
     def get_value(self, name: str):
         """

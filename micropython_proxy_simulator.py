@@ -88,6 +88,9 @@ class Proxy:
     def get_defrost(self):
         return b"True"
 
+    def get_pt1000_connected(self):
+        return b"True"
+
 
 class FeSimulator:
     def __init__(self):
