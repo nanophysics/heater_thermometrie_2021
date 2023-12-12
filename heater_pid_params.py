@@ -1,7 +1,6 @@
 """
-The parameters below are optimized for 30 C.
-
-TODO: Change the parameters based on setpoint_k.
+below 100K calculated for measured step response
+300K values approximated
 """
 
 import numpy as np
@@ -9,11 +8,11 @@ import numpy as np
 
 class HeaterPidParams:
     def __init__(self, setpoint_k: float):
-        T_array = np.array([1.1, 5.2, 10, 27, 300])
+        T_array = np.array([1.1, 5.2, 12, 21, 35, 45, 55, 65, 70, 75, 85, 95, 300])
         # self.fT_array = T_array
-        delay_array = np.array([1, 1, 1, 2, 10])
+        delay_array = np.array([1, 1, 1, 1, 3, 4, 6, 6, 6, 7, 8, 10, 20])
         # self.fdelay_array = delay_array
-        slope_array = np.array([50, 15, 4, 0.2, 0.01])
+        slope_array = np.array([50, 15, 1, 0.2, 0.06, 0.03, 0.02, 0.01, 0.01, 0.01, 0.008, 0.008, 0.002])
         # self.fslope_array = slope_array
         Tn = 4.0 * delay_array
         # self.fTn = Tn
