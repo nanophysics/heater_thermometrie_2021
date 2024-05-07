@@ -1,5 +1,5 @@
 """
-below 100K calculated for measured step response
+below 100K calculated for measured step response (Lev 2023-12-12)
 300K values approximated
 """
 
